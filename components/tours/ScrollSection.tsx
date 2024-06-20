@@ -1,21 +1,35 @@
-import React, { useRef, useEffect, useState } from "react";
+'use client'
+import React, { useRef, useEffect, useState, useContext } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import Image from 'next/image';
+import { VideoContext } from "@/context/VideoContext";
+import CldImage from "../ui/CldImageWrapper";
 
 const images = [
-    '/img/tours/eras.png',
-    '/img/tours/reputation.png',
-    '/img/tours/1989.png',
-    '/img/tours/red.png',
-    '/img/tours/speak_now.png',
-    '/img/tours/fearless.png',
+    'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/eras',
+    'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation',
+    'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/1989',
+    'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/red',
+    'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/speak_now',
+    'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/fearless',
 ];
 
-function ScrollSection() {
+const videos = [
+    '/img/tours/eras.webm',
+    'https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation',
+    'https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/nineteeneightynine',
+    'https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red',
+    'https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red',
+    'https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red',
+];
+
+const ScrollSection = () => {
     const sectionRef = useRef<HTMLDivElement | null>(null);
     const triggerRef = useRef<HTMLDivElement | null>(null);
     const [scrollTriggerInstance, setScrollTriggerInstance] = useState<ScrollTrigger | null>(null);
+    const { setVideoSrc } = useContext(VideoContext);
+
 
     gsap.registerPlugin(ScrollTrigger);
 
@@ -52,6 +66,11 @@ function ScrollSection() {
                             snapTo: 1 / images.length,
                             duration: 1,
                             ease: "power1.inOut",
+                        },
+                        onUpdate: self => {
+                            const progress = self.progress;
+                            const activeIndex = Math.floor(progress * images.length);
+                            setVideoSrc(videos[activeIndex]);
                         },
                     },
                 }
@@ -101,10 +120,11 @@ function ScrollSection() {
         <>
             <section className="overflow-hidden z-10">
                 <div ref={triggerRef} className="overflow-hidden">
-                    <div ref={sectionRef} className={`h-screen flex relative text-white font-bold text-2xl overflow-hidden`} style={{ width: totalWidth, gap: spaceBetween }}>
+                    <div ref={sectionRef} className={`h-screen flex relative text-white font-bold text-2xl overflow-hidden text-ellipsis`} style={{ width: totalWidth, gap: spaceBetween }}>
                         {images.map((image, index) => (
                             <div key={index} className="h-screen py-44 flex items-end justify-center snap-start">
-                                <Image src={image} alt={`Tour ${index + 1}`} className="image w-[280px] h-[400px] object-cover rounded-2xl" width={280} height={400} />
+                                <CldImage src={image} alt={`Tour ${index + 1}`} className="image w-[280px] h-[400px] object-cover rounded-2xl" width={280} height={400}/>
+                                {/* <Image src={image} alt={`Tour ${index + 1}`} className="image w-[280px] h-[400px] object-cover rounded-2xl" width={280} height={400} /> */}
                             </div>
                         ))}
                     </div>
