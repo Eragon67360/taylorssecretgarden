@@ -130,30 +130,37 @@ const AlbumDetailsPage = () => {
                                         ))}
                                     </ul>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 space-x-5 ">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 space-x-5 w-full">
                                         <ul>
                                             {album.tracks.items.slice(0, Math.ceil(album.tracks.items.length / 2)).map((track, index) => (
                                                 <li
                                                     key={track.id}
-                                                    className={`break-words rounded-full bg-[#A5C9A5] px-4 py-2 my-2 transition-all duration-200 ${track.preview_url !== "" ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
-                                                    role="button"
-                                                    tabIndex={track.preview_url !== "" ? 0 : undefined}
-                                                    onClick={track.preview_url !== "" ? () => playTrack(track.name) : undefined}
+                                                    className='w-full'
                                                 >
-                                                    {index + 1}. {track.name}
+                                                    <button
+                                                        onClick={track.preview_url !== "" ? () => playTrack(track.name) : undefined}
+                                                        className={`w-full break-words text-start rounded-full bg-[#A5C9A5] px-4 py-2 my-2 transition-all duration-200 ${track.preview_url !== "" ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
+                                                    >
+                                                        {index + 1}. {track.name}
+                                                    </button>
+
                                                 </li>
+
                                             ))}
                                         </ul>
                                         <ul>
                                             {album.tracks.items.slice(Math.ceil(album.tracks.items.length / 2)).map((track, index) => (
                                                 <li
                                                     key={track.id}
-                                                    role="button"
-                                                    tabIndex={track.preview_url !== "" ? 0 : undefined}                                                    
-                                                    className="break-words rounded-full bg-[#A5C9A5] px-4 py-2 my-2 cursor-pointer hover:scale-105 transition-all duration-200"
-                                                    onClick={track.preview_url !== "" ? () => playTrack(track.name) : undefined}
+                                                    className='w-full'
                                                 >
-                                                    {Math.ceil(album.tracks.items.length / 2) + index + 1}. {track.name}
+                                                    <button
+                                                        onClick={track.preview_url !== "" ? () => playTrack(track.name) : undefined}
+                                                        className={`w-full break-words text-start rounded-full bg-[#A5C9A5] px-4 py-2 my-2 transition-all duration-200 ${track.preview_url !== "" ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
+                                                    >
+                                                        {Math.ceil(album.tracks.items.length / 2) + index + 1}. {track.name}
+                                                    </button>
+
                                                 </li>
                                             ))}
                                         </ul>
