@@ -71,7 +71,7 @@ function ScrollSection() {
                             start: () => `top+=${index * (imageWidth + spaceBetween) - imageWidth - spaceBetween} center`,
                             end: () => `top+=${index * (imageWidth + spaceBetween)} center`,
                             toggleClass: { targets: element, className: "active" },
-                            markers: true,
+                            markers: false,
                         });
 
                     }
