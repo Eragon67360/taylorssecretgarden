@@ -1,11 +1,17 @@
-import { Fira_Code as FontMono, Inter as FontSans } from "next/font/google";
+import { Fira_Code, Inter , Dancing_Script as Dancing } from "next/font/google";
 
-export const fontSans = FontSans({
+export const fontInter = Inter({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-inter",
 });
 
-export const fontMono = FontMono({
+export const fontFira = Fira_Code({
   subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-fira",
 });
+
+export const fontDancing = Dancing({
+  subsets: ["latin"],
+  variable: "--font-dancing",
+});
+

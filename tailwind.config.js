@@ -10,8 +10,9 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-sans)"],
-        mono: ["var(--font-geist-mono)"],
+        inter: ["var(--font-inter)"],
+        fira: ["var(--font-fira)"],
+        dancing: ["var(--font-dancing)"],
         impact: ['Impact', 'sans-serif'],
       },
       backgroundImage: {

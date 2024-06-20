@@ -25,3 +25,15 @@
 .scroll-section-container {
     scroll-snap-type: x mandatory;
 }
+
+.custom-shape {
+    -webkit-clip-path: path("M57.6248 24.2496C53.2552 39.5607 42.0853 58 30.7484 58C17.5672 58 5.09847 36.208 1.33716 24.2496C-5.23561 3.3526 13.6744 0.000126133 30.7484 0C47.8224 -0.000126123 63.8633 2.38936 57.6248 24.2496Z");
+    clip-path: path("M57.6248 24.2496C53.2552 39.5607 42.0853 58 30.7484 58C17.5672 58 5.09847 36.208 1.33716 24.2496C-5.23561 3.3526 13.6744 0.000126133 30.7484 0C47.8224 -0.000126123 63.8633 2.38936 57.6248 24.2496Z");
+    background-color: #A5C9A5;
+    /* Optional: To match the SVG fill color */
+    width: 59px;
+    /* Adjust size as needed */
+    height: 58px;
+    /* Adjust size as needed */
+    scale: 110%;
+  }

@@ -9,7 +9,7 @@ async function fetchAllAlbums(access_token: string | null) {
 
     const response = await fetch(nextUrl, {
         headers: {
-            'Authorization': `Bearer ${access_token}` ,
+            'Authorization': `Bearer ${access_token}`,
         },
     });
 
@@ -17,7 +17,7 @@ async function fetchAllAlbums(access_token: string | null) {
     albums = albums.concat(data.items);
     nextUrl = data.next;
 
-    const filteredAlbums = albums.filter(album => [
+    const specifiedAlbums = [
         'Taylor Swift (Deluxe Edition)',
         'Fearless (Taylor\'s Version)',
         'Speak Now (Taylor\'s Version)',
@@ -26,18 +26,20 @@ async function fetchAllAlbums(access_token: string | null) {
         'reputation',
         'folklore',
         'Lover',
-        'evermore'
-    ].includes(album.name));
+        'evermore',
+        'The Tortured Poets Department: The Anthology'.toUpperCase(),
+        'Midnights'
+    ];
+
+    const filteredAlbums = albums.filter(album => specifiedAlbums.includes(album.name));
 
     return filteredAlbums;
-    
 
-    return albums;
 }
 
 
 export async function GET(req: NextRequest, res: NextResponse) {
-    const {access_token} = await getAccessToken();
+    const { access_token } = await getAccessToken();
 
     const albums = await fetchAllAlbums(access_token);
 
