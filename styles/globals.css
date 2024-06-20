@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+::-webkit-scrollbar {
+    width: 0px;
+    background: transparent; /* Optional: just to hide the scrollbar */
+}
+
+
+.image {
+    @apply border-5 border-white transition duration-300 ease-in-out;
+}
+
+.image.active {
+    @apply border-white;
+}
+
+.snap-start {
+    scroll-snap-align: start;
+}
+
+.scroll-section-container {
+    scroll-snap-type: x mandatory;
+}
