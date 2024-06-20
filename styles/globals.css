@@ -9,7 +9,7 @@
 
 
 .image {
-    @apply border-5 border-white transition duration-300 ease-in-out;
+    @apply border-5 border-transparent transition duration-300 ease-in-out;
 }
 
 .image.active {

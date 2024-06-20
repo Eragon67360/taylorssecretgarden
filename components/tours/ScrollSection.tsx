@@ -45,7 +45,7 @@ function ScrollSection() {
                     scrollTrigger: {
                         trigger: triggerRef.current,
                         start: "top top",
-                        end: "bottom top",
+                        end: () => `+=${totalWidth}`,
                         scrub: 0.6,
                         pin: true,
                         snap: {
@@ -62,16 +62,28 @@ function ScrollSection() {
                 setScrollTriggerInstance(newScrollTrigger);
             }
 
+            console.log("Setting up image triggers");
             images.forEach((image, index) => {
                 if (sectionRef.current && sectionRef.current.children[index]) {
-                    console.log(index);
+                    const element = sectionRef.current.children[index];
+                    console.log(`Setting up trigger for image ${index + 1}`);
+
                     const imgTrigger = ScrollTrigger.create({
-                        trigger: sectionRef.current.children[index],
-                        start: "center center",
-                        end: "center center",
-                        toggleClass: { targets: sectionRef.current.children[index], className: "active" },
-                        markers: false,
+                        trigger: element,
+                        start: () => `top+=${index * (imageWidth + spaceBetween)} center`,
+                        end: () => `top+=${(index + 1) * (imageWidth + spaceBetween)} center`,
+                        toggleClass: { targets: element, className: "active" },
+                        markers: true,
+                        onEnter: () => console.log(`Entering: Image ${index + 1}`),
+                        onLeave: () => console.log(`Leaving: Image ${index + 1}`),
+                        onEnterBack: () => console.log(`Entering Back: Image ${index + 1}`),
+                        onLeaveBack: () => console.log(`Leaving Back: Image ${index + 1}`),
+                        onToggle: (self) => console.log(`Toggled: Image ${index + 1} is ${self.isActive ? 'active' : 'inactive'}`),
                     });
+
+                    console.log(`Trigger for image ${index + 1} set up`, imgTrigger);
+                } else {
+                    console.log(`Element not found for image ${index + 1}`);
                 }
             });
 
@@ -92,6 +104,7 @@ function ScrollSection() {
             window.removeEventListener('resize', updateTranslateX);
         };
     }, [sectionRef, triggerRef, totalWidth]);
+
 
     return (
         <>
