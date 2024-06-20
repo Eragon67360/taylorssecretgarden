@@ -57,7 +57,6 @@ const AlbumDetailsPage = () => {
 
     useEffect(() => {
         if (albumId) {
-            console.log(albumId)
             const fetchAlbumDetails = async () => {
                 const response = await fetch(`/api/${albumId}`);
                 const data = await response.json();
@@ -69,7 +68,6 @@ const AlbumDetailsPage = () => {
                 const data = await response.json();
                 setVariants(data.filteredVariants);
                 setBonusTracks(data.bonusTracks);
-                console.log(data);
             };
             fetchAlbumDetails();
             fetchAlbumVariants();
@@ -138,7 +136,7 @@ const AlbumDetailsPage = () => {
                                                 <li
                                                     key={track.id}
                                                     className={`break-words rounded-full bg-[#A5C9A5] px-4 py-2 my-2 transition-all duration-200 ${track.preview_url !== "" ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
-                                                    role={track.preview_url !== "" ? "button" : undefined}
+                                                    role="button"
                                                     tabIndex={track.preview_url !== "" ? 0 : undefined}
                                                     onClick={track.preview_url !== "" ? () => playTrack(track.name) : undefined}
                                                 >
@@ -150,7 +148,7 @@ const AlbumDetailsPage = () => {
                                             {album.tracks.items.slice(Math.ceil(album.tracks.items.length / 2)).map((track, index) => (
                                                 <li
                                                     key={track.id}
-                                                    role={track.preview_url !== "" ? "button" : undefined}
+                                                    role="button"
                                                     tabIndex={track.preview_url !== "" ? 0 : undefined}                                                    
                                                     className="break-words rounded-full bg-[#A5C9A5] px-4 py-2 my-2 cursor-pointer hover:scale-105 transition-all duration-200"
                                                     onClick={track.preview_url !== "" ? () => playTrack(track.name) : undefined}
