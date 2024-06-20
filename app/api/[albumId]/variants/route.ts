@@ -85,7 +85,6 @@ export async function GET(req: NextRequest, res: NextResponse) {
     const { access_token } = await getAccessToken();
     const albumId = req.nextUrl.pathname.split('/')[2]; // Extract albumId from the given pathname
 
-    console.log(albumId)
     const { filteredVariants, bonusTracks } = await fetchAlbumVariants(access_token, albumId);
 
     return NextResponse.json({ filteredVariants, bonusTracks });
