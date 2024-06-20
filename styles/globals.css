@@ -9,11 +9,11 @@
 
 
 .image {
-    @apply border-5 border-transparent transition duration-300 ease-in-out;
+    border: 5px transparent solid;
 }
 
 .image.active {
-    @apply border-white;
+    border: 5px white solid;
 }
 
 .snap-start {

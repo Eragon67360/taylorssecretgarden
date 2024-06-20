@@ -27,7 +27,7 @@ function ScrollSection() {
         if (sectionRef.current && triggerRef.current) {
             const viewportWidth = window.innerWidth;
             const initialTranslateX = (viewportWidth / 2) - (imageWidth / 2);
-            gsap.set(sectionRef.current, { translateX: initialTranslateX });
+            // gsap.set(sectionRef.current, { translateX: initialTranslateX });
 
             if (scrollTriggerInstance) {
                 scrollTriggerInstance.kill();
@@ -46,7 +46,7 @@ function ScrollSection() {
                         trigger: triggerRef.current,
                         start: "top top",
                         end: () => `+=${totalWidth}`,
-                        scrub: 0.6,
+                        scrub: 0,
                         pin: true,
                         snap: {
                             snapTo: 1 / images.length,
@@ -62,28 +62,19 @@ function ScrollSection() {
                 setScrollTriggerInstance(newScrollTrigger);
             }
 
-            console.log("Setting up image triggers");
             images.forEach((image, index) => {
                 if (sectionRef.current && sectionRef.current.children[index]) {
-                    const element = sectionRef.current.children[index];
-                    console.log(`Setting up trigger for image ${index + 1}`);
+                    const element = sectionRef.current.children[index].querySelector('img');
+                    if (element) {
+                        const imgTrigger = ScrollTrigger.create({
+                            trigger: element,
+                            start: () => `top+=${index * (imageWidth + spaceBetween) - imageWidth - spaceBetween} center`,
+                            end: () => `top+=${index * (imageWidth + spaceBetween)} center`,
+                            toggleClass: { targets: element, className: "active" },
+                            markers: true,
+                        });
 
-                    const imgTrigger = ScrollTrigger.create({
-                        trigger: element,
-                        start: () => `top+=${index * (imageWidth + spaceBetween)} center`,
-                        end: () => `top+=${(index + 1) * (imageWidth + spaceBetween)} center`,
-                        toggleClass: { targets: element, className: "active" },
-                        markers: true,
-                        onEnter: () => console.log(`Entering: Image ${index + 1}`),
-                        onLeave: () => console.log(`Leaving: Image ${index + 1}`),
-                        onEnterBack: () => console.log(`Entering Back: Image ${index + 1}`),
-                        onLeaveBack: () => console.log(`Leaving Back: Image ${index + 1}`),
-                        onToggle: (self) => console.log(`Toggled: Image ${index + 1} is ${self.isActive ? 'active' : 'inactive'}`),
-                    });
-
-                    console.log(`Trigger for image ${index + 1} set up`, imgTrigger);
-                } else {
-                    console.log(`Element not found for image ${index + 1}`);
+                    }
                 }
             });
 
