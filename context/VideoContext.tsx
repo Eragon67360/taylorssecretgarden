@@ -12,7 +12,7 @@ export const VideoContext = createContext<VideoContextProps>({
 });
 
 export const VideoProvider = ({ children }: { children: ReactNode }) => {
-    const [videoSrc, setVideoSrc] = useState<string>('/img/tours/eras.webm');
+    const [videoSrc, setVideoSrc] = useState<string>('/img/bg_ts.jpg');
 
     return (
         <VideoContext.Provider value={{ videoSrc, setVideoSrc }}>
