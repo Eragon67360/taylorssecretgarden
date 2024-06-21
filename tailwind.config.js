@@ -1,4 +1,4 @@
-import {nextui} from '@nextui-org/theme'
+import { nextui } from '@nextui-org/theme'
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -14,11 +14,13 @@ module.exports = {
         fira: ["var(--font-fira)"],
         dancing: ["var(--font-dancing)"],
         impact: ['Impact', 'sans-serif'],
+        playfair: ["var(--font-playfair)"],
       },
       backgroundImage: {
         'custom-gradient': 'linear-gradient(180deg, rgba(217, 217, 217, 0.00) 0%, rgba(79, 79, 79, 0.58) 36.4%, #000 100%)',
-        'tours':'url(\'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/eras\')',
-        'home':'url(\'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/home\')',
+        'tours': 'url(\'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/eras\')',
+        'eras': "url('https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/gallery')",
+        'home': 'url(\'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/home\')',
       },
     },
   },

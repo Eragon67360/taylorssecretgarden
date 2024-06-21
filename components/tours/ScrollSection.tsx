@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { VideoContext } from "@/context/VideoContext";
 import CldImage from "../ui/CldImageWrapper";
 import tours from '@/public/json/tours.json'
+import Link from "next/link";
 
 // const images = [
 //     'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/eras',
@@ -101,8 +102,8 @@ const ScrollSection = () => {
             }
 
             tours.forEach((image, index) => {
-                if (sectionRef.current && sectionRef.current.children[index]) {
-                    const element = sectionRef.current.children[index].querySelector('img');
+                if (sectionRef.current) {
+                    const element = sectionRef.current.querySelectorAll('img')[index];
                     if (element) {
                         const imgTrigger = ScrollTrigger.create({
                             trigger: element,
@@ -134,6 +135,10 @@ const ScrollSection = () => {
         };
     }, [sectionRef, triggerRef, totalWidth]);
 
+    const generateSlug = (name: string) => {
+        return name.toLowerCase().replace(/ /g, '-');
+    };
+
 
     return (
         <>
@@ -147,7 +152,7 @@ const ScrollSection = () => {
                                         <div className="w-full" style={{ maxWidth: imageWidth }}>{tour.tour} <br />{tour.date}</div>
                                     ))}
                                 </div>
-                                <div className="relative h-2 mx-auto" style={{ width:totalWidth-imageWidth  }}>
+                                <div className="relative h-2 mx-auto" style={{ width: totalWidth - imageWidth }}>
                                     <div className="absolute top-1/2 left-0 transform -translate-y-1/2 w-full h-1 bg-white"></div>
                                     {tours.map((tour, index) => (
                                         <div
@@ -161,9 +166,9 @@ const ScrollSection = () => {
                         </div>
                         <div className={`h-full flex relative text-white font-bold text-2xl overflow-hidden text-ellipsis`} style={{ width: totalWidth, gap: spaceBetween }}>
                             {tours.map((tour, index) => (
-                                <div key={index} className="h-full py-44 flex items-end justify-center snap-start">
+                                <Link key={index} className="h-full py-44 flex items-end justify-center snap-start" href={`/tours/${generateSlug(tour.tour)}`}>
                                     <CldImage src={tour.imageUrl} alt={`Tour ${index + 1}`} className="image w-[280px] h-[400px] object-cover rounded-2xl" width={280} height={400} />
-                                </div>
+                                </Link>
                             ))}
                         </div>
 

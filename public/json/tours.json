@@ -3,37 +3,43 @@
       "tour": "The Eras Tour",
       "date": "2023-2024",
       "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/eras"
+      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
+      "slug":"the-eras-tour"
     },
     {
       "tour": "Reputation Tour",
       "date": "2018",
       "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation"
+      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation",
+      "slug":"reputation-tour"
     },
     {
       "tour": "1989 Tour",
       "date": "2015",
       "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/1989",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/nineteeneightynine"
+      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/nineteeneightynine",
+      "slug":"1989-tour"
     },
     {
       "tour": "The Red Tour",
       "date": "2013-2014",
       "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/red",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red"
+      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red",
+      "slug":"the-red-tour"
     },
     {
       "tour": "Speak Now World Tour",
       "date": "2011-2012",
       "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/speak_now",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red"
+      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red",
+      "slug":"speak-now-world-tour"
     },
     {
       "tour": "Fearless Tour",
       "date": "2009-2010",
       "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/fearless",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red"
+      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red",
+      "slug":"fearless-tour"
     }
   ]
   

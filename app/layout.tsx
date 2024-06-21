@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { Providers } from "./providers";
 
 import { siteConfig } from "@/config/site";
-import { fontDancing, fontInter } from "@/config/fonts";
+import { fontDancing, fontInter, fontPlayfair } from "@/config/fonts";
 import Navbar from "@/components/navbar";
 
 export const metadata: Metadata = {
@@ -39,6 +39,7 @@ export default function RootLayout({
           "min-h-screen bg-background font-sans antialiased",
           fontInter.variable,
           fontDancing.variable,
+          fontPlayfair.variable
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
