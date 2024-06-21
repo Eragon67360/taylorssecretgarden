@@ -15,6 +15,7 @@ module.exports = {
         dancing: ["var(--font-dancing)"],
         impact: ['Impact', 'sans-serif'],
         playfair: ["var(--font-playfair)"],
+        unifraktur: ["var(--font-unifraktur)"],
       },
       backgroundImage: {
         'custom-gradient': 'linear-gradient(180deg, rgba(217, 217, 217, 0.00) 0%, rgba(79, 79, 79, 0.58) 36.4%, #000 100%)',

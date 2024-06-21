@@ -4,14 +4,16 @@
       "date": "2023-2024",
       "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
       "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
-      "slug":"the-eras-tour"
+      "slug":"the-eras-tour",
+      "font":"playfair"
     },
     {
       "tour": "Reputation Tour",
       "date": "2018",
       "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation",
       "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation",
-      "slug":"reputation-tour"
+      "slug":"reputation-tour",
+      "font":"unifraktur"
     },
     {
       "tour": "1989 Tour",

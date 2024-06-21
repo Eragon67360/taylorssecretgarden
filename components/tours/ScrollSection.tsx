@@ -8,42 +8,6 @@ import CldImage from "../ui/CldImageWrapper";
 import tours from '@/public/json/tours.json'
 import Link from "next/link";
 
-// const images = [
-//     'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/eras',
-//     'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation',
-//     'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/1989',
-//     'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/red',
-//     'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/speak_now',
-//     'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/fearless',
-// ];
-
-// const videos = [
-//     'https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/eras',
-//     'https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation',
-//     'https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/nineteeneightynine',
-//     'https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red',
-//     'https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red',
-//     'https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red',
-// ];
-
-// const tours = [
-//     'The Eras Tour',
-//     'Reputation Tour',
-//     '1989 Tour',
-//     'The Red Tour',
-//     'Speak Now World Tour',
-//     'Fearless Tour',
-// ];
-
-// const dates = [
-//     '2023-2024',
-//     '2018',
-//     '2015',
-//     '2013-2014',
-//     '2011-2012',
-//     '2009-2010',
-// ];
-
 const ScrollSection = () => {
     const sectionRef = useRef<HTMLDivElement | null>(null);
     const triggerRef = useRef<HTMLDivElement | null>(null);
@@ -149,7 +113,7 @@ const ScrollSection = () => {
                             <div className="bg-black/40 py-4 space-y-4">
                                 <div className="text-white font-bold text-2xl text-center uppercase flex justify-between">
                                     {tours.map((tour, index) => (
-                                        <div className="w-full" style={{ maxWidth: imageWidth }}>{tour.tour} <br />{tour.date}</div>
+                                        <div key={index} className="w-full" style={{ maxWidth: imageWidth }}>{tour.tour} <br />{tour.date}</div>
                                     ))}
                                 </div>
                                 <div className="relative h-2 mx-auto" style={{ width: totalWidth - imageWidth }}>

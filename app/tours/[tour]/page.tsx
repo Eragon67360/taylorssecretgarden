@@ -40,7 +40,7 @@ export default function Tour({ params }: { params: { tour: string } }) {
                     </div>
                 </div>
                 <div className='flex flex-col gap-5 w-full'>
-                    <h1 className='mt-12 uppercase text-[40px] font-extrabold text-center font-playfair'>{tour?.tour}</h1>
+                    <h1 className={`mt-12  text-[40px] font-normal text-center`} style={{fontFamily: `var(--font-${tour.font})`}} >{tour?.tour}</h1>
                     <CldImage
                         src={'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/center'}
                         alt='Centered image of the tour'

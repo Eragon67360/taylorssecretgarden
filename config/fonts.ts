@@ -1,4 +1,4 @@
-import { Fira_Code, Inter , Dancing_Script as Dancing, Playfair_Display } from "next/font/google";
+import { Fira_Code, Inter, Dancing_Script as Dancing, Playfair_Display, UnifrakturMaguntia } from "next/font/google";
 
 export const fontInter = Inter({
   subsets: ["latin"],
@@ -20,3 +20,9 @@ export const fontPlayfair = Playfair_Display({
   variable: "--font-playfair",
 });
 
+export const fontUnifraktur = UnifrakturMaguntia({
+  weight: "400",
+  style: "normal",
+  subsets: ["latin"],
+  variable: "--font-unifraktur",
+});
