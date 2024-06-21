@@ -23,7 +23,7 @@ const Music = () => {
     }, []);
 
     return (
-        <div className="container mx-auto px-4 py-24">
+        <div className="mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {albums.map((album) => (
                     <Link key={album.id} href={`/albums/${album.id}`} className='group'>
