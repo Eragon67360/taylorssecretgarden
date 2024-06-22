@@ -23,6 +23,11 @@ interface User {
   created_at: string;
 }
 
+type UserProfile = {
+  full_name: string;
+  pseudonym: string;
+};
+
 export default function ForumPage() {
 
   const [users, setUsers] = useState<User[]>([]);
@@ -32,11 +37,24 @@ export default function ForumPage() {
   const [authenticated, setAuthenticated] = useState<boolean>(false);
   const [modalClosed, setModalClosed] = useState<boolean>(false);
 
+  const [userProfiles, setUserProfiles] = useState({});
+
+
   const modalLogin = useDisclosure();
   const modalSignUp = useDisclosure();
 
+  async function retrieveSession() {
+    const { data, error } = await supabase.auth.getSession();
+    const { session } = data
+    console.log(user);
+    if (error) {
+      console.error('Error fetching users:', error);
+    } else {
+      setUsers(users);
+    }
+  }
+
   useEffect(() => {
-    console.log("HIIIIIIIII")
     async function fetchUsers() {
       const { data: users, error } = await supabase.from('users').select('*');
       if (error) {
@@ -51,17 +69,18 @@ export default function ForumPage() {
       if (user?.aud === "authenticated") {
         setUser(user);
         setAuthenticated(true)
-      }
-      const response = await fetch('/api/profile');
-      const data = await response.json();
 
-      if (response.ok) {
-        setProfile(data);
-      } else {
-        console.error('Error fetching profile:', data.error);
-      }
+        const response = await fetch('/api/profile?id=' + user?.id);
+        const data = await response.json();
 
+        if (response.ok) {
+          setProfile(data);
+        } else {
+          console.error('Error fetching profile:', data.error);
+        }
+      }
     };
+
 
     async function fetchPosts() {
       const response = await fetch('/api/posts');
@@ -82,25 +101,13 @@ export default function ForumPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user: User = {
-      name: "Thomas",
-      id: "123e4567-e89b-12d3-a456-426614174000",
-      created_at: ""
-    };
-    // const user = supabase.auth.user();
-    const user_id = '123e4567-e89b-12d3-a456-426614174000';
-
-    if (!user) {
-      toast.error('You must be logged in to create a post.');
-      return;
-    }
 
     const response = await fetch('/api/posts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ content, user_id: user_id }),
+      body: JSON.stringify({ content }),
     });
 
     if (!response.ok) {
@@ -115,10 +122,29 @@ export default function ForumPage() {
   };
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      setUser(null);
-      setProfile(null);
+    const response = await fetch('/api/auth/signout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      toast.error(`Error: ${error.error}`);
+    } else {
+      toast.success('Succesffuly signed out!');
+    }
+  };
+
+  const fetchUserProfile = async (id: string) => {
+    const response = await fetch('/api/profile?id=' + id);
+    const data = await response.json();
+    if (response.ok) {
+      return data;
+    } else {
+      console.error('Error fetching profile:', data.error);
+      return null;
     }
   };
 
@@ -169,17 +195,19 @@ export default function ForumPage() {
                 color="primary"
                 variant="underlined" />
               <div className="w-full flex justify-end">
-                <button type="submit" color="primary" disabled={profile? false : true} className="rounded-full bg-primary hover:bg-primary/50 disabled:bg-gray-400 text-white px-3 py-1 transition-all duration-200">POST</button>
+                <button type="submit" color="primary" disabled={profile ? false : true} className="rounded-full bg-primary hover:bg-primary/50 disabled:bg-gray-400 text-white px-3 py-1 transition-all duration-200">POST</button>
               </div>
             </form>
 
             <Tabs variant="underlined" aria-label="Tabs variants" >
-              <Tab title="All" >
+              <Tab title="All" className="flex flex-col gap-2">
                 {posts.map((post) => (
                   <Card key={post.id}>
                     <CardHeader className="gap-2">
                       <Avatar size="sm" />
-                      <p className="font-bold uppercase">{post.user_id}</p>
+                      <p className="font-bold uppercase">
+                        {post.user_id}
+                      </p>
                     </CardHeader>
                     <CardBody>
                       {post.content}
@@ -230,6 +258,7 @@ export default function ForumPage() {
         backdrop="blur">
         <LoginModal onClose={() => {
           modalLogin.onClose();
+          retrieveSession();
           setModalClosed(true);
         }} />
       </Modal>

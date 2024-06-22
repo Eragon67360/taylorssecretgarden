@@ -1,18 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/service/supabaseClient';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // const { data: { user } } = await supabase.auth.getUser()
 
-  if (user?.aud !== "authenticated") {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
 
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', user.id)
+    .eq('id', id)
     .single();
 
   if (error) {

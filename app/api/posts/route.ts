@@ -16,14 +16,23 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-    const { content, user_id } = await request.json();
+    const { content } = await request.json();
 
-    console.log(content, user_id)
+    const { data: { user } } = await supabase.auth.getUser()
+    console.log(user)
+    if (user?.aud !== "authenticated") {
+        return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const response = await fetch('/api/profile?id=' + user?.id);
+    const data = await response.json();
+
+    const uuid: string = user.id;
 
     const { error } = await supabase
         .from('posts')
         .insert([
-            { content, user_id }
+            { content, user_id: uuid, name: data.full_name, pseudonym: data.pseudonym }
         ]);
 
     if (error) {
