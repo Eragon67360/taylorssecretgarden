@@ -1,9 +1,12 @@
 'use client'
-import { Avatar, Button, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader } from "@nextui-org/react";
+import { Avatar, Button, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@nextui-org/react";
+
 import { supabase } from "@/service/supabaseClient";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import LoginModal from "@/components/auth/LoginModal";
+import SignUpModal from "@/components/auth/SignUpModal";
 
 interface Post {
   id: number;
@@ -25,6 +28,11 @@ export default function ForumPage() {
 
   const [users, setUsers] = useState<User[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+
+  const modalLogin = useDisclosure();
+  const modalSignUp = useDisclosure();
 
   useEffect(() => {
     async function fetchUsers() {
@@ -35,8 +43,21 @@ export default function ForumPage() {
         setUsers(users);
       }
     }
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.aud === "authenticated") {
+        setUser(user);
+      }
+      const response = await fetch('/api/profile');
+      const data = await response.json();
 
-    fetchUsers();
+      if (response.ok) {
+        setProfile(data);
+      } else {
+        console.error('Error fetching profile:', data.error);
+      }
+
+    };
 
     async function fetchPosts() {
       const response = await fetch('/api/posts');
@@ -44,6 +65,8 @@ export default function ForumPage() {
       setPosts(data);
     }
 
+    fetchProfile();
+    fetchUsers();
     fetchPosts();
   }, []);
 
@@ -84,6 +107,14 @@ export default function ForumPage() {
     }
   };
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      setUser(null);
+      setProfile(null);
+    }
+  };
+
   return (
     <>
       <div className="w-full flex flex-col items-center">
@@ -99,13 +130,19 @@ export default function ForumPage() {
               <div className="flex gap-2">
                 <Avatar className="bg-white" size="sm" />
                 <div className="flex flex-col text-[10px]">
-                  <p>Name</p>
-                  <p>@anonymous</p>
+                  <p>{profile ? profile.full_name : 'Disconnected'}</p>
+                  <p>@{profile ? profile.pseudonym : 'disconnected'}</p>
                 </div>
               </div>
               <div className="flex gap-2">
-                <button className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full">Sign up</button>
-                <button className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full">Log in</button>
+                {!user ? (
+                  <>
+                    <button onClick={modalSignUp.onOpen} className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full">Sign up</button>
+                    <button onClick={modalLogin.onOpen} className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full">Log in</button>
+                  </>
+                ) : (
+                  <button onClick={handleLogout} className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full">Log out</button>
+                )}
               </div>
 
             </div>
@@ -175,10 +212,25 @@ export default function ForumPage() {
                 ))}
               </div>
             </div>
-
           </div>
         </div>
       </div>
+      <Modal
+        isOpen={modalLogin.isOpen}
+        onOpenChange={modalLogin.onOpenChange}
+        placement="top-center"
+        backdrop="blur">
+        <LoginModal />
+      </Modal>
+
+      <Modal
+        isOpen={modalSignUp.isOpen}
+        onOpenChange={modalSignUp.onOpenChange}
+        placement="top-center"
+        backdrop="blur">
+        <SignUpModal />
+      </Modal>
+
     </>
   );
 }
