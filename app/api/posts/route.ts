@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase
         .from('posts')
         .insert([
-            { content }
+            { content, user_id }
         ]);
 
     if (error) {

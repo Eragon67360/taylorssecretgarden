@@ -1,8 +1,7 @@
 'use client'
+import React, { useEffect, useState } from "react";
 import { Avatar, Button, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@nextui-org/react";
-
 import { supabase } from "@/service/supabaseClient";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import LoginModal from "@/components/auth/LoginModal";
@@ -30,11 +29,14 @@ export default function ForumPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [authenticated, setAuthenticated] = useState<boolean>(false);
+  const [modalClosed, setModalClosed] = useState<boolean>(false);
 
   const modalLogin = useDisclosure();
   const modalSignUp = useDisclosure();
 
   useEffect(() => {
+    console.log("HIIIIIIIII")
     async function fetchUsers() {
       const { data: users, error } = await supabase.from('users').select('*');
       if (error) {
@@ -43,10 +45,12 @@ export default function ForumPage() {
         setUsers(users);
       }
     }
+
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.aud === "authenticated") {
         setUser(user);
+        setAuthenticated(true)
       }
       const response = await fetch('/api/profile');
       const data = await response.json();
@@ -66,9 +70,12 @@ export default function ForumPage() {
     }
 
     fetchProfile();
+    if (modalClosed) {
+      fetchProfile();
+    }
     fetchUsers();
     fetchPosts();
-  }, []);
+  }, [modalClosed]);
 
   const [content, setContent] = useState('');
   const router = useRouter();
@@ -135,13 +142,14 @@ export default function ForumPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                {!user ? (
-                  <>
-                    <button onClick={modalSignUp.onOpen} className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full">Sign up</button>
-                    <button onClick={modalLogin.onOpen} className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full">Log in</button>
-                  </>
-                ) : (
+                {profile ? (
                   <button onClick={handleLogout} className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full">Log out</button>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <button onClick={modalSignUp.onOpen} className="bg-primary hover:bg-primary/50 text-white text-xs px-3 py-1 rounded-full transition-all duration-200">Sign up</button>
+                    <button onClick={modalLogin.onOpen} className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full transition-all duration-200">Log in</button>
+                  </div>
+
                 )}
               </div>
 
@@ -161,7 +169,7 @@ export default function ForumPage() {
                 color="primary"
                 variant="underlined" />
               <div className="w-full flex justify-end">
-                <Button type="submit" color="primary" radius="full">POST</Button>
+                <button type="submit" color="primary" disabled={profile? false : true} className="rounded-full bg-primary hover:bg-primary/50 disabled:bg-gray-400 text-white px-3 py-1 transition-all duration-200">POST</button>
               </div>
             </form>
 
@@ -220,7 +228,10 @@ export default function ForumPage() {
         onOpenChange={modalLogin.onOpenChange}
         placement="top-center"
         backdrop="blur">
-        <LoginModal />
+        <LoginModal onClose={() => {
+          modalLogin.onClose();
+          setModalClosed(true);
+        }} />
       </Modal>
 
       <Modal

@@ -1,21 +1,25 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { FC, useState } from 'react'
 import { Button } from '@nextui-org/button'
 import { ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Checkbox, Link } from '@nextui-org/react'
 import { IoIosMail } from "react-icons/io";
-import { FaKey } from "react-icons/fa";
 import { useRouter } from 'next/navigation';
+import { FaRegEyeSlash, FaRegEye } from "react-icons/fa";
 import { toast } from 'sonner';
 
+type LoginModalProps = {
+    onClose: () => void;
+}
 
-const LoginModal = () => {
+const LoginModal: FC<LoginModalProps> = ({ onClose }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const router = useRouter();
+    const [isVisible, setIsVisible] = useState(false);
+    const toggleVisibility = () => setIsVisible(!isVisible);
 
     const handleLogIn = async (e: React.FormEvent) => {
-        console.log('Log in')
         e.preventDefault();
 
         const response = await fetch('/api/auth/login', {
@@ -30,8 +34,8 @@ const LoginModal = () => {
             const error = await response.json();
             toast.error(`Error: ${error.error}`);
         } else {
-            toast.success('Log in successful!');
-            router.push('/forum');
+            toast.success('Log in successful!');            
+            onClose();
         }
     };
 
@@ -55,11 +59,17 @@ const LoginModal = () => {
                         />
                         <Input
                             endContent={
-                                <FaKey size={24} />
+                                <button className="focus:outline-none" type="button" onClick={toggleVisibility}>
+                                    {isVisible ? (
+                                        <FaRegEyeSlash size={24} />
+                                    ) : (
+                                        <FaRegEye size={24} />
+                                    )}
+                                </button>
                             }
                             label="Password"
+                            type={isVisible ? "text" : "password"}
                             placeholder="Enter your password"
-                            type="password"
                             variant="bordered"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
