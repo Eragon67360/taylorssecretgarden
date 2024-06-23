@@ -1,6 +1,6 @@
 'use client'
 
-import DOMPurify from "dompurify";
+import DOMPurify from "isomorphic-dompurify";
 
 const PostContent = ({ content }: { content: string }) => {
   const createMarkup = () => {

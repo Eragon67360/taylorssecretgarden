@@ -1,12 +1,12 @@
 "use client"
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Avatar, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader, useDisclosure, Divider, Button } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { SignedIn, SignedOut, SignInButton, SignOutButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { HeartIcon } from "@/components/ui/HeartIcon";
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import dynamic from "next/dynamic";
+
 import PostContent from "@/components/ui/PostContent";
 
 interface Post {
@@ -43,6 +43,7 @@ export default function ForumPage() {
 
   const [liked, setLiked] = React.useState(false);
   const [isFollowed, setIsFollowed] = React.useState(false);
+  const ReactQuill = useMemo(() => dynamic(() => import('react-quill'), { ssr: false }),[]);
 
 
   async function fetchUsers() {
