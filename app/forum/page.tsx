@@ -179,7 +179,7 @@ export default function ForumPage() {
                   <Card key={post.id}>
                     <CardHeader className="justify-between">
                       <div className="flex gap-5">
-                        <Avatar isBordered radius="full" size="md"/>
+                        <Avatar isBordered radius="full" size="md" />
                         <div className="flex flex-col gap-1 items-start justify-center">
                           <h4 className="text-small font-semibold leading-none text-default-600">{`${post.users.firstName} ${post.users.lastName}`}</h4>
                           <h5 className="text-small tracking-tight text-default-400">@{post.users.username}</h5>
@@ -196,30 +196,30 @@ export default function ForumPage() {
                         {isFollowed ? "Unfollow" : "Follow"}
                       </Button>
                     </CardHeader>
-                   
+
                     <Divider />
                     <CardBody>
                       <div className="w-full flex justify-between">
-                      <div className="w-full">
-                        {post.content}
-                      </div>
-                      <div className="w-fit">
-                        <Button
-                          isIconOnly
-                          className="text-default-900/60 data-[hover]:bg-foreground/10"
-                          radius="full"
-                          variant="light"
-                          onPress={() => setLiked((v) => !v)}
-                        >
-                          <HeartIcon
-                            className={liked ? "[&>path]:stroke-transparent" : ""}
-                            fill={liked ? "#dd278b" : "none"}
-                          />
-                        </Button>
-                      </div>
+                        <div className="w-full">
+                          {post.content}
+                        </div>
+                        <div className="w-fit">
+                          <Button
+                            isIconOnly
+                            className="text-default-900/60 data-[hover]:bg-foreground/10"
+                            radius="full"
+                            variant="light"
+                            onPress={() => setLiked((v) => !v)}
+                          >
+                            <HeartIcon
+                              className={liked ? "[&>path]:stroke-transparent" : ""}
+                              fill={liked ? "#dd278b" : "none"}
+                            />
+                          </Button>
+                        </div>
 
                       </div>
-                      
+
                     </CardBody>
                     <Divider />
                     <CardFooter>
