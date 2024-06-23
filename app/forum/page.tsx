@@ -1,12 +1,10 @@
 "use client"
 import React, { useEffect, useState } from "react";
-import { Avatar, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader, Modal, useDisclosure, Divider } from "@nextui-org/react";
-import { supabase } from "@/service/supabaseClient";
+import { Avatar, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader, useDisclosure, Divider, Button } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import LoginModal from "@/components/auth/LoginModal";
-import SignUpModal from "@/components/auth/SignUpModal";
 import { SignedIn, SignedOut, SignInButton, SignOutButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { HeartIcon } from "@/components/ui/HeartIcon";
 
 interface Post {
   id: number;
@@ -38,25 +36,14 @@ export default function ForumPage() {
   const [posts, setPosts] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-  const [authenticated, setAuthenticated] = useState<boolean>(false);
   const [modalClosed, setModalClosed] = useState<boolean>(false);
 
-  const [userProfiles, setUserProfiles] = useState({});
+  const [liked, setLiked] = React.useState(false);
+  const [isFollowed, setIsFollowed] = React.useState(false);
 
 
   const modalLogin = useDisclosure();
   const modalSignUp = useDisclosure();
-
-  async function retrieveSession() {
-    const { data, error } = await supabase.auth.getSession();
-    const { session } = data
-    console.log(user);
-    if (error) {
-      console.error('Error fetching users:', error);
-    } else {
-      setUsers(users);
-    }
-  }
 
   useEffect(() => {
     async function fetchUsers() {
@@ -190,21 +177,49 @@ export default function ForumPage() {
               <Tab title="All" className="flex flex-col gap-2">
                 {posts.map((post) => (
                   <Card key={post.id}>
-                    <CardHeader className="gap-2">
-                      <Avatar size="sm" />
-                      <div className="flex flex-col gap-0 justify-center">
-                        <p className="font-bold">
-                          {`${post.users.firstName} ${post.users.lastName}`}
-                        </p>
-                        <p>@{post.users.username}</p>
+                    <CardHeader className="justify-between">
+                      <div className="flex gap-5">
+                        <Avatar isBordered radius="full" size="md"/>
+                        <div className="flex flex-col gap-1 items-start justify-center">
+                          <h4 className="text-small font-semibold leading-none text-default-600">{`${post.users.firstName} ${post.users.lastName}`}</h4>
+                          <h5 className="text-small tracking-tight text-default-400">@{post.users.username}</h5>
+                        </div>
                       </div>
+                      <Button
+                        className={isFollowed ? "bg-transparent text-foreground border-default-200" : ""}
+                        color="primary"
+                        radius="full"
+                        size="sm"
+                        variant={isFollowed ? "bordered" : "solid"}
+                        onPress={() => setIsFollowed(!isFollowed)}
+                      >
+                        {isFollowed ? "Unfollow" : "Follow"}
+                      </Button>
                     </CardHeader>
+                   
                     <Divider />
-                    <CardBody className="flex justify-between">
+                    <CardBody>
+                      <div className="w-full flex justify-between">
                       <div className="w-full">
                         {post.content}
                       </div>
+                      <div className="w-fit">
+                        <Button
+                          isIconOnly
+                          className="text-default-900/60 data-[hover]:bg-foreground/10"
+                          radius="full"
+                          variant="light"
+                          onPress={() => setLiked((v) => !v)}
+                        >
+                          <HeartIcon
+                            className={liked ? "[&>path]:stroke-transparent" : ""}
+                            fill={liked ? "#dd278b" : "none"}
+                          />
+                        </Button>
+                      </div>
 
+                      </div>
+                      
                     </CardBody>
                     <Divider />
                     <CardFooter>
@@ -249,25 +264,6 @@ export default function ForumPage() {
           </div>
         </div>
       </div>
-      <Modal
-        isOpen={modalLogin.isOpen}
-        onOpenChange={modalLogin.onOpenChange}
-        placement="top-center"
-        backdrop="blur">
-        <LoginModal onClose={() => {
-          modalLogin.onClose();
-          retrieveSession();
-          setModalClosed(true);
-        }} />
-      </Modal>
-
-      <Modal
-        isOpen={modalSignUp.isOpen}
-        onOpenChange={modalSignUp.onOpenChange}
-        placement="top-center"
-        backdrop="blur">
-        <SignUpModal />
-      </Modal>
 
     </>
   );
