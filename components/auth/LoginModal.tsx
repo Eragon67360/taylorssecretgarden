@@ -45,8 +45,7 @@ const LoginModal: FC<LoginModalProps> = ({ onClose }) => {
                 <>
                     <ModalHeader className="flex flex-col gap-1">Log in</ModalHeader>
                     <ModalBody>
-                        <Input
-                            autoFocus
+                        <Input                        
                             endContent={
                                 <IoIosMail size={24} />
                             }

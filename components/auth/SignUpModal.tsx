@@ -47,8 +47,8 @@ const SignUpModal = () => {
 
     useEffect(() => {
         validateForm();
-      }, [email, password, fullName, pseudonym]);
-      
+    }, [email, password, fullName, pseudonym]);
+
     const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -75,7 +75,6 @@ const SignUpModal = () => {
                     <ModalHeader className="flex flex-col gap-1">Create an account</ModalHeader>
                     <ModalBody>
                         <Input
-                            autoFocus
                             endContent={
                                 <IoIosMail size={24} />
                             }
@@ -123,7 +122,6 @@ const SignUpModal = () => {
                             isRequired
                         />
                         <Input
-                            autoFocus
                             endContent={
                                 <MdAlternateEmail size={24} />
                             }
