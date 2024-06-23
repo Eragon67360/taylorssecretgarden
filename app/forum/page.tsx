@@ -1,6 +1,6 @@
 "use client"
 import React, { useEffect, useState } from "react";
-import { Avatar, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader, Modal, useDisclosure } from "@nextui-org/react";
+import { Avatar, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader, Modal, useDisclosure, Divider } from "@nextui-org/react";
 import { supabase } from "@/service/supabaseClient";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -199,10 +199,14 @@ export default function ForumPage() {
                         <p>@{post.users.username}</p>
                       </div>
                     </CardHeader>
-                    <CardBody>
-                      {post.content}
-                      <div>Likes: {post.likes} | Reports: {post.reports}</div>
+                    <Divider />
+                    <CardBody className="flex justify-between">
+                      <div className="w-full">
+                        {post.content}
+                      </div>
+
                     </CardBody>
+                    <Divider />
                     <CardFooter>
                       <p>Posted on {new Date(post.date).toLocaleString()}</p>
                     </CardFooter>
