@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import LoginModal from "@/components/auth/LoginModal";
 import SignUpModal from "@/components/auth/SignUpModal";
+import { SignedIn, SignedOut, SignInButton, SignOutButton, SignUpButton, UserButton } from "@clerk/nextjs";
 
 interface Post {
   id: number;
@@ -65,22 +66,17 @@ export default function ForumPage() {
     }
 
     const fetchProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.aud === "authenticated") {
-        setUser(user);
-        setAuthenticated(true)
+      setProfile(null);
+      const response = await fetch('/api/user');
+      const data = await response.json();
 
-        const response = await fetch('/api/profile?id=' + user?.id);
-        const data = await response.json();
-
-        if (response.ok) {
-          setProfile(data);
-        } else {
-          console.error('Error fetching profile:', data.error);
-        }
+      if (data) {
+        setProfile(data.user);
+        console.log(data.user);
+      } else {
+        console.error('Error fetching profile:', data.error);
       }
     };
-
 
     async function fetchPosts() {
       const response = await fetch('/api/posts');
@@ -137,17 +133,6 @@ export default function ForumPage() {
     }
   };
 
-  const fetchUserProfile = async (id: string) => {
-    const response = await fetch('/api/profile?id=' + id);
-    const data = await response.json();
-    if (response.ok) {
-      return data;
-    } else {
-      console.error('Error fetching profile:', data.error);
-      return null;
-    }
-  };
-
   return (
     <>
       <div className="w-full flex flex-col items-center">
@@ -161,22 +146,36 @@ export default function ForumPage() {
           <div className="flex flex-col w-full lg:max-w-[280px]">
             <div className="w-full rounded-2xl bg-[#D9D9D9] flex items-center justify-between gap-2 p-[18px] text-black">
               <div className="flex gap-2">
-                <Avatar className="bg-white" size="sm" />
+                {profile ? (<UserButton />) : (<Avatar className="bg-white" size="sm" />)}
+
                 <div className="flex flex-col text-[10px]">
-                  <p>{profile ? profile.full_name : 'Disconnected'}</p>
-                  <p>@{profile ? profile.pseudonym : 'disconnected'}</p>
+                  <p>{profile ? `${profile.firstName} ${profile.lastName}` : 'Disconnected'}</p>
+                  <p>@{profile ? profile.username : 'disconnected'}</p>
                 </div>
               </div>
               <div className="flex gap-2">
-                {profile ? (
-                  <button onClick={handleLogout} className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full">Log out</button>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    <button onClick={modalSignUp.onOpen} className="bg-primary hover:bg-primary/50 text-white text-xs px-3 py-1 rounded-full transition-all duration-200">Sign up</button>
-                    <button onClick={modalLogin.onOpen} className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full transition-all duration-200">Log in</button>
-                  </div>
 
-                )}
+                <div className="flex flex-col gap-2">
+                  <SignedOut>
+                    <SignUpButton>
+                      <button className="bg-primary hover:bg-primary/50 text-white text-xs px-3 py-1 rounded-full transition-all duration-200">
+                        Sign up
+                      </button>
+                    </SignUpButton>
+                    <SignInButton>
+                      <button className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full transition-all duration-200">
+                        Log in
+                      </button>
+                    </SignInButton>
+                  </SignedOut>
+                  <SignedIn>
+                    <SignOutButton redirectUrl="/forum">
+                      <button className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full transition-all duration-200">
+                        Sign out
+                      </button>
+                    </SignOutButton>
+                  </SignedIn>
+                </div>
               </div>
 
             </div>

@@ -84,7 +84,7 @@ const SignUpModal = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             isInvalid={isEmailInvalid}
-                            color={isEmailInvalid ? "danger" : "success"}
+                            color={isEmailInvalid ? "danger" : "default"}
                             errorMessage="Please enter a valid email"
                             isRequired
                         />
