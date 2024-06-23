@@ -5,7 +5,23 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 export async function GET() {
   const { data: posts, error } = await supabase
     .from("posts")
-    .select("*")
+    .select(
+      `
+      id,
+      content,
+      likes,
+      reports,
+      date,
+      user_id,
+      users (
+        id,
+        username,
+        firstName,
+        lastName,
+        avatar
+      )
+    `
+    )
     .order("date", { ascending: false });
 
   if (error) {
@@ -22,18 +38,6 @@ export async function POST(request: NextRequest) {
     const { userId } = auth();
     const user = await currentUser();
     const id = user?.id;
-    const username = user?.username;
-    const firstName = user?.firstName;
-    const lastName = user?.lastName;
-    const avatar = user?.imageUrl;
-
-    const userInfos = {
-      id,
-      username,
-      firstName,
-      lastName,
-      avatar,
-    };
 
     const { error } = await supabase
       .from("posts")

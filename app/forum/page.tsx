@@ -35,7 +35,7 @@ type UserProfile = {
 export default function ForumPage() {
 
   const [users, setUsers] = useState<User[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [authenticated, setAuthenticated] = useState<boolean>(false);
@@ -121,21 +121,6 @@ export default function ForumPage() {
     }
   };
 
-  const handleLogout = async () => {
-    const response = await fetch('/api/auth/signout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      toast.error(`Error: ${error.error}`);
-    } else {
-      toast.success('Succesffuly signed out!');
-    }
-  };
 
   return (
     <>
@@ -158,7 +143,6 @@ export default function ForumPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-
                 <div className="flex flex-col gap-2">
                   <SignedOut>
                     <SignUpButton>
@@ -208,9 +192,12 @@ export default function ForumPage() {
                   <Card key={post.id}>
                     <CardHeader className="gap-2">
                       <Avatar size="sm" />
-                      <p className="font-bold uppercase">
-                        {post.user_id}
-                      </p>
+                      <div className="flex flex-col gap-0 justify-center">
+                        <p className="font-bold">
+                          {`${post.users.firstName} ${post.users.lastName}`}
+                        </p>
+                        <p>@{post.users.username}</p>
+                      </div>
                     </CardHeader>
                     <CardBody>
                       {post.content}
