@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { SignedIn, SignedOut, SignInButton, SignOutButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { HeartIcon } from "@/components/ui/HeartIcon";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import PostContent from "@/components/ui/PostContent";
 
 interface Post {
   id: number;
@@ -42,43 +45,38 @@ export default function ForumPage() {
   const [isFollowed, setIsFollowed] = React.useState(false);
 
 
-  const modalLogin = useDisclosure();
-  const modalSignUp = useDisclosure();
+  async function fetchUsers() {
+    const response = await fetch('/api/users');
+    const data = await response.json();
+    console.log(data)
+    if (response.ok) {
+      setUsers(data);
+    } else {
+      console.error('Error fetching users:', data.error);
+    }
+  }
+
+  const fetchProfile = async () => {
+    setProfile(null);
+    const response = await fetch('/api/user');
+    const data = await response.json();
+    console.log(data.user);
+    if (data) {
+      setProfile(data.user);
+    } else {
+      console.error('Error fetching profile:', data.error);
+    }
+  };
+
+  async function fetchPosts() {
+    const response = await fetch('/api/posts');
+    const data = await response.json();
+    setPosts(data);
+  }
+
 
   useEffect(() => {
-    async function fetchUsers() {
-      const response = await fetch('/api/users');
-      const data = await response.json();
-      console.log(data)
-      if (response.ok) {
-        setUsers(data);
-      } else {
-        console.error('Error fetching users:', data.error);
-      }
-    }
-
-    const fetchProfile = async () => {
-      setProfile(null);
-      const response = await fetch('/api/user');
-      const data = await response.json();
-      console.log(data.user);
-      if (data) {
-        setProfile(data.user);
-      } else {
-        console.error('Error fetching profile:', data.error);
-      }
-    };
-
-    async function fetchPosts() {
-      const response = await fetch('/api/posts');
-      const data = await response.json();
-      setPosts(data);
-    }
-
     fetchProfile();
-    if (modalClosed) {
-      fetchProfile();
-    }
     fetchUsers();
     fetchPosts();
   }, [modalClosed]);
@@ -104,7 +102,7 @@ export default function ForumPage() {
       toast.success('Post created successfully!');
       console.log('Success')
       setContent('');
-      router.push('/forum');
+      fetchPosts();
     }
   };
 
@@ -160,14 +158,33 @@ export default function ForumPage() {
             <form
               onSubmit={handleSubmit}
               className="w-full rounded-2xl bg-[#D9D9D9] flex flex-col items-center gap-2 p-[18px] text-black py-4">
-              <Textarea
+              {profile ? (
+                <ReactQuill
+                  value={content}
+                  onChange={setContent}
+                  className="p-2 rounded-lg w-full mb-8"
+                  placeholder="What's on your mind?"
+                  theme="snow"
+                />
+              ) : (
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="p-2 rounded-lg w-full"
+                  placeholder="What's on your mind?"
+                  required
+                  color="primary"
+                  variant="underlined" />
+              )
+              }
+              {/* <Textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="p-2 rounded-lg w-full"
                 placeholder="What's on your mind?"
                 required
                 color="primary"
-                variant="underlined" />
+                variant="underlined" /> */}
               <div className="w-full flex justify-end">
                 <button type="submit" color="primary" disabled={profile ? false : true} className="rounded-full bg-primary hover:bg-primary/50 disabled:bg-gray-400 text-white px-3 py-1 transition-all duration-200">POST</button>
               </div>
@@ -201,7 +218,7 @@ export default function ForumPage() {
                     <CardBody>
                       <div className="w-full flex justify-between">
                         <div className="w-full">
-                          {post.content}
+                          <PostContent content={post.content} />
                         </div>
                         <div className="w-fit">
                           <Button
@@ -217,9 +234,7 @@ export default function ForumPage() {
                             />
                           </Button>
                         </div>
-
                       </div>
-
                     </CardBody>
                     <Divider />
                     <CardFooter>
@@ -230,7 +245,7 @@ export default function ForumPage() {
 
               </Tab>
               <Tab title="Following">
-                <Card>
+                {/* <Card>
                   <CardHeader className="gap-2">
                     <Avatar size="sm" />
                     <p className="font-bold uppercase">Name but following</p>
@@ -241,7 +256,7 @@ export default function ForumPage() {
                   <CardFooter>
                     <p>Posted on 15. June 2024</p>
                   </CardFooter>
-                </Card>
+                </Card> */}
               </Tab>
             </Tabs>
           </div>
