@@ -1,43 +1,53 @@
-// app/api/posts/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/service/supabaseClient";
+import { auth, currentUser } from "@clerk/nextjs/server";
 
 export async function GET() {
-    const { data: posts, error } = await supabase
-        .from('posts')
-        .select('*')
-        .order('date', { ascending: false });
+  const { data: posts, error } = await supabase
+    .from("posts")
+    .select("*")
+    .order("date", { ascending: false });
 
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
-    return NextResponse.json(posts);
+  return NextResponse.json(posts);
 }
 
 export async function POST(request: NextRequest) {
-    const { content } = await request.json();
+  const { content } = await request.json();
 
-    const { data: { user } } = await supabase.auth.getUser()
-    console.log(user)
-    if (user?.aud !== "authenticated") {
-        return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
+  try {
+    const { userId } = auth();
+    const user = await currentUser();
+    const id = user?.id;
+    const username = user?.username;
+    const firstName = user?.firstName;
+    const lastName = user?.lastName;
+    const avatar = user?.imageUrl;
 
-    const response = await fetch('/api/profile?id=' + user?.id);
-    const data = await response.json();
-
-    const uuid: string = user.id;
+    const userInfos = {
+      id,
+      username,
+      firstName,
+      lastName,
+      avatar,
+    };
 
     const { error } = await supabase
-        .from('posts')
-        .insert([
-            { content, user_id: uuid, name: data.full_name, pseudonym: data.pseudonym }
-        ]);
+      .from("posts")
+      .insert([{ content, user_id: id }]);
 
     if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ message: 'Post created successfully' });
+    return NextResponse.json(
+      { message: "Post created successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    return NextResponse.json({ error: error }, { status: 500 });
+  }
 }

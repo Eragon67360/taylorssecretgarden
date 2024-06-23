@@ -15,7 +15,7 @@ export default function AccountSuccessPage() {
             const data = await response.json();
 
             if (data.user) {
-                const user = data.user;
+                const user = data.user;                
                 const response = await fetch('/api/users', {
                     method: 'POST',
                     headers: {
@@ -29,7 +29,6 @@ export default function AccountSuccessPage() {
                 else {
                     toast.error('Something went wrong, please click on Redirect to go back to the forum')
                 }
-
             } else {
                 console.error('Error fetching profile:', data.error);
             }

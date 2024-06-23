@@ -20,8 +20,11 @@ interface Post {
 
 interface User {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  username: string;
   created_at: string;
+  avatar: string;
 }
 
 type UserProfile = {
@@ -57,11 +60,13 @@ export default function ForumPage() {
 
   useEffect(() => {
     async function fetchUsers() {
-      const { data: users, error } = await supabase.from('users').select('*');
-      if (error) {
-        console.error('Error fetching users:', error);
+      const response = await fetch('/api/users');
+      const data = await response.json();
+      console.log(data)
+      if (response.ok) {
+        setUsers(data);
       } else {
-        setUsers(users);
+        console.error('Error fetching users:', data.error);
       }
     }
 
@@ -69,10 +74,9 @@ export default function ForumPage() {
       setProfile(null);
       const response = await fetch('/api/user');
       const data = await response.json();
-
+      console.log(data.user);
       if (data) {
         setProfile(data.user);
-        console.log(data.user);
       } else {
         console.error('Error fetching profile:', data.error);
       }
@@ -236,13 +240,17 @@ export default function ForumPage() {
             </Tabs>
           </div>
           <div className="flex flex-col gap-5 w-full lg:max-w-[380px]">
-            <div className="w-full rounded-2xl bg-[#D9D9D9] flex items-center gap-2 p-[18px] text-black flex-col">
+            <div className="w-full rounded-2xl bg-[#D9D9D9] flex items-center gap-2 py-[18px] px-4 text-black flex-col">
               <h2 className="text-xl font-bold">Current users</h2>
-              <div className="flex flex-col gap-4">
-                {users.map((user) => (
-                  <div key={user.id} className="border-b py-4">
-                    <p>{user.name}</p>
-                    <small>Joined on {new Date(user.created_at).toLocaleString()}</small>
+              <div className="flex flex-col gap-4 w-full">
+                {users.map((user, index) => (
+                  <div key={index} className="border-b border-black py-4 flex gap-2 justify-start items-center">
+                    <Avatar src={user.avatar} />
+                    <div className="flex flex-col">
+                      <p>{user.firstName}&nbsp;{user.lastName}</p>
+                      <p>@{user.username}</p>
+                      <small>Joined on {new Date(user.created_at).toLocaleString()}</small>
+                    </div>
                   </div>
                 ))}
               </div>

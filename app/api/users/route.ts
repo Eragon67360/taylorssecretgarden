@@ -18,7 +18,7 @@ export async function POST(req:NextRequest) {
   const { error } = await supabase
         .from('users')
         .insert([
-            { id: user.id, firstName: user.firstName, lastName:user.lastName, username: user.username }
+            { id: user.id, firstName: user.firstName, lastName:user.lastName, username: user.username, avatar:user.imageUrl }
         ]);
 
     if (error) {
