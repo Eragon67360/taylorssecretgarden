@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { Card, CardBody } from '@nextui-org/react';
-import Image from 'next/image';
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { Card, CardBody } from "@nextui-org/react";
+import Image from "next/image";
 
 interface Track {
     id: string;

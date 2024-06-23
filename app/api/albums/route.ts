@@ -1,6 +1,6 @@
 // import { getAccessToken } from '@/service/access-token';
 import { getAccessToken } from '@/service/access-token';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 
 async function fetchAllAlbums(access_token: string | null) {

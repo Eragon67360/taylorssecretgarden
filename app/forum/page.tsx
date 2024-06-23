@@ -1,6 +1,6 @@
-'use client'
+"use client"
 import React, { useEffect, useState } from "react";
-import { Avatar, Button, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@nextui-org/react";
+import { Avatar, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader, Modal, useDisclosure } from "@nextui-org/react";
 import { supabase } from "@/service/supabaseClient";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";

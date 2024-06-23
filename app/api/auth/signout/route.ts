@@ -1,6 +1,6 @@
-import { createClient } from '@/service/supabase/server'
-import { revalidatePath } from 'next/cache'
-import { type NextRequest, NextResponse } from 'next/server'
+import { createClient } from "@/service/supabase/server"
+import { revalidatePath } from "next/cache"
+import { type NextRequest, NextResponse } from "next/server"
 
 
 export async function POST(req: NextRequest) {

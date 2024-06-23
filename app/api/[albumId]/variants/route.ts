@@ -1,5 +1,5 @@
 import { getAccessToken } from '@/service/access-token';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 interface Track {
     name: string;

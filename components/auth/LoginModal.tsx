@@ -1,12 +1,12 @@
-'use client'
+"use client"
 
-import React, { FC, useState } from 'react'
+import React, { FC, useState } from "react"
 import { Button } from '@nextui-org/button'
-import { ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Checkbox, Link } from '@nextui-org/react'
+import { ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Checkbox, Link } from "@nextui-org/react"
 import { IoIosMail } from "react-icons/io";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 import { FaRegEyeSlash, FaRegEye } from "react-icons/fa";
-import { toast } from 'sonner';
+import { toast } from "sonner";
 
 type LoginModalProps = {
     onClose: () => void;

@@ -1,6 +1,6 @@
 // app/api/posts/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/service/supabaseClient';
+import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/service/supabaseClient";
 
 export async function GET() {
     const { data: posts, error } = await supabase

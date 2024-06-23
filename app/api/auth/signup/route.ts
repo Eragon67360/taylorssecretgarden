@@ -1,6 +1,6 @@
 // app/api/auth/signup/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/service/supabase/server';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/service/supabase/server";
 
 export async function POST(request: NextRequest) {
   const { email, password, full_name, username } = await request.json();

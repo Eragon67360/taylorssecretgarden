@@ -1,4 +1,4 @@
-'use client'
+"use client"
 import React, { } from "react";
 import ScrollSection from "@/components/tours/ScrollSection";
 import CldVideo from "@/components/ui/CldVideoWrapper";

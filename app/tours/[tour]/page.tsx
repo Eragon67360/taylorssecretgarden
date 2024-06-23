@@ -1,7 +1,7 @@
-import React from 'react'
+import React from "react"
 import tours from "@/public/json/tours.json"
 import Link from 'next/link';
-import Image from 'next/image';
+import Image from "next/image";
 import CldImage from '@/components/ui/CldImageWrapper';
 
 export default function Tour({ params }: { params: { tour: string } }) {

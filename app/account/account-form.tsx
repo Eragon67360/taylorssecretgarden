@@ -1,7 +1,7 @@
-'use client'
-import { useCallback, useEffect, useState } from 'react'
-import { createClient } from '@/service/supabase/client'
-import { type User } from '@supabase/supabase-js'
+"use client"
+import { useCallback, useEffect, useState } from "react"
+import { createClient } from "@/service/supabase/client"
+import { type User } from "@supabase/supabase-js"
 
 export default function AccountForm({ user }: { user: User | null }) {
   const supabase = createClient()

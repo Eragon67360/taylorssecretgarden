@@ -1,5 +1,5 @@
 // utils/supabaseClient.js
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
     throw Error("No NEXT_PUBLIC_SUPABASE_URL environment variable");

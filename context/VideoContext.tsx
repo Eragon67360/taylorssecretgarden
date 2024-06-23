@@ -1,5 +1,5 @@
 "use client"
-import React, { createContext, useState, ReactNode } from 'react';
+import React, { createContext, useState, ReactNode } from "react";
 
 interface VideoContextProps {
     videoSrc: string;
