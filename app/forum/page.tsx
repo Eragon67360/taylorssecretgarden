@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { SignedIn, SignedOut, SignInButton, SignOutButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { HeartIcon } from "@/components/ui/HeartIcon";
 import dynamic from "next/dynamic";
-
+import 'react-quill/dist/quill.bubble.css';
 import PostContent from "@/components/ui/PostContent";
 
 interface Post {
@@ -43,13 +43,12 @@ export default function ForumPage() {
 
   const [liked, setLiked] = React.useState(false);
   const [isFollowed, setIsFollowed] = React.useState(false);
-  const ReactQuill = useMemo(() => dynamic(() => import('react-quill'), { ssr: false }),[]);
+  const ReactQuill = useMemo(() => dynamic(() => import('react-quill'), { ssr: false }), []);
 
 
   async function fetchUsers() {
     const response = await fetch('/api/users');
     const data = await response.json();
-    console.log(data)
     if (response.ok) {
       setUsers(data);
     } else {
@@ -61,7 +60,6 @@ export default function ForumPage() {
     setProfile(null);
     const response = await fetch('/api/user');
     const data = await response.json();
-    console.log(data.user);
     if (data) {
       setProfile(data.user);
     } else {
@@ -101,7 +99,6 @@ export default function ForumPage() {
       toast.error('Error creating post:')
     } else {
       toast.success('Post created successfully!');
-      console.log('Success')
       setContent('');
       fetchPosts();
     }
@@ -165,7 +162,7 @@ export default function ForumPage() {
                   onChange={setContent}
                   className="p-2 rounded-lg w-full mb-8"
                   placeholder="What's on your mind?"
-                  theme="snow"
+                  theme="bubble"
                 />
               ) : (
                 <Textarea
