@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Avatar, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader, useDisclosure, Divider, Button } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { SignedIn, SignedOut, SignInButton, SignOutButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, SignOutButton, SignUpButton, useClerk, UserButton } from "@clerk/nextjs";
 import { HeartIcon } from "@/components/ui/HeartIcon";
 import dynamic from "next/dynamic";
 import 'react-quill/dist/quill.bubble.css';
@@ -37,7 +37,6 @@ export default function ForumPage() {
 
   const [users, setUsers] = useState<User[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [modalClosed, setModalClosed] = useState<boolean>(false);
 
@@ -45,6 +44,7 @@ export default function ForumPage() {
   const [isFollowed, setIsFollowed] = React.useState(false);
   const ReactQuill = useMemo(() => dynamic(() => import('react-quill'), { ssr: false }), []);
 
+  const { signOut } = useClerk();
 
   async function fetchUsers() {
     const response = await fetch('/api/users');
@@ -56,6 +56,13 @@ export default function ForumPage() {
     }
   }
 
+  async function signOutOfSession() {
+    const response = await signOut({ redirectUrl: '/forum' });
+    if (response !== null) {
+      fetchProfile();
+    }
+  }
+
   const fetchProfile = async () => {
     setProfile(null);
     const response = await fetch('/api/user');
@@ -63,6 +70,7 @@ export default function ForumPage() {
     if (data) {
       setProfile(data.user);
     } else {
+      setProfile(null);
       console.error('Error fetching profile:', data.error);
     }
   };
@@ -140,11 +148,9 @@ export default function ForumPage() {
                     </SignInButton>
                   </SignedOut>
                   <SignedIn>
-                    <SignOutButton redirectUrl="/forum">
-                      <button className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full transition-all duration-200">
-                        Sign out
-                      </button>
-                    </SignOutButton>
+                    <button onClick={() => signOutOfSession()} className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full transition-all duration-200">
+                      Sign out
+                    </button>
                   </SignedIn>
                 </div>
               </div>
@@ -156,33 +162,15 @@ export default function ForumPage() {
             <form
               onSubmit={handleSubmit}
               className="w-full rounded-2xl bg-[#D9D9D9] flex flex-col items-center gap-2 p-[18px] text-black py-4">
-              {profile ? (
-                <ReactQuill
-                  value={content}
-                  onChange={setContent}
-                  className="p-2 rounded-lg w-full mb-8"
-                  placeholder="What's on your mind?"
-                  theme="bubble"
-                />
-              ) : (
-                <Textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="p-2 rounded-lg w-full"
-                  placeholder="What's on your mind?"
-                  required
-                  color="primary"
-                  variant="underlined" />
-              )
-              }
-              {/* <Textarea
+
+              <ReactQuill
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="p-2 rounded-lg w-full"
+                onChange={setContent}
+                className="p-2 rounded-lg w-full mb-8"
                 placeholder="What's on your mind?"
-                required
-                color="primary"
-                variant="underlined" /> */}
+                theme="bubble"
+                readOnly={profile ? false : true}
+              />
               <div className="w-full flex justify-end">
                 <button type="submit" color="primary" disabled={profile ? false : true} className="rounded-full bg-primary hover:bg-primary/50 disabled:bg-gray-400 text-white px-3 py-1 transition-all duration-200">POST</button>
               </div>
@@ -194,7 +182,7 @@ export default function ForumPage() {
                   <Card key={post.id}>
                     <CardHeader className="justify-between">
                       <div className="flex gap-5">
-                        <Avatar isBordered radius="full" size="md" />
+                        <Avatar isBordered radius="full" size="md" src={post.users.avatar} />
                         <div className="flex flex-col gap-1 items-start justify-center">
                           <h4 className="text-small font-semibold leading-none text-default-600">{`${post.users.firstName} ${post.users.lastName}`}</h4>
                           <h5 className="text-small tracking-tight text-default-400">@{post.users.username}</h5>
