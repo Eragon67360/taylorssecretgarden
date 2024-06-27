@@ -1,5 +1,4 @@
-// AlbumDetails.tsx
-
+'use client'
 import { Album, Artist } from '@/types';
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
