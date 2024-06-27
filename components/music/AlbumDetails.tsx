@@ -52,7 +52,7 @@ function formatArtists(artists: Artist[]): string {
 
 export default function AlbumDetails({ albumId }: AlbumDetailsProps) {
     const [album, setAlbum] = useState<Details | null>(null);
-    const [variants, setVariants] = useState<Details[]>([]);
+    const [variants, setVariants] = useState<Details[] | null>(null);
     useEffect(() => {
         if (albumId) {
             const fetchAlbum = async () => {
@@ -72,7 +72,7 @@ export default function AlbumDetails({ albumId }: AlbumDetailsProps) {
             };
 
             fetchAlbum();
-            fetchAlbumVariants();
+            // fetchAlbumVariants();
 
         }
     }, [albumId]);
@@ -93,7 +93,7 @@ export default function AlbumDetails({ albumId }: AlbumDetailsProps) {
                             </div>
                         </div>
                     </div>
-                    {variants && (
+                    {/* {variants && (
                         <div className='flex mt-7 gap-4'>
                             {variants.map((variant, index) => (
                                 <div key={index}>
@@ -101,7 +101,7 @@ export default function AlbumDetails({ albumId }: AlbumDetailsProps) {
                                 </div>
                             ))}
                         </div>
-                    )}
+                    )} */}
                 </div>
                 <Card className="h-[60%] flex flex-col bg-black rounded-2xl text-[#a7a7a7] font-inter">
                     <CardHeader className='justify-between w-full pl-5 pr-8 pt-4 '>
