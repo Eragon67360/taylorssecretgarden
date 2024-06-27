@@ -1,9 +1,8 @@
-import { Card, CardBody, CardHeader, Divider, ScrollShadow, Skeleton } from "@nextui-org/react";
-import { FaRegClock, FaSpotify, FaYoutube } from "react-icons/fa";
-import React from "react";
+import { Skeleton, Card, CardHeader, CardBody, Divider, ScrollShadow } from '@nextui-org/react';
+import React from 'react';
+import { FaRegClock, FaSpotify, FaYoutube } from 'react-icons/fa';
 
-const Music = () => {
-
+const AlbumSkeletonPage = () => {
     return (
         <div className="flex gap-5 pl-[58px] pr-[131px] pt-[105px] pb-[80px] md:pb-[144px] h-full dark">
             <div className="w-2/3 h-full flex flex-col gap-5">
@@ -80,4 +79,4 @@ const Music = () => {
     );
 };
 
-export default Music;
+export default AlbumSkeletonPage;
