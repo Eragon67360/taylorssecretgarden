@@ -81,7 +81,6 @@ export default function ForumPage() {
     setPosts(data);
   }
 
-
   useEffect(() => {
     fetchProfile();
     fetchUsers();

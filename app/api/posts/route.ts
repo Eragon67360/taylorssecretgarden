@@ -7,11 +7,11 @@ export async function GET() {
     .from("posts")
     .select(
       `
-      id,
+    id,
       content,
       likes,
       reports,
-      date,
+      created_at,
       user_id,
       users (
         id,
