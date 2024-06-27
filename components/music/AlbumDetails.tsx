@@ -64,7 +64,11 @@ export default function AlbumDetails({ albumId }: AlbumDetailsProps) {
             const fetchAlbumVariants = async () => {
                 const response = await fetch(`/api/${albumId}/variants`);
                 const data = await response.json();
-                setVariants(data.filteredVariants);
+                console.log(data)
+                if (data) {
+                    setVariants(data.filteredVariants);
+                }
+
             };
 
             fetchAlbum();
