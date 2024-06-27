@@ -90,13 +90,15 @@ export default function AlbumDetails({ albumId }: AlbumDetailsProps) {
                             </div>
                         </div>
                     </div>
-                    <div className='flex mt-7 gap-4'>
-                        {variants.map((variant, index) => (
-                            <div key={index}>
-                                {variant.images && <Image src={variant.images[0]?.url} alt={variant.name} width={58} height={58} />}
-                            </div>
-                        ))}
-                    </div>
+                    {variants && (
+                        <div className='flex mt-7 gap-4'>
+                            {variants.map((variant, index) => (
+                                <div key={index}>
+                                    {variant.images && <Image src={variant.images[0]?.url} alt={variant.name} width={58} height={58} />}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 <Card className="h-[60%] flex flex-col bg-black rounded-2xl text-[#a7a7a7] font-inter">
                     <CardHeader className='justify-between w-full pl-5 pr-8 pt-4 '>
