@@ -39,6 +39,8 @@ async function fetchAlbumVariants(access_token: string | null, albumId: string |
         },
     });
 
+    console.log(access_token)
+
     const albumData: Album = await response.json();
     const albumName = albumData.name.replace(/\(.*?\)|\[.*?\]/g, '').trim(); // Remove text within parentheses or brackets
     const artistId = albumData.artists[0].id;
@@ -75,8 +77,6 @@ async function fetchAlbumVariants(access_token: string | null, albumId: string |
             });
         }
     }
-
-
     return { filteredVariants, bonusTracks };
 }
 

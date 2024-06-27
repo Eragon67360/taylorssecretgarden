@@ -35,11 +35,19 @@ export const getAccessToken = async () => {
         `Spotify token error: ${data.error} - ${data.error_description}`
       );
     }
+
+    if (process.env.NODE_ENV) {
+      console.error(`Production Environment Variables:
+        SPOTIFY_CLIENT_ID: ${client_id}
+        SPOTIFY_CLIENT_SECRET: ${client_secret ? "SET" : "NOT SET"}
+        SPOTIFY_REFRESH_TOKEN: ${refresh_token ? "SET" : "NOT SET"}`);
+      console.error(`Response: ${JSON.stringify(response)}`);
+    }
+
     return data;
   } catch (error) {
     console.error("Error fetching access token", error);
 
-    // Additional detailed logging for production
     if (process.env.NODE_ENV === "production") {
       console.error(`Production Environment Variables:
         SPOTIFY_CLIENT_ID: ${client_id}
