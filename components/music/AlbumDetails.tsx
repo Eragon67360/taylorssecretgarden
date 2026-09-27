@@ -1,9 +1,8 @@
 'use client'
-import { Album, Artist } from '@/types';
+import { Artist } from '@/types';
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Card, CardBody, CardHeader, Divider, ScrollShadow } from '@nextui-org/react';
-import { FaSpotify, FaYoutube } from 'react-icons/fa';
 import { AlbumDetails as Details } from '@/types';
 import { FaRegClock } from "react-icons/fa";
 import AlbumSkeletonPage from './SkeletonAlbumDetails';
@@ -52,28 +51,14 @@ function formatArtists(artists: Artist[]): string {
 
 export default function AlbumDetails({ albumId }: AlbumDetailsProps) {
     const [album, setAlbum] = useState<Details | null>(null);
-    const [variants, setVariants] = useState<Details[] | null>(null);
     useEffect(() => {
         if (albumId) {
             const fetchAlbum = async () => {
                 const response = await fetch(`/api/${albumId}`);
                 const data = await response.json();
-                console.log(data);
                 setAlbum(data);
             };
-            const fetchAlbumVariants = async () => {
-                const response = await fetch(`/api/${albumId}/variants`);
-                const data = await response.json();
-                console.log(data)
-                if (data) {
-                    setVariants(data.filteredVariants);
-                }
-
-            };
-
             fetchAlbum();
-            // fetchAlbumVariants();
-
         }
     }, [albumId]);
 
@@ -84,7 +69,7 @@ export default function AlbumDetails({ albumId }: AlbumDetailsProps) {
             <div className="w-2/3 h-full flex flex-col gap-5">
                 <div className="h-[40%] flex flex-col gap-7">
                     <div className="w-full flex gap-6">
-                        <Image src={album.images[0].url} alt={`Cover album ${album.name}`} width={180} height={180} />
+                        <Image priority src={album.images[0].url} alt={`Cover album ${album.name}`} width={180} height={180} />
                         <div className='flex flex-col justify-between text-white'>
                             <div></div>
                             <div className='flex flex-col gap-1'>
@@ -93,15 +78,6 @@ export default function AlbumDetails({ albumId }: AlbumDetailsProps) {
                             </div>
                         </div>
                     </div>
-                    {/* {variants && (
-                        <div className='flex mt-7 gap-4'>
-                            {variants.map((variant, index) => (
-                                <div key={index}>
-                                    {variant.images && <Image src={variant.images[0]?.url} alt={variant.name} width={58} height={58} />}
-                                </div>
-                            ))}
-                        </div>
-                    )} */}
                 </div>
                 <Card className="h-[60%] flex flex-col bg-black rounded-2xl text-[#a7a7a7] font-inter">
                     <CardHeader className='justify-between w-full pl-5 pr-8 pt-4 '>
@@ -132,39 +108,10 @@ export default function AlbumDetails({ albumId }: AlbumDetailsProps) {
             </div>
             <div className="w-1/3 h-full flex flex-col gap-5">
                 <div className="h-[40%] flex flex-col gap-5 text-white">
-                    <div className='bg-[#3E3E3E] h-1/3 flex items-center justify-between px-8 rounded-2xl'>
-                        <h2 className='font-impact '>Stream</h2>
-                        <div className='flex gap-3'>
-                            <FaSpotify size={24} />
-                            <FaSpotify size={24} />
-                            <FaSpotify size={24} />
-                        </div>
-                    </div>
-                    <div className='bg-[#3E3E3E] h-2/3 rounded-2xl py-8 px-5 font-inter'>
+                    <div className='bg-[#3E3E3E] rounded-2xl py-8 px-5 font-inter'>
                         <p><span className='font-bold'>Label:</span>&nbsp;{album.label}</p>
                         <p><span className='font-bold'>Release Date:</span>&nbsp;{translateDate(album.release_date)}</p>
-                        <p className='mt-4'><span className='font-bold'>Produced by:</span>&nbsp;</p>
                     </div>
-                </div>
-                <div className="h-[60%] flex flex-col items-center gap-5 bg-[#3E3E3E] rounded-2xl py-3 px-5 text-white">
-                    <h2 className="font-dancing capitalize text-4xl font-semibold text-center">music videos</h2>
-                    <ScrollShadow hideScrollBar className="flex flex-col items-center gap-4 overflow-scroll">
-                        <div className="w-[180px] min-h-[120px] bg-white/50 flex items-center justify-center rounded-2xl">
-                            <FaYoutube size={46} />
-                        </div>
-                        <div className="w-[180px] min-h-[120px] bg-white/50 flex items-center justify-center rounded-2xl">
-                            <FaYoutube size={46} />
-                        </div>
-                        <div className="w-[180px] min-h-[120px] bg-white/50 flex items-center justify-center rounded-2xl">
-                            <FaYoutube size={46} />
-                        </div>
-                        <div className="w-[180px] min-h-[120px] bg-white/50 flex items-center justify-center rounded-2xl">
-                            <FaYoutube size={46} />
-                        </div>
-                        <div className="w-[180px] min-h-[120px] bg-white/50 flex items-center justify-center rounded-2xl">
-                            <FaYoutube size={46} />
-                        </div>
-                    </ScrollShadow>
                 </div>
             </div>
         </div>

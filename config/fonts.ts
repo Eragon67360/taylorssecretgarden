@@ -1,13 +1,16 @@
-import { Fira_Code, Inter, Dancing_Script as Dancing, Playfair_Display, UnifrakturMaguntia } from "next/font/google";
+import { Anton, Inter, Dancing_Script as Dancing, Playfair_Display, UnifrakturMaguntia } from "next/font/google";
 
 export const fontInter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
 
-export const fontFira = Fira_Code({
+// Impact-style display face for the home page captions. Impact itself is not
+// installed on every OS (nor licensed for the web), so Anton stands in.
+export const fontImpact = Anton({
+  weight: "400",
   subsets: ["latin"],
-  variable: "--font-fira",
+  variable: "--font-impact",
 });
 
 export const fontDancing = Dancing({

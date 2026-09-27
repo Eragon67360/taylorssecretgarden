@@ -1,10 +1,8 @@
 "use client"
 import React, { useEffect, useMemo, useState } from "react";
-import { Avatar, Textarea, Tabs, Tab, Card, CardBody, CardFooter, CardHeader, useDisclosure, Divider, Button } from "@nextui-org/react";
-import { useRouter } from "next/navigation";
+import { Avatar, Card, CardBody, CardFooter, CardHeader, Divider } from "@nextui-org/react";
 import { toast } from "sonner";
 import { SignedIn, SignedOut, SignInButton, SignOutButton, SignUpButton, useClerk, UserButton } from "@clerk/nextjs";
-import { HeartIcon } from "@/components/ui/HeartIcon";
 import dynamic from "next/dynamic";
 import 'react-quill/dist/quill.bubble.css';
 import PostContent from "@/components/ui/PostContent";
@@ -40,8 +38,6 @@ export default function ForumPage() {
   const [profile, setProfile] = useState<any>(null);
   const [modalClosed, setModalClosed] = useState<boolean>(false);
 
-  const [liked, setLiked] = React.useState(false);
-  const [isFollowed, setIsFollowed] = React.useState(false);
   const ReactQuill = useMemo(() => dynamic(() => import('react-quill'), { ssr: false }), []);
 
   const { signOut } = useClerk();
@@ -88,7 +84,6 @@ export default function ForumPage() {
   }, [modalClosed]);
 
   const [content, setContent] = useState('');
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,7 +113,6 @@ export default function ForumPage() {
         <div className="w-full h-[156px] bg-gradient-to-r from-[#7A2E3A] to-[#4C3337] flex flex-col items-center justify-center text-white px-4">
           <h1 className="text-xl text-center font-inter font-bold">Welcome to the swift<span className="text-[#F00]">ter</span></h1>
           <p className=" text-center text-[10px] mt-1">A social media made by swifties to talk about Taylor Swift for swifties</p>
-          <div className="mt-6 rounded-full w-full lg:w-[580px] h-7 bg-white px-[14px] py-2 text-[#6E6E6E] flex items-center">Search</div>
         </div>
 
         <div className="w-full lg:max-w-[1180px] flex flex-col lg:flex-row gap-5 mt-8 px-4 lg:px-0">
@@ -175,75 +169,28 @@ export default function ForumPage() {
               </div>
             </form>
 
-            <Tabs variant="underlined" aria-label="Tabs variants" >
-              <Tab title="All" className="flex flex-col gap-2">
-                {posts.map((post) => (
-                  <Card key={post.id}>
-                    <CardHeader className="justify-between">
-                      <div className="flex gap-5">
-                        <Avatar isBordered radius="full" size="md" src={post.users.avatar} />
-                        <div className="flex flex-col gap-1 items-start justify-center">
-                          <h4 className="text-small font-semibold leading-none text-default-600">{`${post.users.firstName} ${post.users.lastName}`}</h4>
-                          <h5 className="text-small tracking-tight text-default-400">@{post.users.username}</h5>
-                        </div>
-                      </div>
-                      <Button
-                        className={isFollowed ? "bg-transparent text-foreground border-default-200" : ""}
-                        color="primary"
-                        radius="full"
-                        size="sm"
-                        variant={isFollowed ? "bordered" : "solid"}
-                        onPress={() => setIsFollowed(!isFollowed)}
-                      >
-                        {isFollowed ? "Unfollow" : "Follow"}
-                      </Button>
-                    </CardHeader>
-
-                    <Divider />
-                    <CardBody>
-                      <div className="w-full flex justify-between">
-                        <div className="w-full">
-                          <PostContent content={post.content} />
-                        </div>
-                        <div className="w-fit">
-                          <Button
-                            isIconOnly
-                            className="text-default-900/60 data-[hover]:bg-foreground/10"
-                            radius="full"
-                            variant="light"
-                            onPress={() => setLiked((v) => !v)}
-                          >
-                            <HeartIcon
-                              className={liked ? "[&>path]:stroke-transparent" : ""}
-                              fill={liked ? "#dd278b" : "none"}
-                            />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardBody>
-                    <Divider />
-                    <CardFooter>
-                      <p>Posted on {new Date(post.date).toLocaleString()}</p>
-                    </CardFooter>
-                  </Card>
-                ))}
-
-              </Tab>
-              <Tab title="Following">
-                {/* <Card>
-                  <CardHeader className="gap-2">
-                    <Avatar size="sm" />
-                    <p className="font-bold uppercase">Name but following</p>
+            <div className="flex flex-col gap-2">
+              {posts.map((post) => (
+                <Card key={post.id}>
+                  <CardHeader className="gap-5">
+                    <Avatar isBordered radius="full" size="md" src={post.users.avatar} />
+                    <div className="flex flex-col gap-1 items-start justify-center">
+                      <h4 className="text-small font-semibold leading-none text-default-600">{`${post.users.firstName} ${post.users.lastName}`}</h4>
+                      <h5 className="text-small tracking-tight text-default-400">@{post.users.username}</h5>
+                    </div>
                   </CardHeader>
+
+                  <Divider />
                   <CardBody>
-                    This is a post, I follow the creator
+                    <PostContent content={post.content} />
                   </CardBody>
+                  <Divider />
                   <CardFooter>
-                    <p>Posted on 15. June 2024</p>
+                    <p>Posted on {new Date(post.date).toLocaleString()}</p>
                   </CardFooter>
-                </Card> */}
-              </Tab>
-            </Tabs>
+                </Card>
+              ))}
+            </div>
           </div>
           <div className="flex flex-col gap-5 w-full lg:max-w-[380px]">
             <div className="w-full rounded-2xl bg-[#D9D9D9] flex items-center gap-2 py-[18px] px-4 text-black flex-col">

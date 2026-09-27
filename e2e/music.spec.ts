@@ -35,6 +35,20 @@ test.describe("Music", () => {
 		await expect(page.getByText("Look What You Made Me Do", { exact: true })).toBeHidden();
 	});
 
+	test("Album details show no placeholder controls", async ({ page }) => {
+		await page.goto("/music");
+
+		await page.getByRole("button", { name: "Cover Album reputation" }).click();
+		await expect(page.getByRole("heading", { name: "reputation", exact: true })).toBeVisible();
+		await expect(page.getByText("Label:")).toBeVisible();
+
+		// Streaming icons that linked nowhere, an always-empty "Produced by"
+		// field and grey music-video boxes with nothing in them.
+		await expect(page.getByRole("heading", { name: "Stream" })).toHaveCount(0);
+		await expect(page.getByText("Produced by")).toHaveCount(0);
+		await expect(page.getByRole("heading", { name: "Music videos" })).toHaveCount(0);
+	});
+
 	test("the Albums route returns the curated Albums", async ({ request }) => {
 		const response = await request.get("/api/albums");
 

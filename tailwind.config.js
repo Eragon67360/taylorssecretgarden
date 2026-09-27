@@ -11,9 +11,8 @@ module.exports = {
     extend: {
       fontFamily: {
         inter: ["var(--font-inter)"],
-        fira: ["var(--font-fira)"],
         dancing: ["var(--font-dancing)"],
-        impact: ['Impact', 'sans-serif'],
+        impact: ["var(--font-impact)", "Impact", "sans-serif"],
         playfair: ["var(--font-playfair)"],
         unifraktur: ["var(--font-unifraktur)"],
       },

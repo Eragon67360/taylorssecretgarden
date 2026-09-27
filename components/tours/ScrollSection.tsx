@@ -2,7 +2,6 @@
 import React, { useRef, useEffect, useState, useContext } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
-import Image from "next/image";
 import { VideoContext } from "@/context/VideoContext";
 import CldImage from "../ui/CldImageWrapper";
 import tours from "@/public/json/tours.json"
@@ -14,8 +13,6 @@ const ScrollSection = () => {
     const [scrollTriggerInstance, setScrollTriggerInstance] = useState<ScrollTrigger | null>(null);
     const { setVideoSrc } = useContext(VideoContext);
 
-
-    gsap.registerPlugin(ScrollTrigger);
 
     const imageWidth = 280;
     const spaceBetween = 20;
@@ -53,7 +50,9 @@ const ScrollSection = () => {
                         },
                         onUpdate: self => {
                             const progress = self.progress;
-                            const activeIndex = Math.floor(progress * tours.length);
+                            // progress reaches 1 at the end of the timeline, which
+                            // would index one past the last Tour.
+                            const activeIndex = Math.min(Math.floor(progress * tours.length), tours.length - 1);
                             setVideoSrc(tours[activeIndex].videoUrl);
                         },
                     },
@@ -86,6 +85,9 @@ const ScrollSection = () => {
     };
 
     useEffect(() => {
+        // Registered after hydration: ScrollTrigger touches <body> when it
+        // registers, which React would report as a hydration mismatch.
+        gsap.registerPlugin(ScrollTrigger);
         updateTranslateX();
 
         window.addEventListener('resize', updateTranslateX);
@@ -131,7 +133,7 @@ const ScrollSection = () => {
                         <div className={`h-full flex relative text-white font-bold text-2xl overflow-hidden text-ellipsis`} style={{ width: totalWidth, gap: spaceBetween }}>
                             {tours.map((tour, index) => (
                                 <Link key={index} className="h-full py-44 flex items-end justify-center snap-start" href={`/tours/${generateSlug(tour.tour)}`}>
-                                    <CldImage src={tour.imageUrl} alt={`Tour ${index + 1}`} className="image w-[280px] h-[400px] object-cover rounded-2xl" width={280} height={400} />
+                                    <CldImage priority={index === 0} src={tour.imageUrl} alt={`Tour ${index + 1}`} className="image w-[280px] h-[400px] object-cover rounded-2xl" width={280} height={400} />
                                 </Link>
                             ))}
                         </div>

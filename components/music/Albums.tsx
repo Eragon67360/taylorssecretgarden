@@ -2,7 +2,7 @@
 import { Album } from '@/types';
 import React, { useEffect, useState } from 'react'
 import Image from 'next/image';
-import { ScrollShadow } from "@nextui-org/scroll-shadow";
+import { ScrollShadow } from "@nextui-org/react";
 
 interface AlbumsProps {
     onSelectAlbum: (albumId: string) => void;
@@ -27,7 +27,7 @@ export default function Albums({ onSelectAlbum }: AlbumsProps) {
                 <ScrollShadow hideScrollBar className="flex flex-col gap-5 overflow-scroll">
                     {albums.map((album, index) => (
                         <button key={index} onClick={() => onSelectAlbum(album.id)} className='cursor-pointer grayscale-0 hover:grayscale transition-all duration-300'>
-                            <Image src={album.images[0].url} alt={`Cover Album ${album.name}`} width={180} height={180} />
+                            <Image priority={index === 0} src={album.images[0].url} alt={`Cover Album ${album.name}`} width={180} height={180} />
                         </button>
                     ))}
                 </ScrollShadow>
