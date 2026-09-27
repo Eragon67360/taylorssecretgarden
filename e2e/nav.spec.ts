@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+
 import { expect, test } from "./fixtures";
 
 // The nav marks the page the visitor is on, derived from the URL, so it is
@@ -9,9 +11,9 @@ const sections = [
 	{ name: "Forum", path: "/forum" },
 ];
 
-const nav = (page: import("@playwright/test").Page) => page.getByRole("navigation", { name: "Main" });
+const nav = (page: Page) => page.getByRole("navigation", { name: "Main" });
 
-async function expectCurrent(page: import("@playwright/test").Page, current: string) {
+async function expectCurrent(page: Page, current: string) {
 	for (const { name } of sections) {
 		const link = nav(page).getByRole("link", { name, exact: true });
 

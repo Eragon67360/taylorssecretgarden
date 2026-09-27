@@ -10,11 +10,12 @@ test.describe("Home", () => {
 
 		const { family, loaded } = await caption.evaluate(async (element) => {
 			await document.fonts.ready;
-			const family = getComputedStyle(element).fontFamily.split(",")[0].trim().replace(/^["']|["']$/g, "");
+			const unquote = (name: string) => name.trim().replace(/^["']|["']$/g, "");
+			const family = unquote(getComputedStyle(element).fontFamily.split(",")[0]);
 			let loaded = false;
 
 			document.fonts.forEach((face) => {
-				if (face.family.replace(/^["']|["']$/g, "") === family && face.status === "loaded") loaded = true;
+				if (unquote(face.family) === family && face.status === "loaded") loaded = true;
 			});
 
 			return { family, loaded };
