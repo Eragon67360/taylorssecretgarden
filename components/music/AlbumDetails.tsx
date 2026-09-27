@@ -69,7 +69,7 @@ export default function AlbumDetails({ albumId }: AlbumDetailsProps) {
             <div className="w-2/3 h-full flex flex-col gap-5">
                 <div className="h-[40%] flex flex-col gap-7">
                     <div className="w-full flex gap-6">
-                        <Image src={album.images[0].url} alt={`Cover album ${album.name}`} width={180} height={180} />
+                        <Image priority src={album.images[0].url} alt={`Cover album ${album.name}`} width={180} height={180} />
                         <div className='flex flex-col justify-between text-white'>
                             <div></div>
                             <div className='flex flex-col gap-1'>

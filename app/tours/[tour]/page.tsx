@@ -67,7 +67,7 @@ export default function Tour({ params }: { params: { tour: string } }) {
                     >
                         <p className='uppercase text-white font-inter text-[20px] font-bold w-full text-end'>Watch it on</p>
                         <div className='w-full flex justify-end'>
-                            <CldImage src='https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/disney' alt='Logo VOD' height={56} width={103.158} />
+                            <CldImage src='https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/disney' alt='Logo VOD' height={56} width={103} />
                         </div>
                     </div>
                 </div>
