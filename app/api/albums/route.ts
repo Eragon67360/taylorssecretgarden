@@ -1,23 +1,24 @@
-import { getArtistAlbums, TAYLOR_SWIFT_ARTIST_ID, toAlbum } from '@/service/deezer';
+import { getAlbums, toAlbum } from '@/service/deezer';
 import { NextResponse } from "next/server";
 
-const specifiedAlbums = [
-    'Taylor Swift (Deluxe Edition)',
-    'Fearless (Taylor\'s Version)',
-    'Speak Now (Taylor\'s Version)',
-    '1989 (Taylor\'s Version)',
-    'Red (Taylor\'s Version)',
-    'reputation',
-    'folklore',
-    'Lover',
-    'evermore',
-    'The Tortured Poets Department: The Anthology'.toUpperCase(),
-    'Midnights'
+// Curated by Deezer album ID, fetched directly: titles vary with the catalog
+// region, and title matching dropped the debut album on Vercel's build machines.
+const specifiedAlbumIds = [
+    227786,    // Taylor Swift (Deluxe Edition)
+    221543452, // Fearless (Taylor's Version)
+    461146065, // Speak Now (Taylor's Version)
+    504180521, // 1989 (Taylor's Version)
+    272247412, // Red (Taylor's Version)
+    52612062,  // reputation
+    162683632, // folklore
+    108447472, // Lover
+    192580112, // evermore
+    575252501, // THE TORTURED POETS DEPARTMENT: THE ANTHOLOGY
+    368474187, // Midnights
 ];
 
 export async function GET() {
-    const albums = await getArtistAlbums(TAYLOR_SWIFT_ARTIST_ID);
-    const filteredAlbums = albums.filter(album => specifiedAlbums.includes(album.title));
+    const albums = await getAlbums(specifiedAlbumIds);
 
-    return NextResponse.json({ items: filteredAlbums.map(toAlbum) });
+    return NextResponse.json({ items: albums.map(toAlbum) });
 }

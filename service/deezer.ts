@@ -38,6 +38,12 @@ async function deezerGet<T>(path: string): Promise<T> {
   return data;
 }
 
+export async function getAlbums(albumIds: number[]): Promise<DeezerAlbum[]> {
+  const albums = await Promise.all(albumIds.map((id) => deezerGet<DeezerAlbum>(`/album/${id}`)));
+
+  return albums.sort((a, b) => b.release_date.localeCompare(a.release_date));
+}
+
 export async function getArtistAlbums(artistId: number): Promise<DeezerAlbum[]> {
   const { data } = await deezerGet<{ data: DeezerAlbum[] }>(`/artist/${artistId}/albums?limit=200`);
 
