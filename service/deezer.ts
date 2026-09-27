@@ -1,7 +1,6 @@
 import { Album, AlbumDetails } from "@/types";
 
 const API_URL = "https://api.deezer.com";
-export const TAYLOR_SWIFT_ARTIST_ID = 12246;
 
 type DeezerAlbum = {
   id: number;
@@ -44,15 +43,8 @@ export async function getAlbums(albumIds: number[]): Promise<DeezerAlbum[]> {
   return albums.sort((a, b) => b.release_date.localeCompare(a.release_date));
 }
 
-export async function getArtistAlbums(artistId: number): Promise<DeezerAlbum[]> {
-  const { data } = await deezerGet<{ data: DeezerAlbum[] }>(`/artist/${artistId}/albums?limit=200`);
-
-  // Newest first, like the Spotify endpoint this replaces.
-  return data.sort((a, b) => b.release_date.localeCompare(a.release_date));
-}
-
 // `/album/{id}` embeds at most 25 tracks, so tracks are fetched separately.
-export async function getAlbumTracks(albumId: string | number): Promise<DeezerTrack[]> {
+async function getAlbumTracks(albumId: string | number): Promise<DeezerTrack[]> {
   const { data } = await deezerGet<{ data: DeezerTrack[] }>(`/album/${albumId}/tracks?limit=200`);
 
   return data;
