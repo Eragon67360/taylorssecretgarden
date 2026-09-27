@@ -3,7 +3,8 @@ import tours from "@/public/json/tours.json"
 import Link from 'next/link';
 import CldImage from '@/components/ui/CldImageWrapper';
 
-export default function Tour({ params }: { params: { tour: string } }) {
+export default async function Tour(props: { params: Promise<{ tour: string }> }) {
+    const params = await props.params;
 
     const tour = tours.find((t) => t.slug === params.tour);
 
