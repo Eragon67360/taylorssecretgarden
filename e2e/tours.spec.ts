@@ -14,15 +14,13 @@ test.describe("Tours", () => {
 	test("every Tour on the timeline links to its Tour page", async ({ page }) => {
 		await page.goto("/tours");
 
-		// Timeline links are in the same order as the Tours they show.
+		// Each Tour page itself is checked in routes.spec.ts; here, the timeline
+		// must link to it, in timeline order.
 		const links = page.getByRole("link").filter({ has: page.getByRole("img", { name: /^Tour \d+$/ }) });
 
 		await expect(links).toHaveCount(tours.length);
-		const hrefs = await links.evaluateAll((els) => els.map((el) => el.getAttribute("href") ?? ""));
-
 		for (let index = 0; index < tours.length; index++) {
-			await page.goto(hrefs[index]);
-			await expect(page.getByRole("heading", { name: tours[index].tour, exact: true }), hrefs[index]).toBeVisible();
+			await expect(links.nth(index)).toHaveAttribute("href", `/tours/${tours[index].slug}`);
 		}
 	});
 

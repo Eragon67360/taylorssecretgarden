@@ -1,5 +1,8 @@
 import { expect, test } from "./fixtures";
 
+// Deezer titles some Albums differently by catalog region (the debut is
+// "Taylor Swift (Deluxe Edition)" in Europe, "Taylor Swift" in the US), so
+// these tests only name Albums whose titles are the same everywhere.
 test.describe("Music", () => {
 	test("shows at least 10 curated Album covers", async ({ page }) => {
 		await page.goto("/music");
@@ -8,21 +11,28 @@ test.describe("Music", () => {
 
 		await expect(covers.nth(9)).toBeVisible();
 		expect(await covers.count()).toBeGreaterThanOrEqual(10);
+
+		// The cover images actually loaded, not just their alt text.
+		for (const cover of (await covers.all()).slice(0, 10)) {
+			await cover.scrollIntoViewIfNeeded();
+			await expect.poll(() => cover.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+		}
 	});
 
-	test("selecting another Album shows its tracklist", async ({ page }) => {
+	test("selecting an Album shows its tracklist", async ({ page }) => {
 		await page.goto("/music");
-
-		// The debut Album is selected by default.
-		await expect(page.getByRole("heading", { name: "Taylor Swift (Deluxe Edition)" })).toBeVisible();
-		await expect(page.getByText("Tim McGraw", { exact: true })).toBeVisible();
 
 		await page.getByRole("button", { name: "Cover Album reputation" }).click();
 
 		await expect(page.getByRole("heading", { name: "reputation", exact: true })).toBeVisible();
 		await expect(page.getByText("...Ready For It?", { exact: true })).toBeVisible();
 		await expect(page.getByText("Look What You Made Me Do", { exact: true })).toBeVisible();
-		await expect(page.getByText("Tim McGraw", { exact: true })).toBeHidden();
+
+		await page.getByRole("button", { name: "Cover Album folklore" }).click();
+
+		await expect(page.getByRole("heading", { name: "folklore", exact: true })).toBeVisible();
+		await expect(page.getByText("cardigan", { exact: true })).toBeVisible();
+		await expect(page.getByText("Look What You Made Me Do", { exact: true })).toBeHidden();
 	});
 
 	test("the Albums route returns the curated Albums", async ({ request }) => {

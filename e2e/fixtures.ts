@@ -3,8 +3,10 @@ import { test as base, expect } from "@playwright/test";
 /**
  * Console messages that are known, harmless noise. Every entry must say why
  * it is allowed; anything else logged as an error or warning fails the test.
+ * Warnings are included on purpose: hydration and next/image problems surface
+ * as warnings, and Clerk's notice below is one.
  */
-const ALLOWED_CONSOLE_ERRORS: { pattern: RegExp; reason: string }[] = [
+const ALLOWED_CONSOLE_MESSAGES: { pattern: RegExp; reason: string }[] = [
 	{
 		pattern: /Clerk has been loaded with development keys/,
 		reason: "The site runs on Clerk development keys during Phase A (see #6); Clerk warns about it on every page.",
@@ -30,7 +32,7 @@ export const test = base.extend<Fixtures>({
 				if (message.type() !== "error" && message.type() !== "warning") return;
 				const text = message.text();
 
-				if (ALLOWED_CONSOLE_ERRORS.some(({ pattern }) => pattern.test(text))) return;
+				if (ALLOWED_CONSOLE_MESSAGES.some(({ pattern }) => pattern.test(text))) return;
 				problems.push(`console.${message.type()}: ${text}`);
 			});
 

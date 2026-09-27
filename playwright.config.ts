@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const isCI = !!process.env.CI;
 const PORT = Number(process.env.PORT ?? 3100);
 const baseURL = `http://localhost:${PORT}`;
 
@@ -11,10 +12,10 @@ export default defineConfig({
 	timeout: 60_000,
 	expect: { timeout: 15_000 },
 	fullyParallel: true,
-	forbidOnly: !!process.env.CI,
-	retries: process.env.CI ? 1 : 0,
-	workers: process.env.CI ? 2 : undefined,
-	reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["list"], ["html", { open: "never" }]],
+	forbidOnly: isCI,
+	retries: isCI ? 1 : 0,
+	workers: isCI ? 2 : undefined,
+	reporter: isCI ? [["github"], ["html", { open: "never" }]] : [["list"], ["html", { open: "never" }]],
 	use: {
 		baseURL,
 		trace: "retain-on-failure",
@@ -22,9 +23,9 @@ export default defineConfig({
 	},
 	projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 	webServer: {
-		command: process.env.CI ? `npx next start -p ${PORT}` : `npm run build && npx next start -p ${PORT}`,
+		command: isCI ? `npx next start -p ${PORT}` : `npm run build && npx next start -p ${PORT}`,
 		url: baseURL,
 		timeout: 300_000,
-		reuseExistingServer: !process.env.CI,
+		reuseExistingServer: !isCI,
 	},
 });
