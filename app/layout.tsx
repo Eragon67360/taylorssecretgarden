@@ -32,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html className="light" lang="en">
       <head />
       <body
         className={clsx(
@@ -44,7 +44,7 @@ export default function RootLayout({
           fontUnifraktur.variable
         )}
       >
-        <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
+        <Providers>
           <div className="relative flex flex-col h-screen">
             <Navbar />
             <main className="w-screen h-screen">
