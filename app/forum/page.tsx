@@ -4,7 +4,7 @@ import { Avatar, Card, CardBody, CardFooter, CardHeader, Divider } from "@nextui
 import { toast } from "sonner";
 import { Show, SignInButton, SignOutButton, SignUpButton, useClerk, UserButton } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
-import 'react-quill/dist/quill.bubble.css';
+import 'react-quill-new/dist/quill.bubble.css';
 import PostContent from "@/components/ui/PostContent";
 
 interface Post {
@@ -38,7 +38,7 @@ export default function ForumPage() {
   const [profile, setProfile] = useState<any>(null);
   const [modalClosed, setModalClosed] = useState<boolean>(false);
 
-  const ReactQuill = useMemo(() => dynamic(() => import('react-quill'), { ssr: false }), []);
+  const ReactQuill = useMemo(() => dynamic(() => import('react-quill-new'), { ssr: false }), []);
 
   const { signOut } = useClerk();
 
