@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Avatar, Card, CardBody, CardFooter, CardHeader, Divider } from "@nextui-org/react";
 import { toast } from "sonner";
-import { SignedIn, SignedOut, SignInButton, SignOutButton, SignUpButton, useClerk, UserButton } from "@clerk/nextjs";
+import { Show, SignInButton, SignOutButton, SignUpButton, useClerk, UserButton } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import 'react-quill/dist/quill.bubble.css';
 import PostContent from "@/components/ui/PostContent";
@@ -128,7 +128,7 @@ export default function ForumPage() {
               </div>
               <div className="flex gap-2">
                 <div className="flex flex-col gap-2">
-                  <SignedOut>
+                  <Show when="signed-out">
                     <SignUpButton>
                       <button className="bg-primary hover:bg-primary/50 text-white text-xs px-3 py-1 rounded-full transition-all duration-200">
                         Sign up
@@ -139,12 +139,12 @@ export default function ForumPage() {
                         Log in
                       </button>
                     </SignInButton>
-                  </SignedOut>
-                  <SignedIn>
+                  </Show>
+                  <Show when="signed-in">
                     <button onClick={() => signOutOfSession()} className="bg-[#CDC9C0] text-xs px-3 py-1 rounded-full transition-all duration-200">
                       Sign out
                     </button>
-                  </SignedIn>
+                  </Show>
                 </div>
               </div>
 
