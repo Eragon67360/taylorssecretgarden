@@ -9,7 +9,7 @@ export default function MusicLayout({
   children: React.ReactNode;
 }) {
 
-  const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>("5eyZZoQEFQWRHkV2xgAeBw");
+  const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>("227786");
 
   const handleSelectAlbum = (albumId: string) => {
     setSelectedAlbumId(albumId);
