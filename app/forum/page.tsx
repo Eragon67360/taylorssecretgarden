@@ -37,7 +37,7 @@ export default function ForumPage() {
   const [profile, setProfile] = useState<any>(null);
   const [modalClosed, setModalClosed] = useState<boolean>(false);
 
-  const ReactQuill = useMemo(() => dynamic(() => import('@/components/ui/PostEditor'), { ssr: false }), []);
+  const PostEditor = useMemo(() => dynamic(() => import('@/components/ui/PostEditor'), { ssr: false }), []);
 
   const { signOut } = useClerk();
 
@@ -155,7 +155,7 @@ export default function ForumPage() {
               onSubmit={handleSubmit}
               className="w-full rounded-2xl bg-[#D9D9D9] flex flex-col items-center gap-2 p-[18px] text-black py-4">
 
-              <ReactQuill
+              <PostEditor
                 value={content}
                 onChange={setContent}
                 className="p-2 rounded-lg w-full mb-8"
