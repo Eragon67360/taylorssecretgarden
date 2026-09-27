@@ -2,7 +2,6 @@
 import React, { useRef, useEffect, useState, useContext } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
-import Image from "next/image";
 import { VideoContext } from "@/context/VideoContext";
 import CldImage from "../ui/CldImageWrapper";
 import tours from "@/public/json/tours.json"
@@ -53,7 +52,9 @@ const ScrollSection = () => {
                         },
                         onUpdate: self => {
                             const progress = self.progress;
-                            const activeIndex = Math.floor(progress * tours.length);
+                            // progress reaches 1 at the end of the timeline, which
+                            // would index one past the last Tour.
+                            const activeIndex = Math.min(Math.floor(progress * tours.length), tours.length - 1);
                             setVideoSrc(tours[activeIndex].videoUrl);
                         },
                     },

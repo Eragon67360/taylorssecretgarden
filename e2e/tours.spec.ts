@@ -25,11 +25,9 @@ test.describe("Tours", () => {
 	});
 
 	test("scrolling the whole timeline raises no page error", async ({ page }) => {
-		// Expected failure: reaching the end of the timeline reads the video of a
-		// Tour past the end of the list ("Cannot read properties of undefined
-		// (reading 'videoUrl')"). #8 fixes it and must flip this test.
-		test.fail(true, "Tours timeline throws at the end; fixed by #8");
-
+		// Regression: reaching the end of the timeline used to read the video of
+		// a Tour past the end of the list ("Cannot read properties of undefined
+		// (reading 'videoUrl')").
 		await page.goto("/tours");
 		await expect(page.getByRole("heading", { name: "Tours", exact: true })).toBeVisible();
 
