@@ -2,7 +2,7 @@
 import { Album } from '@/types';
 import React, { useEffect, useState } from 'react'
 import Image from 'next/image';
-import { ScrollShadow } from "@nextui-org/scroll-shadow";
+import { ScrollShadow } from "@nextui-org/react";
 
 interface AlbumsProps {
     onSelectAlbum: (albumId: string) => void;
