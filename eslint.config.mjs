@@ -26,18 +26,17 @@ const config = [
       "unused-imports": unusedImports,
     },
     rules: {
+      // Rules only: eslint-config-next already registers the jsx-a11y plugin,
+      // and registering jsxA11y.flatConfigs.recommended throws "Cannot
+      // redefine plugin".
       ...jsxA11y.flatConfigs.recommended.rules,
 
       "no-console": "warn",
-      "react/prop-types": "off",
       "react/jsx-uses-react": "off",
-      "react/react-in-jsx-scope": "off",
       "react-hooks/exhaustive-deps": "off",
       "jsx-a11y/click-events-have-key-events": "warn",
       "jsx-a11y/interactive-supports-focus": "warn",
 
-      "no-unused-vars": "off",
-      "unused-imports/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "warn",
       "@typescript-eslint/no-unused-vars": [
         "warn",
