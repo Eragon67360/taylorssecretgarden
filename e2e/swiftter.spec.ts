@@ -51,8 +51,8 @@ const stubPost = (id: string, content: string, createdAt = new Date(Date.now() -
 	author: { displayName: "Stub Member", username: "stub", avatarUrl: null },
 });
 
-/** Relative dates as Intl.RelativeTimeFormat writes them in English. */
-const RELATIVE_DATE = /^(just now|now|yesterday|last (week|month|year)|\d+ (seconds?|minutes?|hours?|days?|weeks?|months?|years?) ago)$/;
+/** Relative dates as the feed writes them ("just now", "3 days ago", "last week"). */
+const RELATIVE_DATE = /^(just now|yesterday|last (week|month|year)|\d+ (minutes?|hours?|days?|weeks?|months?|years?) ago)$/;
 
 // Publishing tests check "newest first", so this file's tests run one after
 // another in a single worker.
@@ -269,7 +269,7 @@ test.describe("Swiftter, signed in", () => {
 
 		const marker = `formatted ${Date.now()}`;
 		const editor = page.getByRole("textbox", { name: "Write a Post" });
-		const toolbar = page.getByRole("toolbar", { name: "Formatting" });
+		const toolbar = page.getByRole("group", { name: "Formatting" });
 
 		await editor.click();
 		await toolbar.getByRole("button", { name: "Bold" }).click();

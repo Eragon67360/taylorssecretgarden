@@ -10,8 +10,11 @@ import { NoteSheet, type NotePaper, PAPERS, PinnedPhoto, ruling, TEXT_INSET } fr
 import { PostContent } from "./post-content";
 import { relativeDate } from "./relative-date";
 
-/** Lined paper, then a sticky note, and so on down the feed. */
-export const paperFor = (index: number): NotePaper => (index % 2 === 0 ? "lined" : "sticky");
+/**
+ * Lined paper and sticky notes in turn, counted from the oldest Post, so a
+ * newly published Post never changes the paper of the ones already shown.
+ */
+export const paperFor = (index: number, count: number): NotePaper => ((count - 1 - index) % 2 === 0 ? "lined" : "sticky");
 
 /**
  * One Post, passed like a note in class: the Member's avatar pinned in the

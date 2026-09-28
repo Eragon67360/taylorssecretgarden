@@ -28,7 +28,7 @@ export const PAPERS = {
     rule: "#bcd3e6",
   },
   sticky: {
-    ink: "#2b1d14",
+    ink: "var(--sticky-ink)",
     soft: "#5a4535",
     tilt: 0.9,
     fold: 22,

@@ -146,7 +146,7 @@ function Toolbar({ editor }: { editor: Editor | null }) {
 
   return (
     <div className={cn("relative pr-4 pb-2 sm:pr-6", TEXT_INSET)}>
-      <div aria-label="Formatting" className="flex flex-wrap gap-1" role="toolbar">
+      <div aria-label="Formatting" className="flex flex-wrap gap-1" role="group">
         <ToolButton label="Bold" pressed={active?.bold} onClick={run((e) => e.chain().focus().toggleBold().run())}>
           <span className="font-extrabold">B</span>
         </ToolButton>
@@ -175,7 +175,7 @@ function ToolButton({ label, pressed = false, expanded, onClick, children }: Too
     <button
       aria-expanded={expanded}
       aria-label={label}
-      aria-pressed={expanded === undefined ? pressed : undefined}
+      aria-pressed={pressed}
       className={cn(
         "focus-ring flex size-8 items-center justify-center rounded-[6px] border-[1.5px] text-[17px] leading-none transition-colors",
         pressed || expanded ? "border-current bg-[#23397a] text-[#fffefa]" : "border-[#bcd3e6] bg-[#fffefa] hover:border-current",

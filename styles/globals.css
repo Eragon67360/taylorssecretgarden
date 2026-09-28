@@ -270,11 +270,6 @@
     list-style-type: disc;
 }
 
-/* An empty paragraph is a blank line, as it was when it was written. */
-.post-content p {
-    min-height: 1lh;
-}
-
 .post-content a {
     text-decoration: underline;
     text-underline-offset: 2px;

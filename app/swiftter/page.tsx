@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 import { PressedFlower, Scribble, WashiTape } from "@/components/scrapbook";
 import { FeedEmpty, FeedError, FeedLoading } from "@/components/swiftter/feed-states";
+import { NoteSheet, PAPERS, ruling } from "@/components/swiftter/note-paper";
 import { paperFor, PostNote } from "@/components/swiftter/post-note";
 
 const FEED_URL = "/api/swiftter/posts";
@@ -133,7 +134,7 @@ export default function SwiftterPage() {
           {feed.status === "ready" && feed.posts.length > 0 && (
             <div aria-label="Posts" className="flex flex-col gap-9 sm:gap-11" role="feed">
               {feed.posts.map((post, index) => (
-                <PostNote key={post.id} paper={paperFor(index)} post={post} />
+                <PostNote key={post.id} paper={paperFor(index, feed.posts.length)} post={post} />
               ))}
             </div>
           )}
@@ -176,10 +177,9 @@ function GuestbookPrompt() {
 /** Blank lined paper the size of the composer, while it (or the sign-in state) loads. */
 function ComposerPlaceholder() {
   return (
-    <div
-      aria-hidden="true"
-      className="h-[340px] rotate-[-0.7deg] bg-[#fffefa] shadow-[0_10px_20px_-12px_rgba(40,20,10,.35)]"
-      style={{ backgroundImage: "repeating-linear-gradient(180deg, transparent 0 27px, #bcd3e6 27px 28px)", backgroundPosition: "0 76px" }}
-    />
+    <div aria-hidden="true" className="relative h-[340px]" style={{ rotate: `${PAPERS.lined.tilt}deg` }}>
+      <NoteSheet paper="lined" />
+      <div className="relative mt-[76px] h-[224px]" style={ruling("lined")} />
+    </div>
   );
 }
