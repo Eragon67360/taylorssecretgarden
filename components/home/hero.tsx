@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react";
 
 import { getImageProps } from "next/image";
-import Link from "next/link";
 
+import { IntentLink } from "@/components/intent-link";
 import { Arrow, Bracelet, Polaroid, PressedFlower, RubberStamp, Scribble, StickyNote } from "@/components/scrapbook";
 import { homePhoto } from "@/lib/cloudinary";
 import { cn } from "@/lib/utils";
@@ -56,7 +56,7 @@ export function Hero() {
 
           <div className="mt-9 flex flex-wrap items-center gap-x-8 gap-y-5">
             {/* A luggage tag, punched and strung. */}
-            <Link
+            <IntentLink
               className={cn(
                 "group bg-accent text-on-accent focus-ring relative inline-flex min-h-12 items-center gap-3 py-3.5 pr-6 pl-9 text-[15px] font-bold tracking-wide",
                 "rounded-[4px] [clip-path:polygon(14px_0,100%_0,100%_100%,14px_100%,0_50%)]",
@@ -70,14 +70,14 @@ export function Hero() {
               <span aria-hidden="true" className="transition-transform duration-200 ease-out motion-safe:group-hover:translate-x-1">
                 →
               </span>
-            </Link>
-            <Link className="group font-hand text-ink focus-ring relative rounded-sm text-[26px] font-bold" href="/swiftter">
+            </IntentLink>
+            <IntentLink className="group font-hand text-ink focus-ring relative rounded-sm text-[26px] font-bold" href="/swiftter">
               or pass a note on Swiftter
               <Scribble
                 className="absolute -bottom-1 left-0 h-3 w-full origin-left transition-transform duration-300 ease-out motion-safe:group-hover:scale-x-105"
                 color="var(--pen)"
               />
-            </Link>
+            </IntentLink>
           </div>
         </div>
 

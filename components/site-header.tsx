@@ -1,34 +1,41 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as m from "motion/react-m";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
+import { IntentLink } from "@/components/intent-link";
 import { GardenMark } from "@/components/garden-mark";
 import { Scribble } from "@/components/scrapbook";
 import { afterLoad } from "@/lib/after-load";
+import { isAuthClientLoaded, mayBeMember, subscribeAuthClientLoaded } from "@/lib/auth/member-hint";
 import { cn } from "@/lib/utils";
 
-// Sign-out for Members. Neon Auth's client and the session request come once
-// the page has loaded and gone idle: visitors (and first paint) never wait for them.
+// Sign-out for Members. Once the page has loaded and gone idle, one small
+// request asks whether anyone is signed in; only then does Neon Auth's client
+// load. Visitors (and first paint) never wait for it. A page that loads the
+// client itself (a sign-in form) shows the menu straight away, so it appears
+// as soon as someone signs in there.
 const MemberMenu = dynamic(() => import("@/components/member-menu"), { ssr: false });
 
 function LazyMemberMenu() {
-  const [ready, setReady] = useState(false);
+  const [member, setMember] = useState(false);
+  const clientLoaded = useSyncExternalStore(subscribeAuthClientLoaded, isAuthClientLoaded, () => false);
 
   useEffect(() => {
     let current = true;
 
-    afterLoad().then(() => current && setReady(true));
+    afterLoad()
+      .then(mayBeMember)
+      .then((maybe) => current && setMember(maybe));
 
     return () => {
       current = false;
     };
   }, []);
 
-  return ready ? <MemberMenu /> : null;
+  return member || clientLoaded ? <MemberMenu /> : null;
 }
 
 /** The site's sections, each an index tab in its own pastel. */
@@ -66,10 +73,10 @@ export function SiteHeader() {
         Skip to content
       </a>
       <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-end justify-between gap-x-6 gap-y-2 px-4 pt-4 sm:px-8 md:pt-7">
-        <Link className="group focus-ring text-ink flex min-h-11 items-center gap-2 rounded-md pb-2" href="/">
+        <IntentLink className="group focus-ring text-ink flex min-h-11 items-center gap-2 rounded-md pb-2" href="/">
           <GardenMark className="size-9 transition-transform duration-500 motion-safe:group-hover:rotate-[30deg]" />
           <span className="font-hand text-[26px] leading-none font-bold md:text-[28px]">Taylor&apos;s Secret Garden</span>
-        </Link>
+        </IntentLink>
 
         {/* Beside the name on a phone (the tabs take the next row), before the tabs on wider screens. */}
         <div className="ml-auto">
@@ -83,7 +90,7 @@ export function SiteHeader() {
 
               return (
                 <li key={section.path} className="flex-1 sm:flex-none">
-                  <Link
+                  <IntentLink
                     aria-current={current ? "page" : undefined}
                     className={cn(
                       "focus-ring text-ink relative -mb-px flex min-h-11 items-center justify-center rounded-t-[10px] border border-b-0 px-3 sm:px-4",
@@ -111,7 +118,7 @@ export function SiteHeader() {
                     )}
                     <span className="relative">{section.name}</span>
                     {current && <Scribble className="absolute right-3 bottom-1 left-3 h-2.5 w-[calc(100%-24px)]" />}
-                  </Link>
+                  </IntentLink>
                 </li>
               );
             })}

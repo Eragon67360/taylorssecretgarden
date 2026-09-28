@@ -16,7 +16,8 @@ import { WALL_TOURS, tourPoster } from "./tour-posters";
 /** Three ways into the garden: an envelope of Album covers (Music), a ticket stub (Tours), a passed note (Swiftter). */
 export function WaysIn({ covers }: { covers: EraAlbum[] }) {
   return (
-    <section aria-labelledby="ways-in" className="relative mx-auto w-full max-w-[1240px] px-4 pt-16 pb-8 sm:px-8">
+    // Below the opening spread: rendered (and its covers fetched) only when scrolled near (globals.css).
+    <section aria-labelledby="ways-in" className="below-fold relative mx-auto w-full max-w-[1240px] px-4 pt-16 pb-8 [--fold-height:1650px] sm:px-8 md:[--fold-height:660px]">
       <SectionHead id="ways-in" kicker="page 2 · table of contents" title="Three ways into the garden" />
 
       <ul className="mt-12 grid gap-14 md:grid-cols-3 md:gap-8">

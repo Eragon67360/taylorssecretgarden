@@ -34,7 +34,8 @@ type Mode = "auto" | "playing" | "paused";
 /**
  * A Tour's footage in a taped polaroid. Muted; it plays while it is in view or
  * hovered, never on its own under reduced motion, and a button pauses or
- * plays it. Nothing downloads until it first plays (a still frame stands in),
+ * plays it. Nothing downloads until it first plays (a still frame stands in,
+ * itself fetched only once the polaroid is within a screen of the viewport),
  * and it never starts on its own before the page has loaded, so the footage
  * does not compete with the page for the network.
  */
@@ -43,6 +44,7 @@ export function TourVideo({ tour, src, caption, tilt = 3, className }: TourVideo
   const videoRef = useRef<HTMLVideoElement>(null);
   const reduce = useReducedMotion();
   const [inView, setInView] = useState(false);
+  const [near, setNear] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [mode, setMode] = useState<Mode>("auto");
   const [playing, setPlaying] = useState(false);
@@ -53,10 +55,23 @@ export function TourVideo({ tour, src, caption, tilt = 3, className }: TourVideo
 
     if (!frame) return;
     const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: 0.4 });
+    // The still frame loads a screen ahead of the scroll (and then stays).
+    const approach = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setNear(true);
+        approach.disconnect();
+      },
+      { rootMargin: "100% 0px" },
+    );
 
     observer.observe(frame);
+    approach.observe(frame);
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      approach.disconnect();
+    };
   }, []);
 
   // Only ever on screen; on its own only when motion is welcome.
@@ -107,7 +122,7 @@ export function TourVideo({ tour, src, caption, tilt = 3, className }: TourVideo
           playsInline
           aria-hidden="true"
           className="aspect-video object-cover"
-          poster={videoStill(src, 720)}
+          poster={near ? videoStill(src, 720) : undefined}
           preload="none"
           src={`${cloudinaryWidth(src, 720)}#t=12`}
           onPause={() => setPlaying(false)}

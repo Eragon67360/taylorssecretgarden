@@ -66,6 +66,16 @@ test.describe("Tours journal", () => {
 		await expect.poll(() => first.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true);
 	});
 
+	test("footage far down the journal fetches no still frame until it is scrolled near", async ({ page }) => {
+		await page.goto("/tours", { waitUntil: "load" });
+
+		const last = page.getByRole("region", { name: tours.filter(({ videoUrl }) => videoUrl).at(-1)!.tour }).locator("video");
+
+		expect(await last.getAttribute("poster")).toBeNull();
+		await last.scrollIntoViewIfNeeded();
+		await expect(last).toHaveAttribute("poster", /\.jpg$/);
+	});
+
 	test("a playing video can be paused", async ({ page }) => {
 		await page.goto("/tours");
 
