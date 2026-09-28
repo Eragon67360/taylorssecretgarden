@@ -74,10 +74,12 @@ export async function expectNoHorizontalOverflow(page: Page, scope?: Scope) {
  * running animations or transitions (`document.getAnimations()`) and no
  * playing video, in the scope or the whole page.
  */
-export async function expectReducedMotion(page: Page, scope?: Scope) {
+export async function expectReducedMotion(page: Page, scope?: Scope, ready?: (page: Page) => Promise<void>) {
 	await page.emulateMedia({ reducedMotion: "reduce" });
 	await page.reload();
 	await page.waitForLoadState("load");
+	// Content that mounts after load (e.g. Clerk's forms) is only checked once it is there.
+	await ready?.(page);
 	// Let hydration and the first frames run: anything still going after that
 	// is motion the visitor would see.
 	await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
