@@ -79,12 +79,13 @@ Neon Auth keeps the Members' accounts (users, sessions) in the `neon_auth` schem
 ```bash
 npm run db:migrate   # apply the SQL migrations in drizzle/
 npm run db:seed      # insert the demo Members and Posts (safe to re-run)
+npm run db:unseed    # show the demo rows; add `-- --yes` to delete them
 npm run db:generate  # after editing db/schema.ts: write a new migration to drizzle/, then commit it
 ```
 
 ## Seeding
 
-`npm run db:seed` inserts ten demo Posts from four fictional demo Members, all marked `is_demo` (the feed labels them "Demo"). Every row has a fixed id, so re-running it changes nothing. A fresh database needs `npm run db:migrate` first.
+`npm run db:seed` inserts ten demo Posts from four fictional demo Members, all marked `is_demo` (the feed labels them "Demo"). Every row has a fixed id, so re-running it changes nothing. A fresh database needs `npm run db:migrate` first. To remove the demo content later (for example once real Posts exist), `npm run db:unseed` shows what it would delete and `npm run db:unseed -- --yes` deletes it; real Members and their Posts are never touched, and `npm run db:seed` brings the demo back.
 
 For a throwaway local database (enough for the signed-out Swiftter tests; sign-in needs a Neon branch):
 
