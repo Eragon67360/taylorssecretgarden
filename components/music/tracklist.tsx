@@ -76,7 +76,8 @@ function TrackLine({ track, player }: { track: Track; player: PreviewPlayer }) {
               {track.name}
             </span>
             {playing && (
-              <span className="font-hand text-soft ml-2 shrink-0 text-[18px] font-bold">
+              // On a phone the title keeps the room; the pencil line and the pause button show it is playing.
+              <span className="font-hand text-soft ml-2 hidden shrink-0 text-[18px] font-bold sm:inline">
                 <span aria-hidden="true">← </span>now playing
               </span>
             )}

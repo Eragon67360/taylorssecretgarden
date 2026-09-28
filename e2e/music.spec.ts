@@ -131,7 +131,8 @@ test.describe("Music", () => {
 			const progress = page.getByRole("progressbar");
 
 			await expect(progress).toBeVisible();
-			await expect.poll(async () => Number(await progress.getAttribute("aria-valuenow"))).toBeGreaterThan(0);
+			// The preview streams from Deezer, which can take a while under load.
+			await expect.poll(async () => Number(await progress.getAttribute("aria-valuenow")), { timeout: 30_000 }).toBeGreaterThan(0);
 
 			await previewButtons(page).nth(1).click();
 			// One preview only: the second track plays, the first stopped.

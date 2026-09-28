@@ -84,7 +84,11 @@ export function usePreviewPlayer(): PreviewPlayer {
       ref,
       preload: "none",
       onPlaying: () => setPlaying(true),
-      onPause: () => setPlaying(false),
+      // Switching tracks also fires "pause" (for the old source), after the new
+      // one was asked to play: only a player that is still paused has stopped.
+      onPause: (event) => {
+        if (event.currentTarget.paused) setPlaying(false);
+      },
       onEnded: stop,
       onError: () => {
         // A removed source (stop) also reports an error; only a loaded track is a failure.
