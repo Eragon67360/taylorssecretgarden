@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 
+import { PHONE } from "./checks";
 import { expect, test } from "./fixtures";
 
 // The nav marks the page the visitor is on, derived from the URL, so it is
@@ -56,6 +57,45 @@ test.describe("Navigation", () => {
 
 		await expect(nav(page).getByRole("link")).toHaveText(sections.map(({ name }) => new RegExp(`^${name}$`, "i")));
 		await expect(nav(page).getByRole("link", { name: "Events" })).toHaveCount(0);
+	});
+
+	test("sits at the top of the page, above the content", async ({ page }) => {
+		await page.goto("/music");
+		const navBox = await nav(page).boundingBox();
+
+		expect(navBox!.y).toBeLessThan(200);
+		// The nav is part of the page flow: the page's main heading starts below it.
+		const headingBox = await page.getByRole("heading", { name: "Albums", exact: true }).boundingBox();
+
+		expect(headingBox!.y).toBeGreaterThanOrEqual(navBox!.y + navBox!.height);
+	});
+
+	test("is operable from the keyboard, with a visible focus ring", async ({ page }) => {
+		await page.goto("/");
+		const music = nav(page).getByRole("link", { name: "Music", exact: true });
+
+		for (let presses = 0; presses < 6 && !(await music.evaluate((link) => link === document.activeElement)); presses++) {
+			await page.keyboard.press("Tab");
+		}
+		await expect(music).toBeFocused();
+		expect(await music.evaluate((link) => getComputedStyle(link).outlineStyle)).not.toBe("none");
+
+		await page.keyboard.press("Enter");
+		await expect(page).toHaveURL("/music");
+		await expectCurrent(page, "Music");
+	});
+
+	test("fits a 390px phone with every tab easy to tap", async ({ page }) => {
+		await page.setViewportSize(PHONE);
+		await page.goto("/tours/the-eras-tour");
+
+		for (const { name } of sections) {
+			const link = nav(page).getByRole("link", { name, exact: true });
+
+			await expect(link).toBeInViewport({ ratio: 1 });
+			expect((await link.boundingBox())!.height, `${name} tab height`).toBeGreaterThanOrEqual(44);
+		}
+		await expectCurrent(page, "Tours");
 	});
 
 	test("the Events page is gone", async ({ request }) => {

@@ -28,5 +28,7 @@ export default defineConfig({
 		url: baseURL,
 		timeout: 300_000,
 		reuseExistingServer: !isCI,
+		// Serves the development styleguide (/styleguide) from the production build.
+		env: { ENABLE_STYLEGUIDE: "1" },
 	},
 });

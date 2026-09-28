@@ -2,8 +2,18 @@ import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
 
 import { siteConfig } from "@/config/site";
-import { fontDancing, fontImpact, fontInter, fontPlayfair, fontUnifraktur } from "@/config/fonts";
-import Navbar from "@/components/navbar";
+import {
+  fontBody,
+  fontDancing,
+  fontHand,
+  fontImpact,
+  fontInter,
+  fontPlayfair,
+  fontSerif,
+  fontUnifraktur,
+} from "@/config/fonts";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
 import { cn } from "@/lib/utils";
 
 import { Providers } from "./providers";
@@ -20,10 +30,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "white" },
-    { media: "(prefers-color-scheme: dark)", color: "black" },
-  ],
+  themeColor: "#f3eadb",
 };
 
 export default function RootLayout({
@@ -32,25 +39,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html className="light" lang="en">
-      <head />
-      <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          fontInter.variable,
-          fontDancing.variable,
-          fontImpact.variable,
-          fontPlayfair.variable,
-          fontUnifraktur.variable
-        )}
-      >
+    // The font variables sit on <html> so the journal tokens on :root can use them.
+    <html
+      className={cn(
+        fontHand.variable,
+        fontBody.variable,
+        fontSerif.variable,
+        fontInter.variable,
+        fontDancing.variable,
+        fontImpact.variable,
+        fontPlayfair.variable,
+        fontUnifraktur.variable,
+      )}
+      lang="en"
+    >
+      <body className="flex min-h-dvh flex-col antialiased">
         <Providers>
-          <div className="relative flex flex-col h-screen">
-            <Navbar />
-            <main className="w-screen h-screen">
-              {children}
-            </main>
-          </div>
+          <SiteHeader />
+          <main className="relative flex-1" id="main">
+            {children}
+          </main>
+          <SiteFooter />
         </Providers>
       </body>
     </html>
