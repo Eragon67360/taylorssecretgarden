@@ -1,5 +1,6 @@
 "use client"
 import React from "react";
+
 import ScrollSection from "@/components/tours/ScrollSection";
 import { VideoProvider, VideoContext } from "@/context/VideoContext";
 

@@ -23,6 +23,7 @@ export default function AccountSuccessPage() {
                     },
                     body: JSON.stringify({ user }),
                 });
+
                 if (response.ok) {
                     router.push('/forum');
                 }
@@ -37,12 +38,13 @@ export default function AccountSuccessPage() {
 
         fetchUser();
     }, []);
+
     return (
         <>
             <div className='w-screen h-screen flex flex-col items-center justify-center bg-gradient-to-r from-black to-red-500'>
                 <h1 className='text-white text-center text-3xl'>Success</h1>
                 <p className='text-white text-center text-lg'>Your account has been successfully created ! <br />You will be redirected in a moment...</p>
-                {isButtonVisible && (<Link href={'/forum'} className='underline text-white hover:text-blue-500'>Redirect</Link>)}
+                {isButtonVisible && (<Link className='underline text-white hover:text-blue-500' href={'/forum'}>Redirect</Link>)}
             </div>
         </>
     )
