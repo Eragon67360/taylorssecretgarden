@@ -64,7 +64,7 @@ test.describe("Navigation", () => {
 			await page.setViewportSize(viewport);
 			const headings = [
 				{ path: "/", heading: "Taylor Swift" },
-				{ path: "/music", heading: "Albums" },
+				{ path: "/music", heading: "pick an Era. the page changes outfits." },
 				{ path: "/tours", heading: "Tours" },
 				{ path: "/tours/the-eras-tour", heading: "The Eras Tour" },
 				{ path: "/sign-in", heading: "Sign in to Taylor's Secret Garden" },
