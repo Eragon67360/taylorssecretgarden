@@ -11,11 +11,6 @@ const ALLOWED_CONSOLE_MESSAGES: { pattern: RegExp; reason: string }[] = [
 		pattern: /Clerk has been loaded with development keys/,
 		reason: "The site runs on Clerk development keys during Phase A (see #6); Clerk warns about it on every page.",
 	},
-	{
-		pattern: /^The resource http:\/\/localhost:\d+\/_next\/static\/chunks\/[\w-]+\.css was preloaded using link preload but not used/,
-		reason:
-			"Next prefetches the routes the nav links to, stylesheets included (e.g. Home's Era faces); Chrome warns when the visitor stays put for a few seconds instead of going there.",
-	},
 ];
 
 type Fixtures = {

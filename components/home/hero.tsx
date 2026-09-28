@@ -94,16 +94,27 @@ export function Hero() {
             className="z-10 mx-auto w-[86%]"
             tilt={2.5}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary crops, resizes and encodes it */}
-            <img
-              alt="Taylor Swift singing on stage in the orange sequinned Eras Tour two-piece"
-              className="aspect-[4/5] object-cover"
-              height={525}
-              sizes="(min-width: 1024px) 420px, 80vw"
-              src={photo(840)}
-              srcSet={[420, 640, 840, 1100].map((width) => `${photo(width)} ${width}w`).join(", ")}
-              width={420}
-            />
+            {/*
+              The largest paint on the page, so it is fetched eagerly at high
+              priority, straight from the HTML. The <picture> keeps React from
+              hoisting a <link rel="preload"> for it: that hint would also ride
+              along in Home's prefetched payload on every page linking here, and
+              go unused there.
+            */}
+            <picture className="block">
+              <img
+                alt="Taylor Swift singing on stage in the orange sequinned Eras Tour two-piece"
+                className="block aspect-[4/5] w-full object-cover"
+                decoding="async"
+                fetchPriority="high"
+                height={525}
+                loading="eager"
+                sizes="(min-width: 1024px) 420px, 80vw"
+                src={photo(840)}
+                srcSet={[420, 640, 840, 1100].map((width) => `${photo(width)} ${width}w`).join(", ")}
+                width={420}
+              />
+            </picture>
           </Polaroid>
 
           <div className={cn(styles.drop, "absolute top-14 -left-1 z-20 sm:-left-7")} style={dropDelay(120)}>
