@@ -11,8 +11,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tra
 
   if (!/^\d+$/.test(trackId)) return new NextResponse("Unknown track", { status: 404 });
 
-  const preview = await getTrackPreview(trackId).catch(() => undefined);
+  let preview: string | undefined;
 
+  try {
+    preview = await getTrackPreview(trackId);
+  } catch {
+    return new NextResponse("Deezer is unavailable", { status: 502 });
+  }
   if (!preview) return new NextResponse("No preview for this track", { status: 404 });
 
   return NextResponse.redirect(preview, { headers: { "Cache-Control": "no-store" } });

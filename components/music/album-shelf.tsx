@@ -4,7 +4,7 @@ import type { ShelfAlbum } from "./catalogue";
 
 import Image from "next/image";
 import Link from "next/link";
-import { type MouseEvent, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { Pin } from "@/components/scrapbook";
 import { ERA_LOOKS } from "@/lib/eras";
@@ -22,7 +22,7 @@ type AlbumShelfProps = {
 /**
  * Every Album as a polaroid on a shelf: one row that scrolls (and snaps)
  * sideways on small screens. Each polaroid links to its Album's page
- * (`?album=<id>`); a plain click selects it in place.
+ * (`?album=<id>`); followed in the same tab, it selects the Album in place.
  */
 export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -36,13 +36,6 @@ export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
     if (!row || !selected || row.scrollWidth <= row.clientWidth) return;
     row.scrollLeft = selected.offsetLeft - (row.clientWidth - selected.offsetWidth) / 2;
   }, []);
-
-  const select = (event: MouseEvent, album: ShelfAlbum) => {
-    // Let the browser open new tabs and windows.
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
-    event.preventDefault();
-    onSelect(album);
-  };
 
   return (
     <div
@@ -70,7 +63,11 @@ export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
                 href={`/music?album=${album.id}`}
                 scroll={false}
                 style={{ rotate: active ? "0deg" : `${TILTS[index % TILTS.length]}deg` }}
-                onClick={(event) => select(event, album)}
+                onNavigate={(event) => {
+                  // Select in place; the URL and the details follow.
+                  event.preventDefault();
+                  onSelect(album);
+                }}
               >
                 {active && <Pin className="-top-2 left-1/2 -translate-x-1/2" />}
                 <Image

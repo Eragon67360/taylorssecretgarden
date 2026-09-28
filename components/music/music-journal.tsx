@@ -19,26 +19,30 @@ import { usePreviewPlayer } from "./use-preview-player";
 
 type MusicJournalProps = {
   shelf: ShelfAlbum[];
-  /** The selected Album (from `?album`), fetched on the server. */
+  /** The shelf Album selected by `?album`. */
+  albumId: string | undefined;
+  /** Its details, fetched on the server. */
   details: AlbumDetails | undefined;
 };
 
 /**
  * The music journal: a shelf of Album polaroids over a two-page spread for
  * the selected Album, the whole page dressed in that Album's Era. Selecting
- * an Album re-themes the page at once; its details follow from the server.
+ * an Album dresses the page in its Era's look at once; its details follow
+ * from the server.
  */
-export function MusicJournal({ shelf, details }: MusicJournalProps) {
+export function MusicJournal({ shelf, albumId, details }: MusicJournalProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [selectedId, setSelectedId] = useOptimistic(details?.id);
+  const [selectedId, setSelectedId] = useOptimistic(albumId);
   const player = usePreviewPlayer();
   const { stop } = player;
 
   const album = shelf.find(({ id }) => id === selectedId) ?? shelf[0];
   const era = album?.era ?? "debut";
   const look = ERA_LOOKS[era];
-  const ready = !!details && details.id === selectedId;
+  // The details are the server's Album's: stale while another is on its way.
+  const ready = !!details && albumId === selectedId;
   const tracks = ready ? details.tracks.items : undefined;
 
   // A new Album: whatever was playing stops.

@@ -36,8 +36,8 @@ type DeezerAlbumDetails = DeezerAlbum & {
 // is never cached as if it were data.
 //
 // Until a response is cached, concurrent page views asking for the same path
-// share one request, and "Quota limit exceeded" (error code 4) is retried once
-// the rate limit's window has moved on.
+// share one request, and "Quota limit exceeded" (error code 4) is retried twice,
+// once the rate limit's window has moved on.
 const QUOTA_EXCEEDED = 4;
 const inFlight = new Map<string, Promise<unknown>>();
 
@@ -62,7 +62,7 @@ async function fetchDeezer<T>(path: string): Promise<T> {
     const data = await response.json();
 
     if (response.ok && !data.error) return data;
-    if (data.error?.code !== QUOTA_EXCEEDED || attempt === 5) {
+    if (data.error?.code !== QUOTA_EXCEEDED || attempt === 3) {
       throw new Error(`Deezer ${path} failed: ${data.error?.message ?? response.status}`);
     }
     await new Promise((resolve) => setTimeout(resolve, 1500 * attempt + Math.random() * 1000));

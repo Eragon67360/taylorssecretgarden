@@ -22,5 +22,5 @@ export default async function Music({ searchParams }: MusicProps) {
   const selected = pickAlbum(shelf, typeof wanted === "string" ? wanted : undefined);
   const details = selected && (await getAlbumDetails(selected.id));
 
-  return <MusicJournal details={details} shelf={shelf} />;
+  return <MusicJournal albumId={selected?.id} details={details} shelf={shelf} />;
 }

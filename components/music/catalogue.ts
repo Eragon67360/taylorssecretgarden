@@ -8,8 +8,6 @@ import { getAlbums, toAlbum } from "@/service/deezer";
 /** An Album on the Music page's shelf, with the Era whose look it wears. */
 export type ShelfAlbum = Album & { era: EraSlug };
 
-const DEBUT_ID = Object.keys(ERA_BY_ALBUM_ID).find((id) => ERA_BY_ALBUM_ID[id] === "debut");
-
 /** The curated Albums (lib/eras.ts), in Era order: one polaroid per Era. */
 export async function getShelf(): Promise<ShelfAlbum[]> {
   const albums = await getAlbums(Object.keys(ERA_BY_ALBUM_ID).map(Number));
@@ -32,5 +30,5 @@ export function pickAlbum(shelf: ShelfAlbum[], wanted: string | undefined): Shel
   const byId = (id: string | undefined) => shelf.find((album) => album.id === id);
   const byEra = (era: EraSlug | undefined) => shelf.find((album) => album.era === era);
 
-  return byId(wanted) ?? byEra(wanted ? ERA_BY_ALBUM_ID[wanted] : undefined) ?? byId(DEBUT_ID) ?? byEra("debut") ?? shelf[0];
+  return byId(wanted) ?? byEra(wanted ? ERA_BY_ALBUM_ID[wanted] : undefined) ?? byEra("debut") ?? shelf[0];
 }
