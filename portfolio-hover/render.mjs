@@ -1,6 +1,7 @@
 // Renders a hover-video composition to <out>.mp4 (silent H.264, faststart) and <out>.jpg (frame 0).
 // H.264 MP4 plays in every current browser; VP9 WebM came out larger at equal quality, so it is not produced.
-// Usage: HOVER_KIT_DEPS=/path/to/package.json node render.mjs <comp.html> <out-basename> [fps]
+// Usage: HOVER_KIT_DEPS=/path/to/package.json [HOVER_CRF=26] node render.mjs <comp.html> <out-basename> [fps]
+// HOVER_CRF sets the x264 quality (higher = smaller); textured pages need a higher value to stay light.
 // HOVER_KIT_DEPS points at a package.json whose node_modules contain `playwright` and `ffmpeg-static`.
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
@@ -36,7 +37,7 @@ const frames = Math.round(duration * fps);
 const mp4 = `${out}.mp4`;
 await run(
   ["-f", "image2pipe", "-framerate", String(fps), "-c:v", "mjpeg", "-i", "-", "-an",
-   "-c:v", "libx264", "-preset", "slow", "-crf", "26", "-pix_fmt", "yuv420p", "-movflags", "+faststart", mp4],
+   "-c:v", "libx264", "-preset", "slow", "-crf", process.env.HOVER_CRF ?? "26", "-pix_fmt", "yuv420p", "-movflags", "+faststart", mp4],
   async (stdin) => {
     for (let i = 0; i < frames; i++) {
       await page.evaluate((t) => window.renderAt(t), i / fps);
