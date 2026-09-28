@@ -15,7 +15,7 @@ The domain vocabulary (Era, Album, Tour, Swiftter, Post, Member) is defined in [
 - [Tailwind CSS 4](https://tailwindcss.com/) (CSS-first config in `styles/globals.css`); [shadcn/ui](https://ui.shadcn.com/) is configured (`components.json`, [ADR-0002](docs/adr/0002-shadcn-replaces-nextui.md)) for primitives copied into `components/ui/` when a page needs one (none does yet: the scrapbook kit covers them)
 - [Clerk 7](https://clerk.com/) for sign-in
 - [Neon Postgres](https://neon.com/) (via the Vercel Marketplace) with [Drizzle ORM](https://orm.drizzle.team/) for Swiftter's Members and Posts ([ADR-0003](docs/adr/0003-neon-drizzle-for-swiftter.md))
-- [Cloudinary](https://cloudinary.com/) for Tour images, videos and the home photo, resized and encoded by URL transformations (`f_auto,q_auto,w_…`; `components/cloudinary-image.tsx` is next/image with a Cloudinary loader)
+- [Cloudinary](https://cloudinary.com/) for Tour images, videos and the home photo (URL helpers in `lib/cloudinary.ts`). Pictures go through next/image and are served from the site's own origin; the videos stream from Cloudinary
 - [Deezer API](https://developers.deezer.com/api) for the Album catalogue (no credentials needed)
 - [Motion](https://motion.dev/) (`motion/react`) for the scrapbook's hover lifts and tab transitions
 - [Playwright](https://playwright.dev/) with [axe](https://github.com/dequelabs/axe-core-npm/tree/develop/packages/playwright) for the smoke tests
@@ -24,7 +24,7 @@ The domain vocabulary (Era, Album, Tour, Swiftter, Post, Member) is defined in [
 
 The site is a fan's scrapbook (the 2026 redesign, #17), built from:
 
-- **Journal tokens** in `styles/globals.css`: `paper`, `card`, `ink`, `soft`, `line`, `accent`, `on-accent`, `tape` as CSS variables and Tailwind colours (`bg-paper`, `text-soft`...), plus `font-hand` (Caveat), `font-body` (Karla), `font-serif` (Fraunces) and `font-display` (the current Era's face).
+- **Journal tokens** in `styles/globals.css`: `paper`, `card`, `ink`, `soft`, `line`, `accent`, `on-accent`, `tape` as CSS variables and Tailwind colours (`bg-paper`, `text-soft`...), plus `font-hand` (Caveat), `font-body` (Karla), `font-serif` (Fraunces), `font-serif-italic` and `font-display` (the current Era's face). Caveat and Fraunces are self-hosted static cuts of the one weight the site uses (`assets/fonts/`, rebuilt with `uv run --with fonttools --with brotli python scripts/build-fonts.py`), half the size of Google's variable files.
 - **Era looks** in `lib/eras.ts`: every Era's palette, flower, fan note and display face, and which Era each Album belongs to. The Eras Tour, which spans every Era, has a look of its own (`ERAS_TOUR_LOOK` in `lib/tours.ts`). `<EraScope era="…">` (`components/era-scope.tsx`) applies one by overriding the tokens on a container; the colours fade across when the Era changes. Era display faces (`config/era-fonts.ts`) are not preloaded, so a face downloads only when its Era is on screen.
 - **The scrapbook kit** in `components/scrapbook/`: paper, washi tape, pin, polaroid, bracelet, pressed flowers, scribble, arrow, highlight, sticky note, rubber stamp, ticket stub, ruled list.
 

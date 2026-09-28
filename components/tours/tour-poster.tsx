@@ -1,5 +1,5 @@
 import { Polaroid } from "@/components/scrapbook";
-import { CloudinaryImage } from "@/components/cloudinary-image";
+import Image from "next/image";
 import { type Tour } from "@/lib/tours";
 
 type TourPosterProps = {
@@ -18,7 +18,7 @@ export function TourPoster({ tour, caption, tilt = -3, width, priority = false, 
 
   return (
     <Polaroid taped caption={caption} className={className} tilt={tilt}>
-      <CloudinaryImage
+      <Image
         alt={`${tour.tour} poster`}
         className="h-auto w-full"
         height={h}

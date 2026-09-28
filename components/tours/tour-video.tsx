@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useReducedMotion } from "motion/react";
 
 import { Polaroid } from "@/components/scrapbook";
@@ -17,13 +17,26 @@ type TourVideoProps = {
   className?: string;
 };
 
+/** Whether the page has finished loading (the window's load event). */
+function isPageLoaded() {
+  return document.readyState === "complete";
+}
+
+function subscribeToLoad(onChange: () => void) {
+  window.addEventListener("load", onChange);
+
+  return () => window.removeEventListener("load", onChange);
+}
+
 /** Who decided last whether the video plays: the page (in view / hovered) or the visitor's button. */
 type Mode = "auto" | "playing" | "paused";
 
 /**
  * A Tour's footage in a taped polaroid. Muted; it plays while it is in view or
  * hovered, never on its own under reduced motion, and a button pauses or
- * plays it. Nothing downloads until it first plays (a still frame stands in).
+ * plays it. Nothing downloads until it first plays (a still frame stands in),
+ * and it never starts on its own before the page has loaded, so the footage
+ * does not compete with the page for the network.
  */
 export function TourVideo({ tour, src, caption, tilt = 3, className }: TourVideoProps) {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -33,6 +46,7 @@ export function TourVideo({ tour, src, caption, tilt = 3, className }: TourVideo
   const [hovered, setHovered] = useState(false);
   const [mode, setMode] = useState<Mode>("auto");
   const [playing, setPlaying] = useState(false);
+  const pageLoaded = useSyncExternalStore(subscribeToLoad, isPageLoaded, () => false);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -46,7 +60,7 @@ export function TourVideo({ tour, src, caption, tilt = 3, className }: TourVideo
   }, []);
 
   // Only ever on screen; on its own only when motion is welcome.
-  const shouldPlay = (inView || hovered) && (mode === "playing" || (mode === "auto" && reduce === false));
+  const shouldPlay = (inView || hovered) && (mode === "playing" || (mode === "auto" && reduce === false && (pageLoaded || hovered)));
 
   useEffect(() => {
     const video = videoRef.current;

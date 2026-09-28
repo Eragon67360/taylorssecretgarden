@@ -39,7 +39,7 @@ export function Hero() {
             id="home-title"
           >
             <span className="block">Taylor&apos;s</span>{" "}
-            <span className="text-accent font-serif-italic relative inline-block font-normal">
+            <span className="text-accent font-serif-italic relative inline-block">
               Secret
               <PressedFlower
                 className="absolute -top-8 -right-9 h-24 w-14 rotate-[28deg] sm:-top-10 sm:-right-14 sm:h-36 sm:w-20"

@@ -13,7 +13,7 @@ const nextConfig = {
 				port: "",
 				pathname: "/images/**",
 			},
-			// The home photo, cropped by Cloudinary, resized and served from this origin.
+			// The home photo and the Tour posters and photos, resized and served from this origin.
 			{
 				protocol: "https",
 				hostname: "res.cloudinary.com",
