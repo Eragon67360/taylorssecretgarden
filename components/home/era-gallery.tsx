@@ -26,7 +26,7 @@ export function EraGallery({ albums }: { albums: Record<EraSlug, EraAlbum> }) {
       <ol className="mt-12 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-7 lg:gap-y-10">
         {ERAS.map((look, index) => (
           <li key={look.slug}>
-            <PressedEra album={albums[look.slug]} look={look} number={index + 1} tilt={TILTS[index]} />
+            <PressedEra album={albums[look.slug]} look={look} number={index + 1} tilt={TILTS[index % TILTS.length]} />
           </li>
         ))}
         <li className="flex">

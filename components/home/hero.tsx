@@ -11,7 +11,8 @@ import styles from "./home.module.css";
 const photo = (width: number) =>
   `https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto,c_fill,g_auto,ar_4:5,w_${width}/v1/images/upload/taylorssecretgarden/backgrounds/home`;
 
-const delay =(ms: number) => ({ "--drop-delay": `${ms}ms` }) as CSSProperties;
+/** Staggers a dropped piece (home.module.css). */
+const dropDelay = (ms: number) => ({ "--drop-delay": `${ms}ms` }) as CSSProperties;
 
 /** The opening spread: the garden's name on the left, a taped Eras photo with a sticky note and a stamp on the right. */
 export function Hero() {
@@ -105,7 +106,7 @@ export function Hero() {
             />
           </Polaroid>
 
-          <div className={cn(styles.drop, "absolute top-14 -left-1 z-20 sm:-left-7")} style={delay(120)}>
+          <div className={cn(styles.drop, "absolute top-14 -left-1 z-20 sm:-left-7")} style={dropDelay(120)}>
             <StickyNote className="w-[140px] text-[21px] sm:w-[156px] sm:text-[23px]" tilt={-6}>
               <span>Who is Taylor Swift anyway?</span>{" "}
               <span className="text-pen relative inline-block px-1">
@@ -123,7 +124,7 @@ export function Hero() {
           </div>
           <Arrow className="absolute top-[210px] left-[96px] z-20 hidden h-16 w-24 rotate-[12deg] sm:block" />
 
-          <div className={cn(styles.drop, "absolute right-0 bottom-24 z-20 sm:-right-5 sm:bottom-2")} style={delay(180)}>
+          <div className={cn(styles.drop, "absolute right-0 bottom-24 z-20 sm:-right-5 sm:bottom-2")} style={dropDelay(180)}>
             <RubberStamp big="NOT" bottom="Taylor's Version" top="This is" />
           </div>
         </div>

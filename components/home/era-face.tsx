@@ -23,7 +23,7 @@ export function EraFace({ children, className }: { children: ReactNode; classNam
         setNear(true);
         observer.disconnect();
       },
-      { rootMargin: "300px 0px" },
+      { rootMargin: "600px 0px" },
     );
 
     observer.observe(element);

@@ -4,7 +4,8 @@ import type { EraAlbum } from "./era-albums";
 import Image from "next/image";
 import Link from "next/link";
 
-import { Pin, TicketStub, WashiTape } from "@/components/scrapbook";
+import { Paper, Pin, TicketStub, WashiTape } from "@/components/scrapbook";
+import { ERAS } from "@/lib/eras";
 import { cn } from "@/lib/utils";
 
 import styles from "./home.module.css";
@@ -22,7 +23,7 @@ export function WaysIn({ covers }: { covers: EraAlbum[] }) {
           Every Album, every tracklist, 30-second previews. Each Era re-colours the page, the way it should.
         </WayIn>
         <WayIn cta="grab a ticket" href="/tours" object={<Ticket />} title="The Tours">
-          From the Fearless sparkles to three and a half hours of Eras. Six posters, one Ticketmaster meltdown.
+          From the Fearless sparkles to three and a half hours of Eras. {WALL_TOURS.length} posters, one Ticketmaster meltdown.
         </WayIn>
         <WayIn cta="pass a note" href="/swiftter" object={<PassedNote />} title="Swiftter">
           The fan feed. Theories, easter eggs, 3am thoughts. Be kind, or at least be reputation about it.
@@ -77,14 +78,15 @@ function Envelope({ covers }: { covers: EraAlbum[] }) {
           </div>
         ))}
       </div>
-      <div
+      <Paper
         className={cn(
-          "bg-kraft paper-grain absolute inset-x-0 bottom-0 z-10 h-[150px] shadow-[0_10px_20px_rgba(0,0,0,.2)] transition-transform duration-300 ease-out motion-safe:group-hover:translate-y-2",
+          "absolute inset-x-0 bottom-0 z-10 h-[150px] shadow-[0_10px_20px_rgba(0,0,0,.2)] transition-transform duration-300 ease-out motion-safe:group-hover:translate-y-2",
           flap,
         )}
+        tone="kraft"
       >
-        <span className="font-hand absolute inset-x-0 bottom-5 text-center text-2xl font-bold text-[#2b1d14]">11 Eras inside ✿</span>
-      </div>
+        <span className="font-hand absolute inset-x-0 bottom-5 text-center text-2xl font-bold">{ERAS.length} Eras inside ✿</span>
+      </Paper>
     </div>
   );
 }
