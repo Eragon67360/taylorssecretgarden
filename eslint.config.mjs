@@ -8,6 +8,7 @@ import unusedImports from "eslint-plugin-unused-imports";
 const config = [
   {
     ignores: [
+      ".claude/**", // agent worktrees
       ".next/**",
       "node_modules/**",
       "public/**",
