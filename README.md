@@ -24,7 +24,7 @@ Deployed on Vercel: `main` is production, every branch gets a preview.
 
 ## Getting started
 
-Requires Node 24 (24.15 or later: isomorphic-dompurify's jsdom needs it).
+Requires Node 24.
 
 ```bash
 npm install

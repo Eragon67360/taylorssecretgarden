@@ -90,11 +90,21 @@ test.describe("Swiftter, signed out", () => {
 	});
 });
 
+// These tests publish Posts, so they must never run against the real database.
+function databaseIsLocal(): boolean {
+	const url = process.env.DATABASE_URL;
+
+	if (!url) return false;
+
+	return ["localhost", "127.0.0.1", "::1"].includes(new URL(url).hostname);
+}
+
 test.describe("Swiftter, signed in", () => {
 	test.skip(
 		!process.env.CI && !testMember.password,
 		"Set E2E_CLERK_USER_USERNAME / E2E_CLERK_USER_PASSWORD to run the signed-in tests locally",
 	);
+	test.skip(!databaseIsLocal(), "Publishing tests only run against a local Postgres, never the real database");
 
 	test("a Member publishes a Post and it appears first in the feed", async ({ page }) => {
 		await signIn(page);
