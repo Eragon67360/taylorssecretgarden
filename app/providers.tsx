@@ -2,15 +2,7 @@
 
 import { LazyMotion, MotionConfig } from "motion/react";
 
-/** Resolves once the page has loaded and the main thread is idle. */
-function afterLoad() {
-  return new Promise<void>((resolve) => {
-    const idle = () => (window.requestIdleCallback ? window.requestIdleCallback(() => resolve()) : setTimeout(resolve, 1));
-
-    if (document.readyState === "complete") idle();
-    else window.addEventListener("load", idle, { once: true });
-  });
-}
+import { afterLoad } from "@/lib/after-load";
 
 // Motion's animation features (springs, gestures, exit and layout animations,
 // ~30 KB) load once the page has loaded, off the critical path: nothing moves

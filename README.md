@@ -5,7 +5,7 @@ A Taylor Swift fan site and portfolio piece:
 - **Home**: the journal's opening spread: a taped Eras Tour photo, three ways in (Music, Tours, Swiftter), all twelve Eras pressed like flowers (each opens its Album on Music) and the Tour posters pinned to the wall.
 - **Music**: all 16 Albums (every studio Album and every Taylor's Version, each in its most complete edition, curated in `lib/catalogue.ts`), with cover, tracklist, durations and label fetched live from Deezer's public API.
 - **Tours**: a vertical journal of every Tour (ticket stub, poster, footage), each linking to its own page with that Tour's facts (from `public/json/tours.json`, typed in `lib/tours.ts`).
-- **Swiftter** (`/swiftter`, formerly `/forum`): a small feed where signed-in Members publish Posts. Anyone can read it; publishing needs a Clerk sign-in.
+- **Swiftter** (`/swiftter`, formerly `/forum`): a small feed where signed-in Members publish Posts. Anyone can read it; publishing needs signing the guestbook (email + password, or Google).
 
 The domain vocabulary (Era, Album, Tour, Swiftter, Post, Member) is defined in [`CONTEXT.md`](CONTEXT.md), and design decisions are recorded in [`docs/adr/`](docs/adr/).
 
@@ -13,7 +13,7 @@ The domain vocabulary (Era, Album, Tour, Swiftter, Post, Member) is defined in [
 
 - [Next.js 16](https://nextjs.org/) (App Router, Turbopack), React 19, TypeScript 6
 - [Tailwind CSS 4](https://tailwindcss.com/) (CSS-first config in `styles/globals.css`); [shadcn/ui](https://ui.shadcn.com/) is configured (`components.json`, [ADR-0002](docs/adr/0002-shadcn-replaces-nextui.md)) for primitives copied into `components/ui/` when a page needs one (none does yet: the scrapbook kit covers them)
-- [Clerk 7](https://clerk.com/) for sign-in
+- [Neon Auth](https://neon.com/docs/auth/overview) (managed Better Auth, `@neondatabase/auth`, beta SDK pinned exactly) for sign-in, with our own guestbook forms ([ADR-0004](docs/adr/0004-neon-auth-replaces-clerk.md))
 - [Neon Postgres](https://neon.com/) (via the Vercel Marketplace) with [Drizzle ORM](https://orm.drizzle.team/) for Swiftter's Members and Posts ([ADR-0003](docs/adr/0003-neon-drizzle-for-swiftter.md))
 - [Cloudinary](https://cloudinary.com/) for Tour images, videos and the home photo (URL helpers in `lib/cloudinary.ts`). Pictures go through next/image and are served from the site's own origin; the videos stream from Cloudinary
 - [Deezer API](https://developers.deezer.com/api) for the Album catalogue (no credentials needed)
@@ -53,7 +53,9 @@ npm run test:e2e    # Playwright smoke suite
 npm run lighthouse  # Lighthouse CI on a production build (run `npm run build` first)
 ```
 
-`npm run test:e2e` builds the app and starts it on port 3100 (or reuses a server already listening there), then drives it as a black box: every route renders with no page errors and no console errors or warnings, the nav highlights the current page, the site chrome (and the styleguide) pass axe at WCAG 2.1 AA, fit a 390px phone and stay still under reduced motion (helpers in `e2e/checks.ts`, which each redesigned page enables for its whole route), Music loads Albums and tracklists, Tours lists every Tour and each Tour page shows its own facts, and Swiftter reads, publishes and sanitises Posts. The Swiftter tests need a migrated and seeded database at `DATABASE_URL` (see [Seeding](#seeding); never run them against the real one, they publish Posts). The signed-in tests sign in a dedicated test Member of the Clerk development instance with [`@clerk/testing`](https://clerk.com/docs/testing/playwright/overview); set `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` to run them locally, otherwise they are skipped. That test Member (`e2e+swiftter_clerk_test@example.com`, username `swiftter_e2e`, name "Swiftter Tester", which the tests expect) was created with a password through Clerk's Backend API (`POST /v1/users` with the development `CLERK_SECRET_KEY`); its credentials live in the `E2E_CLERK_USER_*` repository secrets. The first run needs a browser: `npx playwright install chromium`.
+`npm run test:e2e` builds the app and starts it on port 3100 (or reuses a server already listening there), then drives it as a black box: every route renders with no page errors and no console errors or warnings, the nav highlights the current page, the site chrome (and the styleguide) pass axe at WCAG 2.1 AA, fit a 390px phone and stay still under reduced motion (helpers in `e2e/checks.ts`, which each redesigned page enables for its whole route), Music loads Albums and tracklists, Tours lists every Tour and each Tour page shows its own facts, and Swiftter reads, publishes and sanitises Posts. The guestbook pages are checked the same way, plus their keyboard order, validation and error states.
+
+The tests read `.env.local` like the app does. Everything that writes (signing up, signing in, publishing Posts) needs a disposable Neon branch: `DATABASE_URL` and `NEON_AUTH_BASE_URL` of the same branch, which must not be production (the guard in [`e2e/member.ts`](e2e/member.ts) compares against a hash of the production endpoint), plus `NEON_AUTH_COOKIE_SECRET`; otherwise those tests are skipped. With a branch, the `setup` project ([`e2e/member.setup.ts`](e2e/member.setup.ts)) first signs up a fresh test Member ("Swiftter Tester", a unique `@example.com` address) through the sign-up form, and the signed-in tests reuse its session (`e2e/.auth/`, git-ignored). To get a branch locally, create one from production in the Neon console (or the API), with an expiry, and put its connection string and Auth URL in `.env.local`; migrate and seed it (see [Database](#database)). The first run needs a browser: `npx playwright install chromium`.
 
 ## CI
 
@@ -62,15 +64,17 @@ npm run lighthouse  # Lighthouse CI on a production build (run `npm run build` f
 - **smoke**: lint, typecheck, build and the Playwright suite. On failure the Playwright report and traces are uploaded as an artifact.
 - **lighthouse**: [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) ([`lighthouserc.js`](lighthouserc.js)) audits Home, Music, Tours, the Eras Tour page and Swiftter with Lighthouse's mobile emulation, three runs each: the median run must score at least 0.9 for Accessibility (an error) and should for Performance (a warning, since shared runners swing it by up to 0.3 between runs; check it on the Vercel preview). The scores table lands in the run summary and the full reports are uploaded as an artifact.
 
-The environment variables come from repository secrets; Swiftter runs against a Postgres 17 service container that is migrated and seeded first (so Lighthouse audits a real feed).
+Each job creates its own Neon branch from production with [`create-branch-action`](https://github.com/neondatabase/create-branch-action) (database and Neon Auth URL), migrates and seeds it (so Lighthouse audits a real feed), and deletes it at the end, even when a step fails (it also expires after two hours). They need the `NEON_API_KEY` and `NEON_AUTH_COOKIE_SECRET` repository secrets and the `NEON_PROJECT_ID` variable.
 
 To run Lighthouse locally, build first, then `npm run lighthouse` (it starts `next start` on port 3180; set `LHCI_PORT` to change it, and `CHROME_PATH` if Chrome is not found, e.g. Playwright's Chromium).
 
 ## Database
 
-Swiftter's schema lives in [`db/schema.ts`](db/schema.ts): `members` (keyed by Clerk user id) and `posts` (sanitised HTML, newest first). All Swiftter data access goes through [`service/swiftter.ts`](service/swiftter.ts); the API is `GET /api/swiftter/posts` (public feed) and `POST /api/swiftter/posts` (publish as the signed-in Member).
+Swiftter's schema lives in [`db/schema.ts`](db/schema.ts): `members` (keyed by Neon Auth user id) and `posts` (sanitised HTML, newest first). All Swiftter data access goes through [`service/swiftter.ts`](service/swiftter.ts); the API is `GET /api/swiftter/posts` (public feed) and `POST /api/swiftter/posts` (publish as the signed-in Member).
 
 Every database command uses `DATABASE_URL` (read from `.env.local` when it is not already set in the environment). Point it at the database you mean: `.env.local` pulled from Vercel holds the real Neon database.
+
+Neon Auth keeps the Members' accounts (users, sessions) in the `neon_auth` schema of the same database. It belongs to Neon: `drizzle.config.ts` limits drizzle-kit to `public`, and nothing in the app writes to `neon_auth` except through `/api/auth`.
 
 ```bash
 npm run db:migrate   # apply the SQL migrations in drizzle/
@@ -82,7 +86,7 @@ npm run db:generate  # after editing db/schema.ts: write a new migration to driz
 
 `npm run db:seed` inserts ten demo Posts from four fictional demo Members, all marked `is_demo` (the feed labels them "Demo"). Every row has a fixed id, so re-running it changes nothing. A fresh database needs `npm run db:migrate` first.
 
-For a throwaway local database:
+For a throwaway local database (enough for the signed-out Swiftter tests; sign-in needs a Neon branch):
 
 ```bash
 docker run --rm -d --name swiftter-db -p 5432:5432 -e POSTGRES_PASSWORD=swiftter postgres:17

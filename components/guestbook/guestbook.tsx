@@ -5,14 +5,36 @@ import { Paper, PressedFlower, Scribble, WashiTape } from "@/components/scrapboo
 type GuestbookProps = {
   /** A handwritten line under the heading. */
   note: string;
-  /** Clerk's <SignIn> or <SignUp>, themed with `guestbookAppearance`. */
+  /** The sign-in or sign-up form (components/guestbook/guestbook-form.tsx). */
   children: ReactNode;
 };
+
+export type SearchParams = Record<string, string | string[] | undefined>;
+
+const firstParam = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+
+/** Shown when a Google sign-in comes back with an error, or cannot start. */
+export const GOOGLE_ERROR = "Google sign-in didn't go through. Try again, or use your email.";
+
+/**
+ * Where to go once signed in: `redirect_url` when it is a path on this site
+ * (never another origin), else Swiftter.
+ */
+export function guestbookRedirect(params: SearchParams): string {
+  const target = firstParam(params.redirect_url);
+
+  return target && target.startsWith("/") && !target.startsWith("//") && !target.startsWith("/\\") ? target : "/swiftter";
+}
+
+/** The explanation to show when Google sent the visitor back with `?error=…`. */
+export function guestbookError(params: SearchParams): string | null {
+  return firstParam(params.error) ? GOOGLE_ERROR : null;
+}
 
 /**
  * The guestbook spread shared by sign-in and sign-up: a handwritten "Sign the
  * guestbook" heading on the journal's paper, and a taped card on a kraft page,
- * pressed flowers tucked under its corners, holding Clerk's form.
+ * pressed flowers tucked under its corners, holding the form.
  */
 export function Guestbook({ note, children }: GuestbookProps) {
   return (

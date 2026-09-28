@@ -78,7 +78,7 @@ export async function expectReducedMotion(page: Page, scope?: Scope, ready?: (pa
 	await page.emulateMedia({ reducedMotion: "reduce" });
 	await page.reload();
 	await page.waitForLoadState("load");
-	// Content that mounts after load (e.g. Clerk's forms) is only checked once it is there.
+	// Content that mounts after load (e.g. the composer) is only checked once it is there.
 	await ready?.(page);
 	// Let hydration and the first frames run: anything still going after that
 	// is motion the visitor would see.
