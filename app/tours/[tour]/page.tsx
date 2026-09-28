@@ -3,10 +3,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Bracelet, PressedFlower, RuledList, RuledListItem, StickyNote, TicketStub } from "@/components/scrapbook";
+import { Bracelet, PressedFlower, RuledList, RuledListItem, StickyNote } from "@/components/scrapbook";
 import { TourGallery } from "@/components/tours/tour-gallery";
 import { TourPoster } from "@/components/tours/tour-poster";
 import { TourScope } from "@/components/tours/tour-scope";
+import { TourNote, TourStub } from "@/components/tours/tour-stub";
 import { TourVideo } from "@/components/tours/tour-video";
 import { ERA_LOOKS } from "@/lib/eras";
 import { TOURS, getTour, tourEraLabel, tourLook, tourYears } from "@/lib/tours";
@@ -43,23 +44,15 @@ export default async function TourPage({ params }: TourPageProps) {
         {/* The stub, the poster and the numbers. */}
         <div className="mt-8 grid items-start gap-14 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-7">
-            <TicketStub
+            <TourStub
+              as="h1"
               className="max-w-[560px]"
-              kicker={`Admit one · ${tourEraLabel(tour)}`}
-              meta={`${tourYears(tour)} · ${tour.shows} shows · ${tour.legs.length} continents`}
               tilt={-1.5}
-              title={
-                <span className="font-display block text-[clamp(2.4rem,7vw,4rem)] leading-[1] not-italic" id="tour-title">
-                  {tour.tour}
-                </span>
-              }
-              titleAs="h1"
+              titleClassName="text-[clamp(2.4rem,7vw,4rem)] leading-[1]"
+              titleId="tour-title"
+              tour={tour}
             />
-            <p className="font-hand mt-10 max-w-[30rem] text-[28px] leading-tight font-bold">
-              <span aria-hidden="true">“</span>
-              {tour.note}
-              <span aria-hidden="true">”</span>
-            </p>
+            <TourNote className="mt-10 max-w-[30rem] text-[28px]" tour={tour} />
 
             <dl className="mt-10 grid max-w-[560px] grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3">
               <Stat label="Years">{tourYears(tour)}</Stat>

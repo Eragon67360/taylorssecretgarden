@@ -73,6 +73,7 @@ export function TourVideo({ tour, src, caption, tilt = 3, className }: TourVideo
         caption={
           <span className="flex items-center justify-center gap-2">
             <span>{caption}</span>
+            {/* On the polaroid's white frame, so it is inked (and focus-ringed) in the photo ink, not the Era's. */}
             <button
               aria-label={`${playing ? "Pause" : "Play"} ${tour} video`}
               className="font-body grid size-8 shrink-0 place-items-center rounded-full border border-current text-xs text-[var(--photo-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--photo-ink)]"

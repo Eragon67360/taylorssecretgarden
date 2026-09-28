@@ -1,11 +1,12 @@
 import Link from "next/link";
 
-import { PressedFlower, StickyNote, TicketStub } from "@/components/scrapbook";
-import { type Tour, tourEraLabel, tourLook, tourYears } from "@/lib/tours";
+import { PressedFlower, StickyNote } from "@/components/scrapbook";
+import { type Tour, tourLook, tourYears } from "@/lib/tours";
 import { cn } from "@/lib/utils";
 
 import { TourPoster } from "./tour-poster";
 import { TourScope } from "./tour-scope";
+import { TourNote, TourStub } from "./tour-stub";
 import { TourVideo } from "./tour-video";
 
 type TourEntryProps = {
@@ -36,23 +37,15 @@ export function TourEntry({ tour, index }: TourEntryProps) {
           <p className="font-hand text-soft mb-5 text-2xl font-bold">
             page {index + 1} · {tourYears(tour)}
           </p>
-          <TicketStub
+          <TourStub
+            as="h2"
             className="max-w-[440px]"
-            kicker={`Admit one · ${tourEraLabel(tour)}`}
-            meta={`${tourYears(tour)} · ${tour.shows} shows · ${tour.legs.length} continents`}
             tilt={flip ? 2 : -2}
-            title={
-              <span className="font-display block text-[34px] leading-[1.05] not-italic sm:text-[40px]" id={headingId}>
-                {tour.tour}
-              </span>
-            }
-            titleAs="h2"
+            titleClassName="text-[34px] leading-[1.05] sm:text-[40px]"
+            titleId={headingId}
+            tour={tour}
           />
-          <p className="font-hand mt-8 max-w-[26rem] text-[26px] leading-tight font-bold">
-            <span aria-hidden="true">“</span>
-            {tour.note}
-            <span aria-hidden="true">”</span>
-          </p>
+          <TourNote className="mt-8 max-w-[26rem] text-[26px]" tour={tour} />
           <p className="text-soft mt-3 max-w-[30rem] text-[17px] leading-relaxed">{tour.facts[0]}</p>
           <Link
             className="focus-ring font-hand text-ink decoration-accent mt-6 inline-block text-2xl font-bold underline decoration-2 underline-offset-4"
