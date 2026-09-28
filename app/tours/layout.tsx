@@ -4,7 +4,7 @@ export default function ToursLayout({
   children: React.ReactNode;
 }) {
   return (
-    <section className="w-[100dvw] h-screen">
+    <section className="w-dvw h-screen">
       {children}
     </section>
   );

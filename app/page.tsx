@@ -2,7 +2,7 @@
 export default function Home() {
   return (
     <section className="w-screen h-screen bg-home bg-cover bg-no-repeat bg-center relative uppercase transition-all duration-300 pb-[120px] md:pb-[180px] lg:pb-[240px] xl:pb-[300px]">
-      <h1 className="absolute top-8 text-xl md:text-2xl lg:text-3xl xl:text-4xl text-white w-full text-center font-[900] transition-all duration-300">Taylor Swift</h1>
+      <h1 className="absolute top-8 text-xl md:text-2xl lg:text-3xl xl:text-4xl text-white w-full text-center font-black transition-all duration-300">Taylor Swift</h1>
 
       <div className="absolute bg-black/40 top-[108px] left-[58px] md:top-[144px] md:left-[118px] lg:top-[204px] lg:left-[178px] xl:top-[266px] xl:left-[230px] w-[74px] md:w-[84px] lg:w-[94px] transition-all duration-300">
         <p className="font-impact text-base md:text-lg lg:text-xl text-white">Who is taylor swift anyway? <span className="text-[#F00]">EW</span></p>

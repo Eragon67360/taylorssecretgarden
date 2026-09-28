@@ -1,12 +1,92 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  shadcn/ui tokens. One light theme; the values reproduce the NextUI light
+  theme the site used before (foreground #11181c, primary/focus #792e3a).
+  Phase B's journal tokens replace these.
+*/
+:root {
+  --background: #ffffff;
+  --foreground: #11181c;
+  --card: #ffffff;
+  --card-foreground: #11181c;
+  --primary: #792e3a;
+  --primary-foreground: #ffffff;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --border: #e4e4e7;
+  --ring: #792e3a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+}
+
+/* Theme extensions carried over from the Tailwind 3 config. */
+@theme {
+  --background-image-custom-gradient: linear-gradient(180deg, rgba(217, 217, 217, 0) 0%, rgba(79, 79, 79, 0.58) 36.4%, #000 100%);
+  --background-image-tours: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/eras");
+  --background-image-eras: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/gallery");
+  --background-image-home: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/home");
+}
+
+/*
+  Font utilities. next/font sets --font-* on <body> (config/fonts.ts) and the
+  Tour page reads them by name, so they are exposed as plain utilities rather
+  than @theme tokens (a --font-inter token would shadow the next/font variable).
+*/
+@utility font-inter {
+  font-family: var(--font-inter);
+}
+@utility font-dancing {
+  font-family: var(--font-dancing);
+}
+@utility font-impact {
+  font-family: var(--font-impact), Impact, sans-serif;
+}
+@utility font-playfair {
+  font-family: var(--font-playfair);
+}
+@utility font-unifraktur {
+  font-family: var(--font-unifraktur);
+}
+
+/* Tailwind 3 defaults that v4 changed, kept so nothing shifts visually. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
 
 ::-webkit-scrollbar {
     width: 0px;
     background: transparent; /* Optional: just to hide the scrollbar */
 }
-
 
 .image {
     border: 5px transparent solid;
