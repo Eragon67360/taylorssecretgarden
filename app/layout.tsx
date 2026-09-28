@@ -1,12 +1,12 @@
 import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
-import clsx from "clsx";
-
-import { Providers } from "./providers";
 
 import { siteConfig } from "@/config/site";
 import { fontDancing, fontImpact, fontInter, fontPlayfair, fontUnifraktur } from "@/config/fonts";
 import Navbar from "@/components/navbar";
+import { cn } from "@/lib/utils";
+
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: {
@@ -35,7 +35,7 @@ export default function RootLayout({
     <html className="light" lang="en">
       <head />
       <body
-        className={clsx(
+        className={cn(
           "min-h-screen bg-background font-sans antialiased",
           fontInter.variable,
           fontDancing.variable,

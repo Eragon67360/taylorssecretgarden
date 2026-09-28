@@ -1,13 +1,11 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-
-@custom-variant dark (&:is(.dark *));
 
 /*
   shadcn/ui tokens. One light theme; the values reproduce the NextUI light
   theme the site used before (foreground #11181c, primary/focus #792e3a).
-  Phase B's journal tokens replace these.
+  Only the tokens the added primitives (card, separator, skeleton) use are
+  defined; add the rest (radius, input, popover...) with the next primitive
+  that needs them. Phase B's journal tokens replace these.
 */
 :root {
   --background: #ffffff;
@@ -137,4 +135,93 @@
 
 .post-content a {
     text-decoration: underline;
+}
+
+/*
+  Variants shadcn components use, copied from shadcn's tailwind.css (only the
+  ones the added primitives need; copy more with the primitives that use them).
+*/
+@custom-variant data-horizontal {
+  &:where([data-orientation="horizontal"]) {
+    @slot;
+  }
+}
+
+@custom-variant data-vertical {
+  &:where([data-orientation="vertical"]) {
+    @slot;
+  }
+}
+
+/*
+  Scroll utilities, copied from shadcn's tailwind.css (only the two in use):
+  a hidden scrollbar, and a vertical edge fade that replaces NextUI's
+  ScrollShadow. The fade grows in as the list scrolls away from an edge.
+*/
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@property --scroll-fade-t {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --scroll-fade-b {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@theme inline {
+  @keyframes scroll-fade-reveal-t {
+    from {
+      --scroll-fade-t: 0px;
+    }
+    to {
+      --scroll-fade-t: var(--scroll-fade-size);
+    }
+  }
+  @keyframes scroll-fade-reveal-b {
+    from {
+      --scroll-fade-b: var(--scroll-fade-size);
+    }
+    to {
+      --scroll-fade-b: 0px;
+    }
+  }
+}
+
+@utility scroll-fade-y {
+  --scroll-fade-size: min(12%, calc(var(--spacing) * 10));
+  --scroll-fade-reveal: calc(var(--spacing) * 24);
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--scroll-fade-t, 0px),
+    #000 calc(100% - var(--scroll-fade-b, 0px)),
+    transparent 100%
+  );
+  mask-repeat: no-repeat;
+
+  @supports (animation-timeline: scroll()) {
+    animation:
+      scroll-fade-reveal-t 1ms linear,
+      scroll-fade-reveal-b 1ms linear;
+    animation-timeline: scroll(self y), scroll(self y);
+    animation-range:
+      0 var(--scroll-fade-reveal),
+      calc(100% - var(--scroll-fade-reveal)) 100%;
+    animation-fill-mode: both;
+  }
+
+  @supports not (animation-timeline: scroll()) {
+    --scroll-fade-t: var(--scroll-fade-size);
+    --scroll-fade-b: var(--scroll-fade-size);
+  }
 }
