@@ -6,7 +6,7 @@ export { Bracelet } from "./bracelet";
 export { Paper } from "./paper";
 export { Arrow, Highlight, Scribble } from "./pen-marks";
 export { Polaroid } from "./polaroid";
-export { FLOWERS, PressedFlower } from "./pressed-flower";
+export { PressedFlower } from "./pressed-flower";
 export { RubberStamp } from "./rubber-stamp";
 export { RuledList, RuledListItem } from "./ruled-list";
 export { StickyNote } from "./sticky-note";

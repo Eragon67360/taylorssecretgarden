@@ -1,15 +1,15 @@
 import type { CSSProperties } from "react";
 
-import { sanitisePostHtml } from "@/service/post-html";
 import { cn } from "@/lib/utils";
 
 type PostContentProps = { content: string; className?: string; style?: CSSProperties };
 
 /**
- * A Post's HTML. Posts are sanitised when they are published; sanitising again
- * on render keeps rows written any other way from running scripts in the
- * browser. Formatting styles: `.post-content` in styles/globals.css.
+ * A Post's HTML, as the feed API serves it: sanitised on the server when
+ * published and again when read (toFeedPost in service/swiftter.ts), so rows
+ * written any other way cannot run scripts here either. Formatting styles:
+ * `.post-content` in styles/globals.css.
  */
 export function PostContent({ content, className, style }: PostContentProps) {
-  return <div dangerouslySetInnerHTML={{ __html: sanitisePostHtml(content) }} className={cn("post-content", className)} style={style} />;
+  return <div dangerouslySetInnerHTML={{ __html: content }} className={cn("post-content", className)} style={style} />;
 }

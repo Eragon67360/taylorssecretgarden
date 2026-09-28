@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { motion } from "motion/react";
+import * as m from "motion/react-m";
 
 import { cn } from "@/lib/utils";
 
@@ -28,7 +28,7 @@ export function Polaroid({ children, caption, tilt = -2, taped = false, lift = f
   const motionProps = useLift(tilt, lift);
 
   return (
-    <motion.figure
+    <m.figure
       className={cn(
         "relative bg-photo p-2.5 pb-3 shadow-[0_1px_2px_rgba(0,0,0,.12),0_22px_36px_-18px_rgba(40,20,10,.55)] sm:p-3",
         className,
@@ -53,6 +53,6 @@ export function Polaroid({ children, caption, tilt = -2, taped = false, lift = f
       ) : (
         <span aria-hidden="true" className="block h-8" />
       )}
-    </motion.figure>
+    </m.figure>
   );
 }

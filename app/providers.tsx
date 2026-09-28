@@ -1,22 +1,34 @@
 "use client";
 
-import * as React from "react";
-import { Toaster } from "sonner";
-import { ClerkProvider } from "@clerk/nextjs";
-import { MotionConfig } from "motion/react";
+import { LazyMotion, MotionConfig } from "motion/react";
 
-export interface ProvidersProps {
-  children: React.ReactNode;
+/** Resolves once the page has loaded and the main thread is idle. */
+function afterLoad() {
+  return new Promise<void>((resolve) => {
+    const idle = () => (window.requestIdleCallback ? window.requestIdleCallback(() => resolve()) : setTimeout(resolve, 1));
+
+    if (document.readyState === "complete") idle();
+    else window.addEventListener("load", idle, { once: true });
+  });
 }
 
-export function Providers({ children }: ProvidersProps) {
+// Motion's animation features (springs, gestures, exit and layout animations,
+// ~30 KB) load once the page has loaded, off the critical path: nothing moves
+// before then anyway. Components render the tiny `m` elements
+// (motion/react-m); `strict` rejects a full `motion.*` element, which would
+// bundle every feature up front.
+const loadFeatures = () =>
+  afterLoad()
+    .then(() => import("@/lib/motion-features"))
+    .then((mod) => mod.default);
+
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
-      {/* "user": transform and layout animations are skipped under reduced motion. */}
-      <MotionConfig reducedMotion="user">
-        <Toaster richColors position="bottom-center" />
+    // "user": transform and layout animations are skipped under reduced motion.
+    <MotionConfig reducedMotion="user">
+      <LazyMotion strict features={loadFeatures}>
         {children}
-      </MotionConfig>
-    </ClerkProvider>
+      </LazyMotion>
+    </MotionConfig>
   );
 }

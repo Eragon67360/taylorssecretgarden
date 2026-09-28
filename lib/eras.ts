@@ -33,6 +33,9 @@ export type EraSlug = (typeof ERA_SLUGS)[number];
 /** What an Era keeps pressed between the pages: a flower, or (The Life of a Showgirl) a showgirl's feather. */
 export type Flower = "daisy" | "fern" | "lavender" | "rose" | "leaf" | "feather";
 
+/** Every pressed flower (components/scrapbook/pressed-flower.tsx), for the styleguide. */
+export const FLOWERS: readonly Flower[] = ["daisy", "fern", "lavender", "rose", "leaf", "feather"];
+
 export type EraLook = {
   slug: EraSlug;
   /** The Era's name as fans write it (the Album title, in its own casing). */

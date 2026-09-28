@@ -1,5 +1,5 @@
 import { Polaroid } from "@/components/scrapbook";
-import CldImage from "@/components/ui/CldImageWrapper";
+import Image from "next/image";
 import { type GalleryPhoto } from "@/lib/tours";
 
 const TILTS = [-3, 2, -1.5, 3];
@@ -16,7 +16,7 @@ export function TourGallery({ photos }: { photos: GalleryPhoto[] }) {
         {photos.map((photo, index) => (
           <li key={photo.src} className="mx-auto w-[86%] sm:w-full">
             <Polaroid caption={photo.caption} taped={index % 2 === 0} tilt={TILTS[index % TILTS.length]}>
-              <CldImage
+              <Image
                 alt={photo.alt}
                 className="h-auto w-full"
                 height={photo.size[1]}

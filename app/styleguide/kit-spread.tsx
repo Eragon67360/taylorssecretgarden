@@ -5,7 +5,6 @@ import Image from "next/image";
 import {
   Arrow,
   Bracelet,
-  FLOWERS,
   Highlight,
   Paper,
   Pin,
@@ -19,7 +18,7 @@ import {
   TicketStub,
   WashiTape,
 } from "@/components/scrapbook";
-import { ERA_LOOKS, type EraSlug, paperTexture } from "@/lib/eras";
+import { ERA_LOOKS, type EraSlug, FLOWERS, paperTexture } from "@/lib/eras";
 import { cn } from "@/lib/utils";
 
 const PHOTO = "/img/eras.jpg";

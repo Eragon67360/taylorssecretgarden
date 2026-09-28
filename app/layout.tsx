@@ -7,34 +7,31 @@ import { siteConfig } from "@/config/site";
 // has a CSS chunk of its own that the nav's prefetch preloads and then leaves
 // unused (a console warning on every other page).
 import "@/config/era-fonts";
-import {
-  fontBody,
-  fontDancing,
-  fontHand,
-  fontInter,
-  fontPlayfair,
-  fontSerif,
-  fontUnifraktur,
-} from "@/config/fonts";
+import { fontBody, fontHand, fontSerif, fontSerifItalic } from "@/config/fonts";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { cn } from "@/lib/utils";
 
 import { Providers } from "./providers";
 
+// Icons (app/icon.svg, app/apple-icon.tsx) and the Open Graph card
+// (app/opengraph-image.tsx) are file conventions: Next adds their tags.
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
   title: {
-    default: siteConfig.name,
-    template: `%s - ${siteConfig.name}`,
+    default: `${siteConfig.name}: a Swiftie's scrapbook`,
+    template: `%s · ${siteConfig.name}`,
   },
   description: siteConfig.description,
-  icons: {
-    icon: "/favicon.ico",
-  },
+  applicationName: siteConfig.name,
+  // No og:title/og:description here: a page's own <title> and description
+  // (which link previews fall back to) beat one shared title on every page.
+  openGraph: { type: "website", siteName: siteConfig.name, locale: "en" },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f3eadb",
+  themeColor: siteConfig.colors.paper,
 };
 
 export default function RootLayout({
@@ -45,15 +42,7 @@ export default function RootLayout({
   return (
     // The font variables sit on <html> so the journal tokens on :root can use them.
     <html
-      className={cn(
-        fontHand.variable,
-        fontBody.variable,
-        fontSerif.variable,
-        fontInter.variable,
-        fontDancing.variable,
-        fontPlayfair.variable,
-        fontUnifraktur.variable,
-      )}
+      className={cn(fontHand.variable, fontBody.variable, fontSerif.variable, fontSerifItalic.variable)}
       lang="en"
     >
       <body className="flex min-h-dvh flex-col antialiased">

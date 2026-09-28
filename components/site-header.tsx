@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "motion/react";
+import * as m from "motion/react-m";
 
+import { GardenMark } from "@/components/garden-mark";
 import { Scribble } from "@/components/scrapbook";
 import { cn } from "@/lib/utils";
 
@@ -31,8 +32,10 @@ function isCurrent(pathname: string, path: string) {
 export function SiteHeader() {
   const pathname = usePathname();
 
+  // No paper of its own: the body's grain shows through, aligned (a second
+  // grain here would also make the header the page's Largest Contentful Paint).
   return (
-    <header className="bg-paper paper-grain border-line relative z-40 border-b" id="site-header">
+    <header className="border-line relative z-40 border-b" id="site-header">
       <a
         className="bg-card text-ink focus-ring sr-only z-50 rounded-md px-4 py-2 font-bold focus:not-sr-only focus:absolute focus:top-3 focus:left-3"
         href="#main"
@@ -41,7 +44,7 @@ export function SiteHeader() {
       </a>
       <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-end justify-between gap-x-6 gap-y-2 px-4 pt-4 sm:px-8 md:pt-7">
         <Link className="group focus-ring text-ink flex min-h-11 items-center gap-2 rounded-md pb-2" href="/">
-          <GardenMark />
+          <GardenMark className="size-9 transition-transform duration-500 motion-safe:group-hover:rotate-[30deg]" />
           <span className="font-hand text-[26px] leading-none font-bold md:text-[28px]">Taylor&apos;s Secret Garden</span>
         </Link>
 
@@ -71,7 +74,7 @@ export function SiteHeader() {
                       style={{ background: section.tab }}
                     />
                     {current && (
-                      <motion.span
+                      <m.span
                         aria-hidden="true"
                         className="bg-card absolute inset-0 rounded-t-[9px] shadow-[0_-2px_6px_rgba(60,40,20,.08)]"
                         layoutId="current-section-tab"
@@ -88,22 +91,5 @@ export function SiteHeader() {
         </nav>
       </div>
     </header>
-  );
-}
-
-/** A little pressed daisy, the garden's mark. */
-function GardenMark() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="size-9 transition-transform duration-500 motion-safe:group-hover:rotate-[30deg]"
-      focusable="false"
-      viewBox="0 0 40 40"
-    >
-      {Array.from({ length: 8 }, (_, index) => (
-        <ellipse key={index} cx="20" cy="10" fill="var(--accent)" opacity=".8" rx="4.5" ry="9" transform={`rotate(${index * 45} 20 20)`} />
-      ))}
-      <circle cx="20" cy="20" fill="#E9B949" r="5" />
-    </svg>
   );
 }

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { motion } from "motion/react";
+import * as m from "motion/react-m";
 
 import { cn } from "@/lib/utils";
 
@@ -33,7 +33,7 @@ export function StickyNote({ children, tone = "yellow", attach = "none", tilt = 
   const motionProps = useLift(tilt, lift);
 
   return (
-    <motion.div
+    <m.div
       className={cn(
         "font-hand relative p-4 pb-5 text-[22px] font-bold leading-[1.1] drop-shadow-[0_8px_8px_rgba(0,0,0,.18)]",
         TONES[tone].ink,
@@ -56,6 +56,6 @@ export function StickyNote({ children, tone = "yellow", attach = "none", tilt = 
       {attach === "pin" && <Pin className="top-1.5 left-1/2 -translate-x-1/2" />}
       {attach === "tape" && <WashiTape className="-top-3 left-1/2 -translate-x-1/2" rotate={-3} width={80} />}
       <div className={cn("relative", attach === "pin" && "pt-2")}>{children}</div>
-    </motion.div>
+    </m.div>
   );
 }

@@ -1,9 +1,12 @@
+"use client";
+
+// A client component only so that pages do not serialise every petal into
+// their RSC payload: the page sends the flower's props, the browser draws it.
 import type { CSSProperties } from "react";
 import type { Flower } from "@/lib/eras";
 
 import { cn } from "@/lib/utils";
 
-export const FLOWERS: readonly Flower[] = ["daisy", "fern", "lavender", "rose", "leaf", "feather"];
 
 type PressedFlowerProps = {
   kind: Flower;

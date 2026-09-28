@@ -28,7 +28,9 @@ export function TourEntry({ tour, index }: TourEntryProps) {
   return (
     <TourScope
       aria-labelledby={headingId}
-      className="relative overflow-x-clip shadow-[inset_0_14px_18px_-14px_rgba(0,0,0,.28)]"
+      // Off-screen Tours skip rendering until scrolled near, so their Era's
+      // display face and poster load then, not with the page.
+      className="relative overflow-x-clip shadow-[inset_0_14px_18px_-14px_rgba(0,0,0,.28)] [contain-intrinsic-size:auto_1200px] [content-visibility:auto]"
       id={tour.slug}
       tour={tour}
     >
@@ -59,7 +61,6 @@ export function TourEntry({ tour, index }: TourEntryProps) {
           <div className="relative mx-auto flex max-w-[620px] flex-col items-center gap-10 sm:flex-row sm:items-start sm:gap-0">
             <TourPoster
               className="w-[68%] shrink-0 sm:w-[44%]"
-              priority={index === 0}
               tilt={flip ? 3 : -3}
               tour={tour}
               width={272}

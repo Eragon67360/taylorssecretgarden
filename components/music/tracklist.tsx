@@ -3,8 +3,6 @@
 import type { PreviewPlayer } from "./use-preview-player";
 import type { Track } from "@/types";
 
-import { FaPause, FaPlay } from "react-icons/fa";
-
 import { RuledList, RuledListItem, WashiTape } from "@/components/scrapbook";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +59,7 @@ function TrackLine({ track, player }: { track: Track; player: PreviewPlayer }) {
           type="button"
           onClick={() => player.toggle(track.id)}
         >
-          {playing ? <FaPause aria-hidden="true" size={11} /> : <FaPlay aria-hidden="true" className="translate-x-px" size={10} />}
+          {playing ? <PauseIcon /> : <PlayIcon />}
         </button>
         <span className="relative min-w-0 flex-1">
           <span className="flex min-w-0 items-baseline text-[15.5px] font-medium sm:text-base">
@@ -109,5 +107,23 @@ function PreviewProgress({ name, position, length }: { name: string; position: n
         style={{ scale: `${Math.min(position / length, 1)} 1` }}
       />
     </span>
+  );
+}
+
+/** The play and pause marks on a track's button (decorative: the button is labelled). */
+function PlayIcon() {
+  return (
+    <svg aria-hidden="true" className="translate-x-px" fill="currentColor" height="10" viewBox="0 0 10 12" width="9">
+      <path d="M0 .8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L1.2.1A.8.8 0 0 0 0 .8Z" />
+    </svg>
+  );
+}
+
+function PauseIcon() {
+  return (
+    <svg aria-hidden="true" fill="currentColor" height="11" viewBox="0 0 10 12" width="9">
+      <rect height="12" rx="1" width="3.5" x="0.5" />
+      <rect height="12" rx="1" width="3.5" x="6" />
+    </svg>
   );
 }
