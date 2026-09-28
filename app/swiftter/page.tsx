@@ -139,7 +139,7 @@ export default function SwiftterPage() {
 
 	return (
 		<div className="w-full flex flex-col items-center">
-			<div className="w-full h-[156px] bg-gradient-to-r from-[#7A2E3A] to-[#4C3337] flex flex-col items-center justify-center text-white px-4">
+			<div className="w-full h-[156px] bg-linear-to-r from-[#7A2E3A] to-[#4C3337] flex flex-col items-center justify-center text-white px-4">
 				<h1 className="text-xl text-center font-inter font-bold">
 					Welcome to the swift<span className="text-[#F00]">ter</span>
 				</h1>
