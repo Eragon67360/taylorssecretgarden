@@ -12,12 +12,12 @@ import { EraFace } from "./era-face";
 import { SectionHead } from "./section-head";
 
 // A hand-placed tilt per pressed page.
-const TILTS = [-2, 1.5, -1, 2.2, -1.8, 1, -2.4, 1.8, -1.2, 2, -1.6];
+const TILTS = [-2, 1.5, -1, 2.2, -1.8, 1, -2.4, 1.8, -1.2, 2, -1.6, 1.4];
 
 /** How the Era is written on its pressed page: the debut by its title, TTPD by its initials. */
 const label = (look: EraLook) => (look.slug === "ttpd" ? look.short : look.name);
 
-/** The herbarium: all eleven Eras pressed in their own paper, each opening its Album on the Music page. */
+/** The herbarium: every Era pressed in their own paper, each opening its Album on the Music page. */
 export function EraGallery({ albums }: { albums: Record<EraSlug, EraAlbum> }) {
   return (
     <section aria-labelledby="eras" className="relative mx-auto w-full max-w-[1240px] px-4 pt-20 pb-10 sm:px-8">
@@ -29,12 +29,6 @@ export function EraGallery({ albums }: { albums: Record<EraSlug, EraAlbum> }) {
             <PressedEra album={albums[look.slug]} look={look} number={index + 1} tilt={TILTS[index % TILTS.length]} />
           </li>
         ))}
-        <li className="flex">
-          <div className="border-line text-soft relative flex w-full rotate-[1.5deg] flex-col items-center justify-center border-2 border-dashed p-5 text-center">
-            <p className="font-hand text-[22px] leading-snug font-bold">space saved for whatever she announces at midnight</p>
-            <p className="mt-3 text-[11px] font-bold tracking-[.2em] uppercase">No. 12 · soon™</p>
-          </div>
-        </li>
       </ol>
     </section>
   );
@@ -75,7 +69,7 @@ function PressedEra({ look, album, number, tilt }: { look: EraLook; album: EraAl
           <span>No. {String(number).padStart(2, "0")}</span>
           <span>{look.year}</span>
         </div>
-        <p className="mt-1.5 truncate text-[clamp(1.35rem,2.6vw,1.9rem)] leading-tight">
+        <p className="mt-1.5 text-[clamp(1.35rem,2.6vw,1.9rem)] leading-tight text-balance">
           <EraFace>{label(look)}</EraFace>
         </p>
         {album.taylorsVersion && (

@@ -3,12 +3,37 @@ import type { Locator, Page } from "@playwright/test";
 import { PHONE, expectNoAxeViolations, expectNoHorizontalOverflow, expectReducedMotion } from "./checks";
 import { expect, test } from "./fixtures";
 
-// Deezer titles some Albums differently by catalog region (the debut is
-// "Taylor Swift (Deluxe Edition)" in Europe, "Taylor Swift" in the US), and
-// may answer a curated ID with a regional twin that has another ID. These
-// tests only name Albums whose titles are the same everywhere, and only use
-// curated IDs in URLs.
-const IDS = { debut: "227786", reputation: "52612062", folklore: "162683632", midnights: "368474187" };
+// Albums are named from the curated catalogue (lib/catalogue.ts), not from
+// Deezer, whose titles vary by catalog region; URLs use curated IDs.
+const IDS = {
+	reputation: "52612062",
+	folklore: "167766152",
+	midnights: "446218925",
+	showgirl: "1103662682",
+	/** Fearless (International Version), another edition of the Fearless Album. */
+	fearlessInternational: "283925",
+};
+
+/** The shelf, in Era order: each Taylor's Version right after its original. */
+const SHELF: { name: string; id: string; era: string }[] = [
+	{ name: "Taylor Swift", id: "227786", era: "debut" },
+	{ name: "Fearless", id: "426350", era: "fearless" },
+	{ name: "Fearless (Taylor's Version)", id: "221543452", era: "fearless" },
+	{ name: "Speak Now", id: "689149", era: "speak-now" },
+	{ name: "Speak Now (Taylor's Version)", id: "461146065", era: "speak-now" },
+	{ name: "Red", id: "68491961", era: "red" },
+	{ name: "Red (Taylor's Version)", id: "272247412", era: "red" },
+	{ name: "1989", id: "9007781", era: "1989" },
+	{ name: "1989 (Taylor's Version)", id: "505316961", era: "1989" },
+	{ name: "reputation", id: "52612062", era: "reputation" },
+	{ name: "Lover", id: "108447472", era: "lover" },
+	{ name: "folklore", id: "167766152", era: "folklore" },
+	{ name: "evermore", id: "198167862", era: "evermore" },
+	{ name: "Midnights", id: "446218925", era: "midnights" },
+	{ name: "The Tortured Poets Department", id: "575252501", era: "ttpd" },
+	{ name: "The Life of a Showgirl", id: "1103662682", era: "showgirl" },
+];
+const ERA_COUNT = new Set(SHELF.map(({ era }) => era)).size;
 
 const shelf = (page: Page) => page.getByRole("list", { name: "Albums" });
 const polaroid = (page: Page, name: string) => shelf(page).getByRole("link", { name, exact: true });
@@ -33,12 +58,12 @@ async function expectAlbumShown(page: Page, title: string | RegExp) {
 }
 
 test.describe("Music", () => {
-	test("shows the eleven Albums as polaroids on a shelf, covers loaded", async ({ page }) => {
+	test("shows the sixteen Albums as polaroids on a shelf, covers loaded", async ({ page }) => {
 		await page.goto("/music");
 
 		const covers = shelf(page).locator("img");
 
-		await expect(shelf(page).getByRole("link")).toHaveCount(11);
+		await expect(shelf(page).getByRole("link")).toHaveCount(16);
 		for (const cover of await covers.all()) {
 			await cover.scrollIntoViewIfNeeded();
 			await expect.poll(() => cover.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
@@ -78,6 +103,78 @@ test.describe("Music", () => {
 		await expect(page.getByText("cardigan", { exact: true })).toBeVisible();
 		await expect(page.getByText("...Ready For It?", { exact: true })).toBeHidden();
 		await expect.poll(() => background(eraPage(page))).toBe("rgb(228, 227, 224)");
+	});
+
+	test("lists the Albums in Era order, each Taylor's Version right after its original with a handwritten tag", async ({ page }) => {
+		await page.goto("/music");
+
+		const links = shelf(page).getByRole("link");
+
+		expect(await links.evaluateAll((all) => all.map((link) => link.getAttribute("aria-label")))).toEqual(SHELF.map(({ name }) => name));
+		for (const { name } of SHELF) {
+			const tag = polaroid(page, name).getByText("Taylor's Version", { exact: true });
+
+			await expect(tag, `${name}'s tag`).toHaveCount(name.includes("(Taylor's Version)") ? 1 : 0);
+		}
+	});
+
+	test("a Taylor's Version wears its original's Era look", async ({ page }) => {
+		test.setTimeout(120_000);
+		await page.goto("/music");
+
+		for (const [index, tv] of SHELF.entries()) {
+			if (!tv.name.includes("(Taylor's Version)")) continue;
+			const original = SHELF[index - 1];
+
+			await polaroid(page, original.name).click();
+			await expect(eraPage(page)).toHaveAttribute("data-era", original.era);
+			await expect(polaroid(page, original.name)).toHaveAttribute("aria-current", "true");
+			await page.waitForTimeout(800);
+			const paper = await background(eraPage(page));
+
+			await polaroid(page, tv.name).click();
+			await expect(page).toHaveURL(`/music?album=${tv.id}`);
+			await expect(eraPage(page)).toHaveAttribute("data-era", original.era);
+			await expect(page.getByText("(Taylor's Version)", { exact: true })).toBeVisible();
+			await expect.poll(() => background(eraPage(page))).toBe(paper);
+		}
+	});
+
+	test("The Life of a Showgirl is Era No. 12, with its own look and its Encore edition", async ({ page }) => {
+		await page.goto(`/music?album=${IDS.showgirl}`);
+
+		await expectAlbumShown(page, "The Life of a Showgirl");
+		await expect(eraPage(page)).toHaveAttribute("data-era", "showgirl");
+		await expect(eraBracelet(page, "Showgirl")).toBeVisible();
+		await expect(page.getByText(/Era No\. 12 · 2025/)).toBeVisible();
+		await expect(page.getByText("The Encore", { exact: true })).toBeVisible();
+		// Mint-water paper (lib/eras.ts).
+		await expect.poll(() => background(eraPage(page))).toBe("rgb(221, 241, 234)");
+		await expect(page.getByRole("definition").nth(1)).toHaveText("16");
+	});
+
+	test("each Album is shown in its most complete edition, named on the page", async ({ page }) => {
+		await page.goto(`/music?album=${IDS.midnights}`);
+
+		await expectAlbumShown(page, "Midnights");
+		await expect(page.getByText("The Til Dawn Edition", { exact: true })).toBeVisible();
+		await expect(page.getByRole("definition").nth(1)).toHaveText("23");
+	});
+
+	test("every Album has a working ?album deep link", async ({ page }) => {
+		test.setTimeout(180_000);
+		for (const { name, id, era } of SHELF) {
+			await page.goto(`/music?album=${id}`);
+			await expect(polaroid(page, name), name).toHaveAttribute("aria-current", "true");
+			await expect(eraPage(page)).toHaveAttribute("data-era", era);
+		}
+	});
+
+	test("a deep link to another edition of an Album opens that Album", async ({ page }) => {
+		await page.goto(`/music?album=${IDS.fearlessInternational}`);
+
+		await expect(polaroid(page, "Fearless")).toHaveAttribute("aria-current", "true");
+		await expect(eraPage(page)).toHaveAttribute("data-era", "fearless");
 	});
 
 	test("Fearless (Taylor's Version) is in the Fearless Era", async ({ page }) => {
@@ -185,7 +282,7 @@ test.describe("Music", () => {
 		const names = await shelf(page).getByRole("link").evaluateAll((links) => links.map((link) => link.getAttribute("aria-label")!));
 		const eras = new Set<string>();
 
-		expect(names).toHaveLength(11);
+		expect(names).toHaveLength(SHELF.length);
 		for (const name of names) {
 			await polaroid(page, name).click();
 			await expect(polaroid(page, name)).toHaveAttribute("aria-current", "true");
@@ -197,7 +294,7 @@ test.describe("Music", () => {
 			await page.waitForTimeout(800);
 			await test.step(`axe in the ${era} Era`, () => expectNoAxeViolations(page));
 		}
-		expect(eras.size).toBe(11);
+		expect(eras.size).toBe(ERA_COUNT);
 	});
 
 	test("fits a 390px phone", async ({ page }) => {
@@ -214,40 +311,23 @@ test.describe("Music", () => {
 		await expectReducedMotion(page);
 	});
 
-	test("the Albums route returns the curated Albums", async ({ request }) => {
+	test("the Albums route returns the curated catalogue, in Era order", async ({ request }) => {
 		const response = await request.get("/api/albums");
 
 		expect(response.status()).toBe(200);
-		const { items } = await response.json();
-		const names = items.map((album: { name: string }) => album.name);
-
-		expect(names.length).toBeGreaterThanOrEqual(10);
-		expect(names).toEqual(expect.arrayContaining(["reputation", "folklore", "Midnights"]));
-	});
-
-	test("every curated Album belongs to an Era, and every Era has one Album", async ({ request }) => {
-		// Deezer may answer a curated ID with a regional twin (another ID for the
-		// same Album), so the route falls back to the title to find the Era.
-		const { items } = (await (await request.get("/api/albums")).json()) as { items: { id: string; name: string; era: string | null }[] };
-		const eraNames: Record<string, string> = {
-			debut: "Taylor Swift",
-			fearless: "Fearless",
-			"speak-now": "Speak Now",
-			red: "Red",
-			"1989": "1989",
-			reputation: "reputation",
-			lover: "Lover",
-			folklore: "folklore",
-			evermore: "evermore",
-			midnights: "Midnights",
-			ttpd: "The Tortured Poets Department",
+		const { items } = (await response.json()) as {
+			items: { id: string; name: string; era: string; taylorsVersion: boolean; reRecords: string | null; year: number; edition: string | null }[];
 		};
 
-		for (const { id, name, era } of items) {
-			expect(era, `Era of ${name} (${id})`).not.toBeNull();
-			// A Taylor's Version shares its original's Era; TTPD's Anthology is TTPD.
-			expect(name.toLowerCase(), `${name} is in the ${era} Era`).toContain(eraNames[era!].toLowerCase());
+		expect(items.map(({ name, era }) => ({ name, era }))).toEqual(SHELF.map(({ name, era }) => ({ name, era })));
+		expect(new Set(items.map(({ era }) => era)).size).toBe(ERA_COUNT);
+		for (const [index, album] of items.entries()) {
+			expect(album.year, `${album.name}'s release year`).toBeGreaterThanOrEqual(2006);
+			if (!album.taylorsVersion) continue;
+			// A Taylor's Version re-records the Album right before it, in the same Era.
+			expect(album.reRecords).toBe(items[index - 1].id);
+			expect(album.era).toBe(items[index - 1].era);
 		}
-		expect(items.map(({ era }) => era).sort()).toEqual(Object.keys(eraNames).sort());
+		expect(items.find(({ name }) => name === "The Life of a Showgirl")).toMatchObject({ edition: "The Encore", year: 2025 });
 	});
 });

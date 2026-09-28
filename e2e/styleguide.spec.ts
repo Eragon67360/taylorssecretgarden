@@ -34,6 +34,7 @@ const ERAS = [
 	"evermore",
 	"Midnights",
 	"The Tortured Poets Department",
+	"The Life of a Showgirl",
 ];
 
 const sandbox = (page: Page) => page.getByRole("region", { name: "Era sandbox" });
@@ -82,7 +83,8 @@ test.describe("Styleguide", () => {
 		await page.goto("/styleguide");
 		const table = page.getByRole("region", { name: "Album → Era" }).getByRole("table");
 
-		await expect(table.getByRole("row")).toHaveCount(ERAS.length + 1);
+		// Sixteen Albums: one per Era, plus four Taylor's Versions.
+		await expect(table.getByRole("row")).toHaveCount(16 + 1);
 		await expect(table.getByRole("row", { name: /221543452 Fearless/ })).toBeVisible();
 	});
 

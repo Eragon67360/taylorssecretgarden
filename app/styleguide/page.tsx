@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { EraScope } from "@/components/era-scope";
-import { ERAS, ERA_BY_ALBUM_ID, ERA_LOOKS, type EraSlug, paperTexture } from "@/lib/eras";
+import { CATALOGUE, albumName } from "@/lib/catalogue";
+import { ERAS, ERA_LOOKS, type EraSlug, paperTexture } from "@/lib/eras";
 
 import { EraSandbox } from "./era-sandbox";
 import { EraTitle } from "./era-title";
@@ -72,20 +73,26 @@ export default function Styleguide() {
           Album → Era
         </h2>
         <p className="text-soft mt-1 text-[15px]">
-          The curated Deezer Albums (app/api/albums/route.ts). A Taylor&apos;s Version shares its original&apos;s Era.
+          The catalogue (lib/catalogue.ts): each Album in its most complete edition on Deezer. A Taylor&apos;s Version shares its
+          original&apos;s Era.
         </p>
-        <table className="mt-4 w-full max-w-[520px] text-left text-[15px]">
+        <table className="mt-4 w-full max-w-[720px] text-left text-[15px]">
           <thead className="text-soft text-[11px] tracking-[.2em] uppercase">
             <tr className="border-line border-b">
-              <th className="py-2 font-bold">Deezer Album ID</th>
+              <th className="py-2 pr-3 font-bold">Deezer Album ID</th>
+              <th className="py-2 pr-3 font-bold">Album</th>
               <th className="py-2 font-bold">Era</th>
             </tr>
           </thead>
           <tbody>
-            {Object.entries(ERA_BY_ALBUM_ID).map(([albumId, era]) => (
-              <tr key={albumId} className="border-line border-b">
-                <td className="py-1.5 font-mono text-[14px]">{albumId}</td>
-                <td className="py-1.5">{ERA_LOOKS[era].name}</td>
+            {CATALOGUE.map((album) => (
+              <tr key={album.id} className="border-line border-b">
+                <td className="py-1.5 pr-3 font-mono text-[14px]">{album.id}</td>
+                <td className="py-1.5 pr-3">
+                  {albumName(album)}
+                  {album.edition && <span className="text-soft"> · {album.edition}</span>}
+                </td>
+                <td className="py-1.5">{ERA_LOOKS[album.era].name}</td>
               </tr>
             ))}
           </tbody>

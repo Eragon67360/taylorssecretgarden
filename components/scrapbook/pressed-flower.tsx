@@ -3,7 +3,7 @@ import type { Flower } from "@/lib/eras";
 
 import { cn } from "@/lib/utils";
 
-export const FLOWERS: readonly Flower[] = ["daisy", "fern", "lavender", "rose", "leaf"];
+export const FLOWERS: readonly Flower[] = ["daisy", "fern", "lavender", "rose", "leaf", "feather"];
 
 type PressedFlowerProps = {
   kind: Flower;
@@ -29,7 +29,44 @@ export function PressedFlower({ kind, color = "var(--accent)", className, style 
       {kind === "lavender" && <Lavender color={color} />}
       {kind === "rose" && <Rose color={color} />}
       {kind === "leaf" && <Leaves color={color} />}
+      {kind === "feather" && <Feather color={color} />}
     </svg>
+  );
+}
+
+/** Barbs along the quill, bottom to top: where each leaves the quill and how far it reaches. */
+const BARBS = Array.from({ length: 26 }, (_, index) => {
+  const t = index / 25;
+
+  return {
+    x: 56 + 16 * t * t,
+    y: 186 - 168 * t,
+    // Downy at the base, widest below the middle, tapering to the tip.
+    reach: 8 + 30 * Math.sin(Math.PI * Math.min(1, 0.25 + t * 0.9)),
+  };
+});
+
+/** A showgirl's plume, pressed flat, with a few rhinestones caught in it. */
+function Feather({ color }: { color: string }) {
+  return (
+    <g>
+      {BARBS.map(({ x, y, reach }, index) => (
+        <g key={index} fill="none" opacity={index < 4 ? 0.55 : 0.85} stroke={color} strokeLinecap="round" strokeWidth="2.2">
+          <path d={`M${x} ${y} C${x - reach * 0.4} ${y - 4} ${x - reach * 0.8} ${y - 6} ${x - reach} ${y - 16}`} />
+          <path d={`M${x} ${y} C${x + reach * 0.4} ${y - 5} ${x + reach * 0.8} ${y - 8} ${x + reach} ${y - 20}`} />
+        </g>
+      ))}
+      <path d="M54 198 C56 150 64 80 73 14" fill="none" stroke={STEM} strokeLinecap="round" strokeWidth="2" />
+      {[
+        [48, 120],
+        [80, 92],
+        [62, 66],
+        [86, 150],
+        [40, 160],
+      ].map(([cx, cy]) => (
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} fill="#FFFFFF" opacity=".9" r="2.4" stroke="rgba(0,0,0,.2)" strokeWidth=".6" />
+      ))}
+    </g>
   );
 }
 

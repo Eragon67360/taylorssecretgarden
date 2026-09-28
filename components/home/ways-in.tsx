@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Paper, Pin, TicketStub, WashiTape } from "@/components/scrapbook";
+import { CATALOGUE } from "@/lib/catalogue";
 import { ERAS } from "@/lib/eras";
 import { cn } from "@/lib/utils";
 
@@ -85,7 +86,7 @@ function Envelope({ covers }: { covers: EraAlbum[] }) {
         )}
         tone="kraft"
       >
-        <span className="font-hand absolute inset-x-0 bottom-5 text-center text-2xl font-bold">{ERAS.length} Eras inside ✿</span>
+        <span className="font-hand absolute inset-x-0 bottom-5 text-center text-2xl font-bold">{ERAS.length} Eras, {CATALOGUE.length} Albums inside ✿</span>
       </Paper>
     </div>
   );
