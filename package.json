@@ -18,6 +18,10 @@
 	},
 	"dependencies": {
 		"@clerk/nextjs": "^7.9.7",
+		"@tiptap/extensions": "^3.31.3",
+		"@tiptap/pm": "^3.31.3",
+		"@tiptap/react": "^3.31.3",
+		"@tiptap/starter-kit": "^3.31.3",
 		"cn": "^0.4.0",
 		"drizzle-orm": "^0.45.3",
 		"gsap": "^3.15.0",
@@ -29,7 +33,6 @@
 		"react": "19.3.0",
 		"react-dom": "19.3.0",
 		"react-icons": "^5.7.0",
-		"react-quill-new": "^3.8.3",
 		"sanitize-html": "^2.17.7",
 		"server-only": "^0.0.1",
 		"sonner": "^2.0.8"

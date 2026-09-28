@@ -249,9 +249,10 @@
     /* Adjust size as needed */
     scale: 110%;
   }
-/* Swiftter Posts: Tailwind's preflight strips list markers; bring them back.
-   Quill 2 stores bullet lists either as <ul> or as <ol> items marked
-   data-list="bullet". */
+/* Swiftter Posts (and the composer, which writes them): Tailwind's preflight
+   strips list markers; bring them back. Tiptap writes <ul>/<ol> with a <p> in
+   each item. Posts from before the redesign were written with Quill 2, which
+   stored bullet lists as <ol> items marked data-list="bullet". */
 .post-content ul,
 .post-content ol {
     padding-left: 1.5em;
@@ -271,6 +272,17 @@
 
 .post-content a {
     text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* The composer's placeholder (Tiptap's Placeholder extension). */
+.post-content p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: #46557f;
+    font-style: italic;
 }
 
 /*
