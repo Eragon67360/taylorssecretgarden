@@ -16,8 +16,3 @@ export function formatRunningTime(ms: number) {
 export function formatReleaseDate(date: string) {
   return new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 }
-
-/** The Album title a fan writes: "Fearless (Taylor's Version)" → "Fearless". */
-export function shortTitle(name: string) {
-  return name.replace(/\s*\((Taylor['’]s Version|Deluxe Edition|Deluxe)\)/i, "");
-}

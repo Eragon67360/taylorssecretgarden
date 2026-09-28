@@ -69,10 +69,9 @@ async function fetchDeezer<T>(path: string): Promise<T> {
   }
 }
 
-export async function getAlbums(albumIds: number[]): Promise<DeezerAlbum[]> {
-  const albums = await Promise.all(albumIds.map((id) => deezerGet<DeezerAlbum>(`/album/${id}`)));
-
-  return albums.sort((a, b) => b.release_date.localeCompare(a.release_date));
+/** The Albums, in the order asked. Deezer may answer an ID with a regional twin (another ID for the same Album). */
+export function getAlbums(albumIds: string[]): Promise<DeezerAlbum[]> {
+  return Promise.all(albumIds.map((id) => deezerGet<DeezerAlbum>(`/album/${id}`)));
 }
 
 // `/album/{id}` embeds at most 25 tracks, so tracks are fetched separately.

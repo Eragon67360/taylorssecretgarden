@@ -9,7 +9,7 @@ One album cycle of Taylor Swift's career (e.g. Fearless, Red, 1989), and the uni
 _Avoid_: Theme, album (when meaning the cycle)
 
 **Album**:
-A released record belonging to exactly one Era. A Taylor's Version re-recording is a separate Album in the same Era as the original; The Tortured Poets Department and its Anthology edition are one Era.
+A released record belonging to exactly one Era. A Taylor's Version re-recording is a separate Album in the same Era as the original; The Tortured Poets Department and its Anthology edition are one Era. An Album is shown in its most complete edition (e.g. Midnights as The Til Dawn Edition).
 _Avoid_: Record, release
 
 **Taylor's Version**:

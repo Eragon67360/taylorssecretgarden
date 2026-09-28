@@ -73,19 +73,28 @@ test.describe("Home", () => {
 		}
 	});
 
-	test("the gallery shows the eleven Eras, each linking to Music with its Album selected", async ({ page }) => {
+	test("the gallery shows the twelve Eras, each linking to Music with its Album selected", async ({ page }) => {
 		await page.goto("/");
 		const eras = gallery(page).getByRole("link");
 
-		await expect(eras).toHaveCount(11);
-		for (let index = 0; index < 11; index++) {
+		await expect(eras).toHaveCount(12);
+		for (let index = 0; index < 12; index++) {
 			await expect(eras.nth(index)).toHaveAttribute("href", /^\/music\?album=\d+$/);
 		}
 		// Taylor's Version Albums stand for their original's Era.
 		await expect(gallery(page).getByRole("link", { name: /Fearless/ })).toHaveAttribute("href", "/music?album=221543452");
-		await expect(gallery(page).getByRole("link", { name: /folklore/ })).toHaveAttribute("href", "/music?album=162683632");
+		await expect(gallery(page).getByRole("link", { name: /folklore/ })).toHaveAttribute("href", "/music?album=167766152");
+		// The newest Era takes the last pressed page.
+		await expect(eras.last()).toHaveAccessibleName(/Showgirl/);
+		await expect(eras.last()).toHaveAttribute("href", "/music?album=1103662682");
 		// Each Era is pressed with its Album cover, fetched on the server.
-		await expect(gallery(page).locator("img")).toHaveCount(11);
+		await expect(gallery(page).locator("img")).toHaveCount(12);
+	});
+
+	test("the Music envelope counts every Era and Album", async ({ page }) => {
+		await page.goto("/");
+
+		await expect(waysIn(page).getByText("12 Eras, 16 Albums inside")).toBeAttached();
 	});
 
 	test("an Era's display face downloads only when its pressed page scrolls into view", async ({ page }) => {

@@ -3,8 +3,8 @@ import type { CSSProperties } from "react";
 import { eraFontFamilies } from "@/config/era-fonts";
 
 /*
-  The Era look module: every Era's look, defined once, and which Era each
-  Album belongs to (see CONTEXT.md). Pages apply a look by rendering inside
+  The Era look module: every Era's look, defined once (which Era each
+  Album belongs to is in lib/catalogue.ts; see CONTEXT.md). Pages apply a look by rendering inside
   <EraScope era="…"> (components/era-scope.tsx), which overrides the journal's
   CSS variables (styles/globals.css) with the values below.
 
@@ -25,11 +25,13 @@ export const ERA_SLUGS = [
   "evermore",
   "midnights",
   "ttpd",
+  "showgirl",
 ] as const;
 
 export type EraSlug = (typeof ERA_SLUGS)[number];
 
-export type Flower = "daisy" | "fern" | "lavender" | "rose" | "leaf";
+/** What an Era keeps pressed between the pages: a flower, or (The Life of a Showgirl) a showgirl's feather. */
+export type Flower = "daisy" | "fern" | "lavender" | "rose" | "leaf" | "feather";
 
 export type EraLook = {
   slug: EraSlug;
@@ -263,6 +265,24 @@ export const ERA_LOOKS: Record<EraSlug, EraLook> = {
     note: "31 songs at 2am. the chairman has been notified",
     font: eraFontFamilies.ttpd,
   },
+  showgirl: {
+    slug: "showgirl",
+    name: "The Life of a Showgirl",
+    short: "Showgirl",
+    year: 2025,
+    // Mint water and orange glitter over deep teal, from the Album's cover.
+    paper: "#DDF1EA",
+    card: "#F6FCF9",
+    ink: "#0E3B35",
+    soft: "#2E5E57",
+    accent: "#E0561B",
+    onAccent: "#1E0A00",
+    line: "#B5DDD0",
+    tape: "rgba(232, 84, 28, 0.45)",
+    flower: "feather",
+    note: "orange glitter, one feather boa, and ophelia finally gets saved. encore!",
+    font: eraFontFamilies.showgirl,
+  },
 };
 
 /** The colours and display face of a look: what `eraVariables` applies (an Era's, or a Tour's own). */
@@ -303,51 +323,4 @@ export function eraVariables(look: EraPalette): CSSProperties {
 
 export function isEraSlug(value: unknown): value is EraSlug {
   return typeof value === "string" && (ERA_SLUGS as readonly string[]).includes(value);
-}
-
-/*
-  Album → Era, for the curated Deezer Album IDs (app/api/albums/route.ts).
-  Taylor's Version re-recordings belong to the original's Era, and The
-  Tortured Poets Department and its Anthology are one Era.
-*/
-export const ERA_BY_ALBUM_ID: Readonly<Record<string, EraSlug>> = {
-  "227786": "debut", // Taylor Swift (Deluxe Edition)
-  "221543452": "fearless", // Fearless (Taylor's Version)
-  "461146065": "speak-now", // Speak Now (Taylor's Version)
-  "272247412": "red", // Red (Taylor's Version)
-  "504180521": "1989", // 1989 (Taylor's Version)
-  "52612062": "reputation",
-  "108447472": "lover",
-  "162683632": "folklore",
-  "192580112": "evermore",
-  "368474187": "midnights",
-  "575252501": "ttpd", // THE TORTURED POETS DEPARTMENT: THE ANTHOLOGY
-};
-
-/** "Fearless (Taylor's Version)" → "fearless"; "THE TORTURED POETS DEPARTMENT: THE ANTHOLOGY" → "the tortured poets department". */
-function baseTitle(title: string) {
-  return title
-    .replace(/\s*[([][^)\]]*[)\]]/g, "")
-    .replace(/:\s*the anthology$/i, "")
-    .replace(/\s+-\s+.*$/, "")
-    .trim()
-    .toLowerCase();
-}
-
-const ERA_BY_TITLE: Readonly<Record<string, EraSlug>> = Object.fromEntries(
-  ERAS.map((look) => [look.name.toLowerCase(), look.slug]),
-);
-
-/**
- * The Era an Album belongs to: by its Deezer ID, else by its title (so a
- * Taylor's Version, deluxe or Anthology edition outside the curated list
- * still lands in the original's Era). Undefined for an Album of no Era.
- */
-export function eraOfAlbum(album: { id: string | number; title?: string }): EraSlug | undefined {
-  return ERA_BY_ALBUM_ID[String(album.id)] ?? (album.title ? ERA_BY_TITLE[baseTitle(album.title)] : undefined);
-}
-
-/** Whether an Album is a Taylor's Version re-recording. */
-export function isTaylorsVersion(title: string) {
-  return /taylor['’]s version/i.test(title);
 }

@@ -10,10 +10,10 @@ import { useEffect, useOptimistic, useTransition } from "react";
 
 import { EraScope } from "@/components/era-scope";
 import { Bracelet, Highlight, Polaroid, PressedFlower, StickyNote } from "@/components/scrapbook";
-import { ERA_LOOKS, ERA_SLUGS, isTaylorsVersion } from "@/lib/eras";
+import { ERA_LOOKS, ERA_SLUGS } from "@/lib/eras";
 
 import { AlbumShelf } from "./album-shelf";
-import { formatReleaseDate, formatRunningTime, shortTitle } from "./format";
+import { formatReleaseDate, formatRunningTime } from "./format";
 import { Tracklist } from "./tracklist";
 import { usePreviewPlayer } from "./use-preview-player";
 
@@ -56,7 +56,7 @@ export function MusicJournal({ shelf, albumId, details }: MusicJournalProps) {
     });
   };
 
-  const title = shortTitle(album?.name ?? look.name);
+  const title = album?.title ?? look.name;
   const eraNumber = String(ERA_SLUGS.indexOf(era) + 1).padStart(2, "0");
   const braceletWord = look.short === "rep" ? look.name : look.short;
 
@@ -101,7 +101,7 @@ export function MusicJournal({ shelf, albumId, details }: MusicJournalProps) {
                   initial={{ opacity: 0, y: -18, rotate: -6, scale: 1.03 }}
                   transition={{ type: "spring", stiffness: 170, damping: 18 }}
                 >
-                  <Polaroid taped caption={`${title.toLowerCase()}, ${look.year}`} tilt={-2.5}>
+                  <Polaroid taped caption={`${title.toLowerCase()}, ${album?.year ?? look.year}`} tilt={-2.5}>
                     {album && (
                       <Image
                         priority
@@ -137,18 +137,24 @@ export function MusicJournal({ shelf, albumId, details }: MusicJournalProps) {
           <h2 className={title.length > 18 ? "font-display mt-2 text-[clamp(2rem,4.6vw,3.6rem)] leading-[1.05] break-words" : "font-display mt-2 text-[clamp(2.5rem,6.5vw,5.2rem)] leading-[1.02] break-words"}>
             {title}
           </h2>
-          {album && isTaylorsVersion(album.name) && (
-            <p className="font-hand mt-1 inline-block -rotate-2 text-[26px] font-bold">
-              <Highlight>(Taylor&apos;s Version)</Highlight> <span className="text-soft">the one we stream</span>
-            </p>
-          )}
-          {album && /deluxe/i.test(album.name) && (
-            <p className="font-hand text-soft mt-1 inline-block -rotate-2 text-[26px] font-bold">deluxe edition, the one with the bonus tracks</p>
+          {(album?.taylorsVersion || album?.edition) && (
+            <div className="font-hand mt-1 flex -rotate-2 flex-wrap items-baseline gap-x-5 text-[26px] leading-tight font-bold">
+              {album.taylorsVersion && (
+                <p>
+                  <Highlight>(Taylor&apos;s Version)</Highlight> <span className="text-soft">the one we stream</span>
+                </p>
+              )}
+              {album.edition && (
+                <p className="text-soft">
+                  <span className="text-ink">{album.edition}</span>, every last bonus track
+                </p>
+              )}
+            </div>
           )}
 
           <dl className="border-line mt-7 grid max-w-[640px] grid-cols-2 gap-x-6 gap-y-3 border-y py-4 text-[15px] sm:grid-cols-[1.5fr_.6fr_1fr_1fr]">
             {[
-              ["Released", ready ? formatReleaseDate(details.release_date) : "…"],
+              ["Released", album ? formatReleaseDate(album.released) : "…"],
               ["Songs", tracks ? String(tracks.length) : "…"],
               ["Running time", tracks ? formatRunningTime(tracks.reduce((total, track) => total + track.duration_ms, 0)) : "…"],
               ["Label", ready ? details.label || "n/a" : "…"],

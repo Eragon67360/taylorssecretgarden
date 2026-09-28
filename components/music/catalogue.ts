@@ -1,34 +1,58 @@
 import "server-only";
 
 import type { Album } from "@/types";
+import type { EraSlug } from "@/lib/eras";
 
-import { ERA_BY_ALBUM_ID, ERA_SLUGS, type EraSlug, eraOfAlbum } from "@/lib/eras";
+import { CATALOGUE, albumName, albumYear, findAlbum, isTaylorsVersion } from "@/lib/catalogue";
 import { getAlbums, toAlbum } from "@/service/deezer";
 
-/** An Album on the Music page's shelf, with the Era whose look it wears. */
-export type ShelfAlbum = Album & { era: EraSlug };
+/** An Album on the Music page's shelf: its Deezer cover and ID, named and placed by the catalogue. */
+export type ShelfAlbum = Album & {
+  era: EraSlug;
+  /** The catalogue's ID for it (`id` is the one Deezer answered with, maybe a regional twin). */
+  catalogueId: string;
+  /** Its title without edition or "(Taylor's Version)": "Fearless". */
+  title: string;
+  edition: string | null;
+  year: number;
+  /** Its original release date, "2017-11-10". */
+  released: string;
+  taylorsVersion: boolean;
+  /** For a Taylor's Version, the shelf ID of the Album it re-records. */
+  reRecords: string | null;
+};
 
-/** The curated Albums (lib/eras.ts), in Era order: one polaroid per Era. */
+/**
+ * Every catalogue Album (lib/catalogue.ts), in Era order, with its Deezer
+ * cover. Names come from the catalogue, not Deezer, whose titles vary by
+ * catalog region.
+ */
 export async function getShelf(): Promise<ShelfAlbum[]> {
-  const albums = await getAlbums(Object.keys(ERA_BY_ALBUM_ID).map(Number));
+  const albums = await getAlbums(CATALOGUE.map(({ id }) => id));
+  // Deezer may answer with a regional twin: a Taylor's Version points at the ID its original is listed under.
+  const shelfId = (catalogueId: string) => String(albums[CATALOGUE.findIndex(({ id }) => id === catalogueId)].id);
 
-  return albums
-    .flatMap((album) => {
-      const era = eraOfAlbum(album);
-
-      return era ? [{ ...toAlbum(album), era }] : [];
-    })
-    .sort((a, b) => ERA_SLUGS.indexOf(a.era) - ERA_SLUGS.indexOf(b.era));
+  return CATALOGUE.map((entry, index) => ({
+    ...toAlbum(albums[index]),
+    name: albumName(entry),
+    era: entry.era,
+    catalogueId: entry.id,
+    title: entry.title,
+    edition: entry.edition ?? null,
+    year: albumYear(entry),
+    released: entry.released,
+    taylorsVersion: isTaylorsVersion(entry),
+    reRecords: entry.reRecords ? shelfId(entry.reRecords) : null,
+  }));
 }
 
 /**
- * The shelf Album a `?album=<id>` asks for. Deezer may answer a curated ID
- * with a regional twin (another ID for the same Album), so a curated ID also
- * finds its Era's Album on the shelf. Anything else opens the debut Album.
+ * The shelf Album a `?album=<id>` asks for: by the ID on the shelf, else by
+ * any Deezer ID of the same Album (another edition, a regional twin).
+ * Anything else opens the debut Album.
  */
 export function pickAlbum(shelf: ShelfAlbum[], wanted: string | undefined): ShelfAlbum | undefined {
-  const byId = (id: string | undefined) => shelf.find((album) => album.id === id);
-  const byEra = (era: EraSlug | undefined) => shelf.find((album) => album.era === era);
+  const catalogueId = findAlbum(wanted)?.id;
 
-  return byId(wanted) ?? byEra(wanted ? ERA_BY_ALBUM_ID[wanted] : undefined) ?? byEra("debut") ?? shelf[0];
+  return shelf.find(({ id }) => id === wanted) ?? shelf.find((album) => album.catalogueId === catalogueId) ?? shelf[0];
 }

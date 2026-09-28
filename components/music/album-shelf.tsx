@@ -11,7 +11,15 @@ import { ERA_LOOKS } from "@/lib/eras";
 import { cn } from "@/lib/utils";
 
 /** Each polaroid's resting tilt, in shelf order. */
-const TILTS = [-3, 2, -1.5, 3, -2.5, 1.5, -2, 2.5, -1, 3, -2.5];
+const TILTS = [-3, 2, -1.5, 3, -2.5, 1.5, -2, 2.5, -1, 3, -2.5, 1, -2, 2.5, -1.5, 2];
+
+/**
+ * On wide screens the shelf is two rows of up to nine: the first ends with
+ * 1989 (Taylor's Version), so every Taylor's Version sits on the first row
+ * next to its original, and the second row starts one column in.
+ */
+const SECOND_ROW = "lg:col-start-2";
+const PER_ROW = 9;
 
 type AlbumShelfProps = {
   albums: ShelfAlbum[];
@@ -21,7 +29,8 @@ type AlbumShelfProps = {
 
 /**
  * Every Album as a polaroid on a shelf: one row that scrolls (and snaps)
- * sideways on small screens. Each polaroid links to its Album's page
+ * sideways on small screens. A Taylor's Version leans on its original and
+ * carries a handwritten tag. Each polaroid links to its Album's page
  * (`?album=<id>`); followed in the same tab, it selects the Album in place.
  */
 export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
@@ -42,13 +51,13 @@ export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
       ref={scroller}
       className="relative -mx-4 mt-2 snap-x snap-mandatory scroll-px-4 overflow-x-auto px-4 pt-5 pb-6 [scrollbar-width:thin] sm:-mx-8 sm:scroll-px-8 sm:px-8 lg:mx-0 lg:overflow-visible lg:px-0"
     >
-      <ul aria-label="Albums" className="flex w-max gap-3.5 lg:grid lg:w-full lg:grid-cols-11 lg:gap-2.5">
+      <ul aria-label="Albums" className="flex w-max gap-3.5 lg:grid lg:w-full lg:grid-cols-9 lg:gap-x-4 lg:gap-y-7">
         {albums.map((album, index) => {
           const look = ERA_LOOKS[album.era];
           const active = album.id === selectedId;
 
           return (
-            <li key={album.id} className="relative snap-center">
+            <li key={album.id} className={cn("relative snap-center", album.taylorsVersion && "-ml-2", index === PER_ROW && SECOND_ROW)}>
               <Link
                 aria-current={active ? "true" : undefined}
                 aria-label={album.name}
@@ -74,13 +83,21 @@ export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
                   alt=""
                   className="aspect-square w-full object-cover"
                   height={120}
-                  sizes="(min-width: 1024px) 110px, 96px"
+                  sizes="(min-width: 1024px) 130px, 96px"
                   src={album.images[0].url}
                   width={120}
                 />
                 <span aria-hidden="true" className="font-hand block truncate py-1 text-center text-[17px] leading-tight font-bold text-[var(--photo-ink)]">
                   {look.short}
                 </span>
+                {album.taylorsVersion && (
+                  <span
+                    aria-hidden="true"
+                    className="font-hand bg-card text-ink absolute right-[-7px] bottom-7 rotate-[-7deg] px-1.5 text-[15px] leading-[1.35] font-bold whitespace-nowrap shadow-[0_1px_3px_rgba(0,0,0,.3)]"
+                  >
+                    Taylor&apos;s Version
+                  </span>
+                )}
               </Link>
             </li>
           );

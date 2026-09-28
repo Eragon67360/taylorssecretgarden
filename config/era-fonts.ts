@@ -1,5 +1,6 @@
 import {
   Abril_Fatface,
+  Bebas_Neue,
   Bodoni_Moda,
   Cinzel,
   Cormorant_Garamond,
@@ -31,6 +32,8 @@ const folklore = IM_Fell_English({ subsets: ["latin"], display: "swap", preload:
 const evermore = Cormorant_Garamond({ subsets: ["latin"], display: "swap", preload: false, weight: ["600", "700"], style: ["italic"], fallback: ["Georgia", "serif"] });
 const midnights = Bodoni_Moda({ subsets: ["latin"], display: "swap", preload: false, weight: ["500", "700"], fallback: ["Didot", "Georgia", "serif"] });
 const ttpd = Special_Elite({ subsets: ["latin"], display: "swap", preload: false, weight: "400", fallback: ["Courier New", "monospace"] });
+// Condensed marquee capitals, like the lights over a Vegas stage door.
+const showgirl = Bebas_Neue({ subsets: ["latin"], display: "swap", preload: false, weight: "400", fallback: ["Impact", "Arial Narrow", "sans-serif"] });
 
 /** Each Era's display face: the CSS font-family list to set on its container. */
 export const eraFontFamilies = {
@@ -45,4 +48,5 @@ export const eraFontFamilies = {
   evermore: evermore.style.fontFamily,
   midnights: midnights.style.fontFamily,
   ttpd: ttpd.style.fontFamily,
+  showgirl: showgirl.style.fontFamily,
 } as const;
