@@ -1,24 +1,23 @@
-import { getAlbums, toAlbum } from '@/service/deezer';
 import { NextResponse } from "next/server";
 
-// Curated by Deezer album ID, fetched directly: titles vary with the catalog
-// region, and title matching dropped the debut album on Vercel's build machines.
-const specifiedAlbumIds = [
-    227786,    // Taylor Swift (Deluxe Edition)
-    221543452, // Fearless (Taylor's Version)
-    461146065, // Speak Now (Taylor's Version)
-    504180521, // 1989 (Taylor's Version)
-    272247412, // Red (Taylor's Version)
-    52612062,  // reputation
-    162683632, // folklore
-    108447472, // Lover
-    192580112, // evermore
-    575252501, // THE TORTURED POETS DEPARTMENT: THE ANTHOLOGY
-    368474187, // Midnights
-];
+import { getShelf } from "@/components/music/catalogue";
 
+/**
+ * The catalogue (lib/catalogue.ts): every Album in Era order, each with its
+ * Era, edition, release year and, for a Taylor's Version, the Album it re-records.
+ */
 export async function GET() {
-    const albums = await getAlbums(specifiedAlbumIds);
+  const items = (await getShelf()).map(({ id, name, images, era, edition, year, released, taylorsVersion, reRecords }) => ({
+    id,
+    name,
+    images,
+    era,
+    edition,
+    year,
+    released,
+    taylorsVersion,
+    reRecords,
+  }));
 
-    return NextResponse.json({ items: albums.map(toAlbum) });
+  return NextResponse.json({ items });
 }

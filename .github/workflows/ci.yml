@@ -1,20 +1,21 @@
 name: CI
 
-# Lint, typecheck, build, then run the Playwright smoke suite against
-# `next start`, on every pull request and on pushes to dev.
+# Two jobs on every pull request and on pushes to dev, each on its own
+# production build under `next start`:
+#   smoke       lint, typecheck, build, then the Playwright smoke suite
+#   lighthouse  build, then Lighthouse CI (lighthouserc.js): mobile, median of
+#               3 runs; Accessibility under 0.9 fails, Performance under 0.9 warns
 #
-# Required repository secrets (set from the local env file with
-# `gh secret set -f <file>`; values are never committed):
-#   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY    Clerk (development instance)
-#   CLERK_SECRET_KEY                     Clerk server key, used by the proxy (proxy.ts)
-#   NEXT_PUBLIC_CLERK_SIGN_IN_URL        Clerk sign-in route
-#   NEXT_PUBLIC_CLERK_SIGN_UP_URL        Clerk sign-up route
-#   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME    Cloudinary images and videos
-#   E2E_CLERK_USER_USERNAME              the dedicated test Member (email) on the Clerk
-#   E2E_CLERK_USER_PASSWORD              development instance, for the signed-in Swiftter tests
+# Each job runs on its own Neon branch (database + Neon Auth, docs/adr/0004),
+# created from production for the run, migrated and seeded, and deleted at the
+# end (it also expires after two hours, should the deletion not run). The
+# production branch itself is never written to: the tests that sign up or
+# publish refuse to run on it (e2e/member.ts).
 #
-# Swiftter's database is a throwaway Postgres service container, migrated and
-# seeded before the tests; the real (Neon) database is never touched.
+# Required repository settings (values are never committed):
+#   secrets.NEON_API_KEY             Neon API key (project-scoped), creates and deletes the branches
+#   vars.NEON_PROJECT_ID             the Neon project
+#   secrets.NEON_AUTH_COOKIE_SECRET  signs Neon Auth's session cookies (32+ characters)
 
 on:
   pull_request:
@@ -25,36 +26,17 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NEXT_TELEMETRY_DISABLED: 1
+  NEON_AUTH_COOKIE_SECRET: ${{ secrets.NEON_AUTH_COOKIE_SECRET }}
+  # Builds and serves the development styleguide (/styleguide) for its tests;
+  # production (Vercel) leaves it unset and answers 404.
+  ENABLE_STYLEGUIDE: 1
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      NEXT_TELEMETRY_DISABLED: 1
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-      NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }}
-      NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }}
-      # A plain value, not a secret: as a secret, GitHub masks every "/swiftter" in the logs.
-      NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: /swiftter
-      NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
-      E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
-      E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
-      DATABASE_URL: postgres://swiftter:swiftter@localhost:5432/swiftter
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: swiftter
-          POSTGRES_PASSWORD: swiftter
-          POSTGRES_DB: swiftter
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U swiftter"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -65,7 +47,30 @@ jobs:
 
       - run: npm ci
 
-      - name: Migrate and seed the test database
+      - name: Branch expiry
+        id: expiry
+        run: echo "at=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Create a Neon branch for this run
+        id: branch
+        uses: neondatabase/create-branch-action@v6
+        with:
+          api_key: ${{ secrets.NEON_API_KEY }}
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: ci/${{ github.run_id }}-${{ github.run_attempt }}-smoke
+          expires_at: ${{ steps.expiry.outputs.at }}
+          get_auth_url: true
+
+      - name: Point the app at the branch
+        env:
+          DB_URL: ${{ steps.branch.outputs.db_url_pooled }}
+          AUTH_URL: ${{ steps.branch.outputs.auth_url }}
+        run: |
+          test -n "$AUTH_URL" || { echo "::error::Neon Auth is not enabled on the CI branch"; exit 1; }
+          echo "DATABASE_URL=$DB_URL" >> "$GITHUB_ENV"
+          echo "NEON_AUTH_BASE_URL=$AUTH_URL" >> "$GITHUB_ENV"
+
+      - name: Migrate and seed the branch
         run: npm run db:migrate && npm run db:seed
 
       - name: Lint
@@ -92,3 +97,76 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
+
+      - name: Delete the Neon branch
+        if: always() && steps.branch.outputs.branch_id != ''
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          api_key: ${{ secrets.NEON_API_KEY }}
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: ${{ steps.branch.outputs.branch_id }}
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: npm
+
+      - run: npm ci
+
+      - name: Branch expiry
+        id: expiry
+        run: echo "at=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - name: Create a Neon branch for this run
+        id: branch
+        uses: neondatabase/create-branch-action@v6
+        with:
+          api_key: ${{ secrets.NEON_API_KEY }}
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: ci/${{ github.run_id }}-${{ github.run_attempt }}-lighthouse
+          expires_at: ${{ steps.expiry.outputs.at }}
+          get_auth_url: true
+
+      - name: Point the app at the branch
+        env:
+          DB_URL: ${{ steps.branch.outputs.db_url_pooled }}
+          AUTH_URL: ${{ steps.branch.outputs.auth_url }}
+        run: |
+          test -n "$AUTH_URL" || { echo "::error::Neon Auth is not enabled on the CI branch"; exit 1; }
+          echo "DATABASE_URL=$DB_URL" >> "$GITHUB_ENV"
+          echo "NEON_AUTH_BASE_URL=$AUTH_URL" >> "$GITHUB_ENV"
+
+      - name: Migrate and seed the branch
+        run: npm run db:migrate && npm run db:seed
+
+      - name: Build
+        run: npm run build
+
+      - name: Lighthouse CI
+        run: npm run lighthouse # starts `next start` itself (lighthouserc.js); uses the runner's Chrome
+
+      - name: Scores
+        if: always() && hashFiles('.lighthouseci/reports/manifest.json') != ''
+        run: node scripts/lighthouse-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/reports/
+          retention-days: 14
+
+      - name: Delete the Neon branch
+        if: always() && steps.branch.outputs.branch_id != ''
+        uses: neondatabase/delete-branch-action@v3
+        with:
+          api_key: ${{ secrets.NEON_API_KEY }}
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: ${{ steps.branch.outputs.branch_id }}

@@ -1,16 +1,19 @@
+import "server-only";
+
 import sanitizeHtml from "sanitize-html";
 
 /**
  * Post HTML with anything executable removed: the one sanitising policy for
- * Posts, applied when they are published and again when they are rendered.
+ * Posts, applied when they are published and again when the feed reads them.
  *
- * An allowlist of the formatting the Swiftter editor produces (paragraphs,
- * marks, links, headings, quotes, code and lists, which Quill 2 may write as
- * `<ol><li data-list="bullet">`, so `data-list` is kept). Everything else,
+ * An allowlist of the formatting Swiftter's editors have produced: Tiptap's
+ * paragraphs, bold, italic, links and lists (`<ul>/<ol><li><p>`), and, in
+ * Posts from before the redesign, Quill 2's headings, quotes, code and lists
+ * written as `<ol><li data-list="bullet">` (so `data-list` is kept). Everything else,
  * including inline styles and event handlers, is dropped.
  *
- * sanitize-html is pure JavaScript (no jsdom), so it runs on Vercel's Node
- * runtime and in the browser alike.
+ * Server only: sanitize-html (with its parser and PostCSS) weighs ~70 KB
+ * gzipped, too much to ship to the browser.
  */
 const POLICY: sanitizeHtml.IOptions = {
 	allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "s", "a", "ol", "ul", "li", "h1", "h2", "h3", "blockquote", "code", "pre"],

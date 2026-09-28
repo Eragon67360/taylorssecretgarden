@@ -38,4 +38,12 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /blob-report/
+/e2e/.auth/
 /playwright/.cache/
+
+# lighthouse ci
+/.lighthouseci/
+
+# Chrome profiles Lighthouse leaves behind under WSL (chrome-launcher turns the
+# Windows LOCALAPPDATA path into a literal folder name in the working directory)
+/C:*lighthouse.*/

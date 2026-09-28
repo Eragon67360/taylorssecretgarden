@@ -1,32 +1,38 @@
 <!doctype html>
-<!-- Taylor's Secret Garden hover loop (8s, 1280x800). Real captures from taylorssecretgarden.vercel.app; see capture.mjs. -->
+<!-- Taylor's Secret Garden hover loop (8s, 1280x800). Real captures of the Secret Garden design; see capture.mjs. -->
 <html>
 <head>
 <meta charset="utf-8" />
 <link rel="stylesheet" href="base.css" />
 <style>
-  /* The site's own look: black backgrounds with the pure red accent of the home page. */
-  :root { --ink: #000; --red: rgb(255, 0, 0); }
+  /* The site's own look: the journal's paper (--header is the site header's paper, around the wordmark)
+     with its wine accent. */
+  :root { --paper: #f3eadb; --header: #ebe1d1; --accent: #7e2a37; }
+  body, .stage { background: var(--paper); }
   .wipe { position: absolute; top: 0; bottom: 0; width: 1500px; left: -1500px; z-index: 30;
-    background: var(--ink); box-shadow: 18px 0 0 var(--red); }
-  /* The site's "TAYLOR SWIFT" wordmark, cropped from the home capture and centred on the wipe. */
-  .mark { position: absolute; top: 400px; width: 320px; height: 48px; margin: -24px 0 0 -160px;
-    transform: scale(1.5); background: url("captures/home.png") -480px -28px / 1280px 800px no-repeat; }
-  .zoom { transform-origin: 0 0; }
+    background: var(--header); box-shadow: 14px 0 0 var(--accent), 30px 0 40px rgba(40, 20, 10, .25); }
+  /* The site's wordmark (pressed flower + "Taylor's Secret Garden"), cropped from the home capture
+     and centred on the wipe. Its box comes from layout.js. */
+  .mark { position: absolute; top: 400px; background: url("captures/home.png") no-repeat;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent),
+      linear-gradient(transparent, #000 15%, #000 85%, transparent);
+    -webkit-mask-composite: source-in; mask-composite: intersect; }
   /* Cursors pass under the wipes. */
   .hv-cursor, .hv-click { z-index: 20; }
 </style>
 </head>
 <body>
 <div class="stage">
-  <div class="layer" id="home"><img class="shot zoom" id="homeImg" src="captures/home.png" /></div>
-  <div class="layer" id="music">
-    <img class="shot" src="captures/music-0.png" />
-    <img class="shot" id="m1989" src="captures/music-1989.png" />
-    <div id="albumsSeq"></div>
-    <img class="shot" id="mRed" src="captures/music-red.png" />
+  <div class="layer" id="home">
+    <div id="homeSeq"></div>
+    <img class="shot" id="homeHover" src="captures/home-hover.png" />
+    <img class="shot" id="homeImg" src="captures/home.png" />
   </div>
-  <div class="layer" id="tours"><img class="shot" src="captures/tours.png" /></div>
+  <div class="layer" id="music">
+    <img class="shot" src="captures/music-folklore.png" />
+    <img class="shot" id="mShowgirl" src="captures/music-showgirl.png" />
+  </div>
+  <div class="layer" id="tours"><div id="toursSeq"></div></div>
   <div class="layer" id="eras"><div id="erasSeq"></div></div>
   <div class="wipe" id="wipe"><div class="mark" id="mark"></div></div>
   <div class="hv-cursor" id="c1"></div><div class="hv-cursor" id="c2"></div><div class="hv-cursor" id="c3"></div>
@@ -34,7 +40,7 @@
 <script src="engine.js"></script>
 <script src="captures/layout.js"></script>
 <script>
-  const { tw, seg, keys, ease } = HV;
+  const { tw, seg, ease } = HV;
   const L = window.LAYOUT;
   const $ = (id) => document.getElementById(id);
   const center = (b) => [b.x + b.w / 2, b.y + b.h / 2];
@@ -54,70 +60,78 @@
       imgs.forEach((img, i) => (img.style.opacity = i === k ? 1 : 0));
     };
   };
-  const albumsAt = stack("albumsSeq", "albums");
+  const homeAt = stack("homeSeq", "home");
+  const toursAt = stack("toursSeq", "tours");
   const erasAt = stack("erasSeq", "eras");
 
+  // The wipe's wordmark.
+  const M = L.logo, MS = 1.9;
+  Object.assign($("mark").style, {
+    width: `${M.w}px`, height: `${M.h}px`, margin: `${-M.h / 2}px 0 0 ${-M.w / 2}px`,
+    backgroundPosition: `${-M.x}px ${-M.y}px`, backgroundSize: "1280px 800px", transform: `scale(${MS})`,
+  });
+
   // Timeline (seconds).
-  const HOME_OUT = 1.3, CLICK_1989 = 2.15, ALBUMS_SCROLL = 2.6, CLICK_RED = 3.75, TOURS_IN = 4.5;
-  const CLICK_ERAS = 5.4, ERAS_IN = 5.75, ERAS_SCROLL = 6.1, HOME_BACK = 7.15;
+  const HOME_SCROLL = 0.45, CLICK_FOLKLORE = 2.35, MUSIC_IN = 2.75, CLICK_SHOWGIRL = 3.55, TOURS_IN = 4.85;
+  const TOURS_SCROLL = 5.05, CLICK_ERAS = 6.0, ERAS_IN = 6.3, ERAS_SCROLL = 6.45, HOME_BACK = 7.4;
 
-  const [mx, my] = center(L.musicLink);
-  const [ax, ay] = center(L.album1989);
-  const [rx, ry] = center(L.albumRed);
-  const [ex, ey] = [L.eras.x + L.eras.w / 2, L.eras.y + 70];
-  const cur1 = HV.cursor($("c1"), [[0.45, 1010, 560], [0.8, mx, my], [1.1, mx, my]], [0.85]);
-  const cur2 = HV.cursor($("c2"), [[1.8, 720, 560], [2.1, ax + 10, ay + 10], [2.5, ax + 10, ay + 10],
-    [2.6, ax + 20, ay + 40], [3.4, ax + 20, ay + 40], [3.7, rx + 10, ry + 10], [4.2, rx + 10, ry + 10]], [CLICK_1989, CLICK_RED]);
-  const cur3 = HV.cursor($("c3"), [[4.85, 1000, 660], [5.35, ex, ey], [5.6, ex, ey]], [CLICK_ERAS]);
+  const [fx, fy] = center(L.folklore);
+  const [sx, sy] = center(L.showgirl);
+  const [ex, ey] = [L.erasLink.x + 90, L.erasLink.y + L.erasLink.h / 2];
+  const cur1 = HV.cursor($("c1"), [[1.85, 760, 720], [2.25, fx, fy], [2.5, fx, fy]], [CLICK_FOLKLORE]);
+  const cur2 = HV.cursor($("c2"), [[2.95, 720, 640], [3.45, sx, sy], [3.9, sx + 4, sy + 6]], [CLICK_SHOWGIRL]);
+  const cur3 = HV.cursor($("c3"), [[5.6, 560, 660], [5.95, ex, ey], [6.2, ex, ey]], [CLICK_ERAS]);
 
-  /** A black panel with the red edge sweeping across, fully covering the frame at `mid`. */
+  /** The paper panel with the wine edge sweeping across, fully covering the frame at `mid`. */
   const wipeX = (t, start, mid, end) =>
     t < start || t > end ? -1600 : t < mid ? tw(t, start, mid, -1600, -110, ease.in) : tw(t, mid, end, -110, 1300, ease.out);
 
   window.DURATION = 8;
   window.renderAt = (t) => {
-    const scene = t < HOME_OUT ? "home" : t < TOURS_IN ? "music" : t < ERAS_IN ? "tours" : t < HOME_BACK ? "eras" : "home";
+    const scene = t < MUSIC_IN ? "home" : t < TOURS_IN ? "music" : t < ERAS_IN ? "tours" : t < HOME_BACK ? "eras" : "home";
     for (const id of ["home", "music", "tours", "eras"]) $(id).style.opacity = id === scene ? 1 : 0;
-    // The tour page fades in over the zoomed tours landing.
+    // The tour page fades in over the zoomed Tours journal.
     if (scene === "eras") {
       $("eras").style.opacity = seg(t, ERAS_IN, ERAS_IN + 0.2);
       $("tours").style.opacity = t < ERAS_IN + 0.2 ? 1 : 0;
     }
 
-    // Home: gentle push-in, back to exactly scale 1 at the loop point.
-    const hs = t < 4 ? tw(t, 0, HOME_OUT, 1, 1.035) : tw(t, HOME_BACK, 7.85, 1.035, 1, ease.out);
-    $("homeImg").style.transform = `scale(${hs})`;
+    // Home: the hero (the card frame), the real scroll down to the herbarium, the folklore card lifting under the cursor.
+    const back = t >= HOME_BACK;
+    $("homeImg").style.opacity = t < HOME_SCROLL || back ? 1 : 0;
+    homeAt(t, HOME_SCROLL);
+    $("homeHover").style.opacity = back ? 0 : seg(t, 2.15, 2.3);
+    $("home").style.transformOrigin = `${fx}px ${fy}px`;
+    $("home").style.transform = `scale(${back ? 1 : tw(t, CLICK_FOLKLORE, MUSIC_IN, 1, 1.12, ease.in)})`;
 
-    // Music: open 1989, scroll the album list (real per-frame captures), open Red, push in on its tracks.
-    $("m1989").style.opacity = seg(t, CLICK_1989 + 0.05, CLICK_1989 + 0.2);
-    albumsAt(t, ALBUMS_SCROLL);
-    $("albumsSeq").style.opacity = t >= ALBUMS_SCROLL ? 1 : 0;
-    $("mRed").style.opacity = seg(t, CLICK_RED + 0.05, CLICK_RED + 0.2);
-    const mz = tw(t, CLICK_RED + 0.2, TOURS_IN, 1, 1.07, ease.linear);
-    $("music").style.transformOrigin = "630px 420px";
+    // Music: folklore, then the Showgirl polaroid re-themes the page; slow push-in on the new Era.
+    $("mShowgirl").style.opacity = seg(t, CLICK_SHOWGIRL + 0.05, CLICK_SHOWGIRL + 0.35);
+    const mz = t < CLICK_SHOWGIRL ? tw(t, MUSIC_IN - 0.3, CLICK_SHOWGIRL, 1.04, 1, ease.out) : tw(t, CLICK_SHOWGIRL + 0.3, TOURS_IN, 1, 1.06, ease.linear);
+    $("music").style.transformOrigin = "900px 560px";
     $("music").style.transform = `scale(${mz})`;
 
-    // Tours: slow push-in on the landing, click The Eras Tour poster and zoom into it.
-    const tz = t < CLICK_ERAS + 0.05 ? tw(t, TOURS_IN, CLICK_ERAS, 1, 1.03, ease.linear) : tw(t, CLICK_ERAS + 0.05, ERAS_IN + 0.2, 1.03, 1.6, ease.in);
-    $("tours").style.transformOrigin = `${ex}px ${ey + 80}px`;
+    // Tours: the journal's opening, the real scroll to The Eras Tour, click "More on The Eras Tour" and zoom into it.
+    toursAt(t, TOURS_SCROLL);
+    const tz = t < CLICK_ERAS + 0.05 ? 1 : tw(t, CLICK_ERAS + 0.05, ERAS_IN + 0.2, 1, 1.5, ease.in);
+    $("tours").style.transformOrigin = `${ex}px ${ey}px`;
     $("tours").style.transform = `scale(${tz})`;
-    $("tours").style.filter = `blur(${tw(t, 5.6, ERAS_IN + 0.2, 0, 6)}px)`;
+    $("tours").style.filter = `blur(${tw(t, CLICK_ERAS + 0.1, ERAS_IN + 0.2, 0, 6)}px)`;
 
     // The Eras Tour page: lands slightly zoomed, then the real scroll down the page.
     erasAt(t, ERAS_SCROLL);
-    const ez = tw(t, ERAS_IN, ERAS_SCROLL, 1.06, 1, ease.out);
+    const ez = tw(t, ERAS_IN, ERAS_SCROLL + 0.2, 1.05, 1, ease.out);
     $("eras").style.transformOrigin = "640px 300px";
     $("eras").style.transform = `scale(${ez})`;
 
-    // Brand wipes: home -> music, music -> tours, tour page -> home.
-    const w = t < 3 ? wipeX(t, 1.0, HOME_OUT, 1.65) : t < 6 ? wipeX(t, 4.2, TOURS_IN, 4.85) : wipeX(t, 6.85, HOME_BACK, 7.55);
+    // Journal wipes: home -> music, music -> tours, tour page -> home.
+    const w = t < 3.5 ? wipeX(t, 2.45, MUSIC_IN, 3.1) : t < 6.2 ? wipeX(t, 4.55, TOURS_IN, 5.2) : wipeX(t, 7.1, HOME_BACK, 7.75);
     $("wipe").style.transform = `translateX(${w + 1500}px)`;
     // Keep the wordmark centred on the visible part of the panel (the panel spans [w, w + 1500]).
     const cx = (Math.max(0, w) + Math.min(1280, w + 1500)) / 2;
     $("mark").style.left = `${cx - w}px`;
     // Shown only once the visible part of the panel is wider than the wordmark.
     const visible = Math.min(1280, w + 1500) - Math.max(0, w);
-    $("mark").style.opacity = HV.clamp((visible - 500) / 200);
+    $("mark").style.opacity = HV.clamp((visible - M.w * MS - 40) / 200);
 
     cur1(t); cur2(t); cur3(t);
   };

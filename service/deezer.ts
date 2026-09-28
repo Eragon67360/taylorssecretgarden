@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+
 import { Album, AlbumDetails } from "@/types";
 
 const API_URL = "https://api.deezer.com";
@@ -27,24 +29,49 @@ type DeezerAlbumDetails = DeezerAlbum & {
 // Deezer's public catalog needs no credentials, but reports failures as
 // HTTP 200 with an `error` object in the body.
 //
-// Responses are kept in Next's data cache for a day. Next 14 cached fetches by
-// default; since Next 15 they are uncached, and every page view would then hit
-// Deezer's rate limit (50 requests per 5 seconds) within a few visits.
-async function deezerGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, { next: { revalidate: 86400 } });
-  const data = await response.json();
+// Responses are kept in Next's data cache for a day: since Next 15 fetches are
+// uncached, and every page view would then hit Deezer's rate limit (50
+// requests per 5 seconds) within a few visits. The cache wraps the checked
+// response, not the raw fetch, so an error body (e.g. "Quota limit exceeded")
+// is never cached as if it were data.
+//
+// Until a response is cached, concurrent page views asking for the same path
+// share one request, and "Quota limit exceeded" (error code 4) is retried twice,
+// once the rate limit's window has moved on.
+const QUOTA_EXCEEDED = 4;
+const inFlight = new Map<string, Promise<unknown>>();
 
-  if (!response.ok || data.error) {
-    throw new Error(`Deezer ${path} failed: ${data.error?.message ?? response.status}`);
-  }
-
-  return data;
+function deezerGet<T>(path: string, revalidate = 86400): Promise<T> {
+  return unstable_cache(() => fetchOnce<T>(path), ["deezer", path], { revalidate })();
 }
 
-export async function getAlbums(albumIds: number[]): Promise<DeezerAlbum[]> {
-  const albums = await Promise.all(albumIds.map((id) => deezerGet<DeezerAlbum>(`/album/${id}`)));
+function fetchOnce<T>(path: string): Promise<T> {
+  let request = inFlight.get(path) as Promise<T> | undefined;
 
-  return albums.sort((a, b) => b.release_date.localeCompare(a.release_date));
+  if (!request) {
+    request = fetchDeezer<T>(path).finally(() => inFlight.delete(path));
+    inFlight.set(path, request);
+  }
+
+  return request;
+}
+
+async function fetchDeezer<T>(path: string): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    const response = await fetch(`${API_URL}${path}`, { cache: "no-store" });
+    const data = await response.json();
+
+    if (response.ok && !data.error) return data;
+    if (data.error?.code !== QUOTA_EXCEEDED || attempt === 3) {
+      throw new Error(`Deezer ${path} failed: ${data.error?.message ?? response.status}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1500 * attempt + Math.random() * 1000));
+  }
+}
+
+/** The Albums, in the order asked. Deezer may answer an ID with a regional twin (another ID for the same Album). */
+export function getAlbums(albumIds: string[]): Promise<DeezerAlbum[]> {
+  return Promise.all(albumIds.map((id) => deezerGet<DeezerAlbum>(`/album/${id}`)));
 }
 
 // `/album/{id}` embeds at most 25 tracks, so tracks are fetched separately.
@@ -80,4 +107,16 @@ export async function getAlbumDetails(albumId: string): Promise<AlbumDetails> {
       })),
     },
   };
+}
+
+/*
+  A track's 30-second preview URL. Deezer signs preview URLs for about 15
+  minutes, so the day-old URLs in a cached tracklist have usually expired:
+  players ask for a fresh one when they play (app/api/preview/[trackId]).
+  Cached for 5 minutes, well inside the signature's lifetime.
+*/
+export async function getTrackPreview(trackId: string): Promise<string | undefined> {
+  const track = await deezerGet<DeezerTrack>(`/track/${trackId}`, 300);
+
+  return track.preview || undefined;
 }

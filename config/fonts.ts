@@ -1,31 +1,56 @@
-import { Anton, Inter, Dancing_Script as Dancing, Playfair_Display, UnifrakturMaguntia } from "next/font/google";
+import { Karla } from "next/font/google";
+import localFont from "next/font/local";
 
-export const fontInter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+/*
+  The journal's own faces, used on every page and preloaded: a pen (Caveat),
+  a clean text face (Karla) and a bookish heading serif (Fraunces). Exposed as
+  the `font-hand`, `font-body` and `font-serif` utilities (styles/globals.css).
+  Each Era's display face lives in config/era-fonts.ts and is not preloaded.
+
+  Caveat and Fraunces are self-hosted static cuts (assets/fonts/, built by
+  scripts/build-fonts.py) of the one weight the site sets them in, half the
+  size of Google's variable files. Each face is declared for a weight range,
+  so text asking for another weight in that range uses it as is (no faux bold).
+*/
+const Caveat = localFont({
+  // Caveat Bold: the pen writes bold everywhere.
+  src: [{ path: "../assets/fonts/caveat-700.woff2", weight: "400 700", style: "normal" }],
+  display: "swap",
+  variable: "--font-caveat",
+  fallback: ["Segoe Print", "Bradley Hand", "cursive"],
 });
 
-// Impact-style display face for the home page captions. Impact itself is not
-// installed on every OS (nor licensed for the web), so Anton stands in.
-export const fontImpact = Anton({
-  weight: "400",
+export const fontBody = Karla({
   subsets: ["latin"],
-  variable: "--font-impact",
+  display: "swap",
+  variable: "--font-karla",
+  fallback: ["system-ui", "sans-serif"],
 });
 
-export const fontDancing = Dancing({
-  subsets: ["latin"],
-  variable: "--font-dancing",
+const Fraunces = localFont({
+  // Fraunces SemiBold: the journal's headings.
+  src: [{ path: "../assets/fonts/fraunces-600.woff2", weight: "100 900", style: "normal" }],
+  display: "swap",
+  variable: "--font-fraunces",
+  fallback: ["Georgia", "serif"],
+  adjustFontFallback: "Times New Roman",
 });
 
-export const fontPlayfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
+/*
+  Fraunces italic (SemiBold, like the headings), for the few italic words set
+  in it: the `font-serif-italic` utility and the Eras Tour's display face.
+  Not preloaded: Next preloads a root layout's faces on every page, and most
+  pages never use this one. Its own family, so italic serif text elsewhere is
+  synthesised from the upright face.
+*/
+const FrauncesItalic = localFont({
+  src: [{ path: "../assets/fonts/fraunces-italic-600.woff2", weight: "100 900", style: "italic" }],
+  display: "swap",
+  preload: false,
+  variable: "--font-fraunces-italic",
+  fallback: ["Georgia", "serif"],
+  adjustFontFallback: "Times New Roman",
 });
 
-export const fontUnifraktur = UnifrakturMaguntia({
-  weight: "400",
-  style: "normal",
-  subsets: ["latin"],
-  variable: "--font-unifraktur",
-});
+// Named after the typeface: next/font/local takes the family name from the binding.
+export { Caveat as fontHand, Fraunces as fontSerif, FrauncesItalic as fontSerifItalic };

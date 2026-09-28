@@ -1,29 +1,109 @@
 @import "tailwindcss";
 
-/*
-  shadcn/ui tokens. One light theme; the values reproduce the NextUI light
-  theme the site used before (foreground #11181c, primary/focus #792e3a).
-  Only the tokens the added primitives (card, separator, skeleton) use are
-  defined; add the rest (radius, input, popover...) with the next primitive
-  that needs them. Phase B's journal tokens replace these.
-*/
+/* ==========================================================================
+   Journal tokens (the scrapbook design system)
+
+   The neutral journal look is the default. An Era applies by overriding the
+   same variables on a container (components/era-scope.tsx, values in
+   lib/eras.ts). The colours are registered custom properties, so the Era
+   container can transition the variables themselves: every descendant that
+   reads them fades along (instant under reduced motion).
+   ========================================================================== */
+
+@property --paper {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f3eadb;
+}
+@property --card {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #fffcf5;
+}
+@property --ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #2b1d14;
+}
+@property --soft {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #5a4535;
+}
+@property --line {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #e2d3bb;
+}
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #7e2a37;
+}
+@property --on-accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #fff6ec;
+}
+@property --tape {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(246, 226, 170, 0.62);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #11181c;
-  --card: #ffffff;
-  --card-foreground: #11181c;
-  --primary: #792e3a;
-  --primary-foreground: #ffffff;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --border: #e4e4e7;
-  --ring: #792e3a;
+  /* Journal base; every Era overrides these eight. */
+  --paper: #f3eadb;
+  --card: #fffcf5;
+  --ink: #2b1d14;
+  --soft: #5a4535;
+  --line: #e2d3bb;
+  --accent: #7e2a37;
+  --on-accent: #fff6ec;
+  --tape: rgba(246, 226, 170, 0.62);
+
+  /* Fixed craft colours, the same in every Era. */
+  --kraft: #dcc7a6;
+  --sticky: #fce68a;
+  --sticky-ink: #2b1d14;
+  --pen: #b0231c;
+  --photo: #fffdf8;
+  --photo-ink: #2b1d14;
+  --stem: #6e7f4e;
+
+  /* Display face; an Era sets its own (config/era-fonts.ts). */
+  --era-font: var(--font-fraunces), Georgia, serif;
+  --era-font-weight: 600;
+  --era-font-style: normal;
+
+  /* shadcn/ui tokens, mapped onto the journal. */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card-foreground: var(--ink);
+  --primary: var(--accent);
+  --primary-foreground: var(--on-accent);
+  --muted: color-mix(in srgb, var(--line) 50%, var(--card));
+  --muted-foreground: var(--soft);
+  --border: var(--line);
+  --ring: var(--accent);
 }
 
 @theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-soft: var(--soft);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-tape: var(--tape);
+  --color-kraft: var(--kraft);
+  --color-sticky: var(--sticky);
+  --color-pen: var(--pen);
+  --color-photo: var(--photo);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -31,35 +111,66 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-ring: var(--ring);
+
+  /* next/font sets --font-caveat/karla/fraunces on <html> (app/layout.tsx). */
+  --font-hand: var(--font-caveat), "Segoe Print", cursive;
+  --font-body: var(--font-karla), system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), Georgia, serif;
 }
 
-/* Theme extensions carried over from the Tailwind 3 config. */
-@theme {
-  --background-image-custom-gradient: linear-gradient(180deg, rgba(217, 217, 217, 0) 0%, rgba(79, 79, 79, 0.58) 36.4%, #000 100%);
-  --background-image-tours: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/eras");
-  --background-image-eras: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/gallery");
-  --background-image-home: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/home");
+/* Fraunces italic (config/fonts.ts): its own family, downloaded only where used. */
+@utility font-serif-italic {
+  font-family: var(--font-fraunces-italic), Georgia, serif;
+  font-style: italic;
+}
+
+/* The current Era's display face, weight and style. */
+@utility font-display {
+  font-family: var(--era-font);
+  font-weight: var(--era-font-weight);
+  font-style: var(--era-font-style);
+}
+
+/* An Era container (components/era-scope.tsx): paper, ink and a colour fade. */
+@utility era {
+  background-color: var(--paper);
+  color: var(--ink);
+  transition-property: --paper, --card, --ink, --soft, --line, --accent, --on-accent, --tape;
+  transition-duration: 0.6s;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
 /*
-  Font utilities. next/font sets --font-* on <body> (config/fonts.ts) and the
-  Tour page reads them by name, so they are exposed as plain utilities rather
-  than @theme tokens (a --font-inter token would shadow the next/font variable).
+  Paper surfaces: grain (noise + fibres), a darker grain for dark Eras, and
+  evermore's flannel plaid over the grain. Textures only: pair with a
+  background colour (bg-paper, bg-card, bg-kraft).
 */
-@utility font-inter {
-  font-family: var(--font-inter);
+@utility paper-grain {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .24 0 0 0 0 .16 0 0 0 .14 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.004 .06' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .3 0 0 0 0 .2 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
 }
-@utility font-dancing {
-  font-family: var(--font-dancing);
+@utility paper-dark {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .6 0 0 0 0 .6 0 0 0 0 .6 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-@utility font-impact {
-  font-family: var(--font-impact), Impact, sans-serif;
+@utility paper-plaid {
+  background-image:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--accent) 13%, transparent) 0 14px, transparent 14px 40px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 13%, transparent) 0 14px, transparent 14px 40px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 0 2px, transparent 2px 20px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .24 0 0 0 0 .16 0 0 0 .14 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-@utility font-playfair {
-  font-family: var(--font-playfair);
-}
-@utility font-unifraktur {
-  font-family: var(--font-unifraktur);
+
+/* A visible focus ring in the current ink (3:1+ on paper and card in every Era; accents are not). */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2.5px solid var(--ink);
+    outline-offset: 3px;
+  }
 }
 
 /* Tailwind 3 defaults that v4 changed, kept so nothing shifts visually. */
@@ -76,46 +187,18 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+  html {
+    background-color: var(--paper);
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-paper paper-grain font-body text-ink;
   }
 }
 
-::-webkit-scrollbar {
-    width: 0px;
-    background: transparent; /* Optional: just to hide the scrollbar */
-}
-
-.image {
-    border: 5px transparent solid;
-}
-
-.image.active {
-    border: 5px white solid;
-}
-
-.snap-start {
-    scroll-snap-align: start;
-}
-
-.scroll-section-container {
-    scroll-snap-type: x mandatory;
-}
-
-.custom-shape {
-    -webkit-clip-path: path("M57.6248 24.2496C53.2552 39.5607 42.0853 58 30.7484 58C17.5672 58 5.09847 36.208 1.33716 24.2496C-5.23561 3.3526 13.6744 0.000126133 30.7484 0C47.8224 -0.000126123 63.8633 2.38936 57.6248 24.2496Z");
-    clip-path: path("M57.6248 24.2496C53.2552 39.5607 42.0853 58 30.7484 58C17.5672 58 5.09847 36.208 1.33716 24.2496C-5.23561 3.3526 13.6744 0.000126133 30.7484 0C47.8224 -0.000126123 63.8633 2.38936 57.6248 24.2496Z");
-    background-color: #A5C9A5;
-    /* Optional: To match the SVG fill color */
-    width: 59px;
-    /* Adjust size as needed */
-    height: 58px;
-    /* Adjust size as needed */
-    scale: 110%;
-  }
-/* Swiftter Posts: Tailwind's preflight strips list markers; bring them back.
-   Quill 2 stores bullet lists either as <ul> or as <ol> items marked
-   data-list="bullet". */
+/* Swiftter Posts (and the composer, which writes them): Tailwind's preflight
+   strips list markers; bring them back. Tiptap writes <ul>/<ol> with a <p> in
+   each item. Posts from before the redesign were written with Quill 2, which
+   stored bullet lists as <ol> items marked data-list="bullet". */
 .post-content ul,
 .post-content ol {
     padding-left: 1.5em;
@@ -135,93 +218,15 @@
 
 .post-content a {
     text-decoration: underline;
+    text-underline-offset: 2px;
 }
 
-/*
-  Variants shadcn components use, copied from shadcn's tailwind.css (only the
-  ones the added primitives need; copy more with the primitives that use them).
-*/
-@custom-variant data-horizontal {
-  &:where([data-orientation="horizontal"]) {
-    @slot;
-  }
-}
-
-@custom-variant data-vertical {
-  &:where([data-orientation="vertical"]) {
-    @slot;
-  }
-}
-
-/*
-  Scroll utilities, copied from shadcn's tailwind.css (only the two in use):
-  a hidden scrollbar, and a vertical edge fade that replaces NextUI's
-  ScrollShadow. The fade grows in as the list scrolls away from an edge.
-*/
-@utility no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-@property --scroll-fade-t {
-  syntax: "<length-percentage>";
-  inherits: false;
-  initial-value: 0px;
-}
-@property --scroll-fade-b {
-  syntax: "<length-percentage>";
-  inherits: false;
-  initial-value: 0px;
-}
-
-@theme inline {
-  @keyframes scroll-fade-reveal-t {
-    from {
-      --scroll-fade-t: 0px;
-    }
-    to {
-      --scroll-fade-t: var(--scroll-fade-size);
-    }
-  }
-  @keyframes scroll-fade-reveal-b {
-    from {
-      --scroll-fade-b: var(--scroll-fade-size);
-    }
-    to {
-      --scroll-fade-b: 0px;
-    }
-  }
-}
-
-@utility scroll-fade-y {
-  --scroll-fade-size: min(12%, calc(var(--spacing) * 10));
-  --scroll-fade-reveal: calc(var(--spacing) * 24);
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 var(--scroll-fade-t, 0px),
-    #000 calc(100% - var(--scroll-fade-b, 0px)),
-    transparent 100%
-  );
-  mask-repeat: no-repeat;
-
-  @supports (animation-timeline: scroll()) {
-    animation:
-      scroll-fade-reveal-t 1ms linear,
-      scroll-fade-reveal-b 1ms linear;
-    animation-timeline: scroll(self y), scroll(self y);
-    animation-range:
-      0 var(--scroll-fade-reveal),
-      calc(100% - var(--scroll-fade-reveal)) 100%;
-    animation-fill-mode: both;
-  }
-
-  @supports not (animation-timeline: scroll()) {
-    --scroll-fade-t: var(--scroll-fade-size);
-    --scroll-fade-b: var(--scroll-fade-size);
-  }
+/* The composer's placeholder (Tiptap's Placeholder extension). */
+.post-content p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: #46557f;
+    font-style: italic;
 }

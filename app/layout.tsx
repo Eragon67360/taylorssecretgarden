@@ -2,28 +2,36 @@ import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
 
 import { siteConfig } from "@/config/site";
-import { fontDancing, fontImpact, fontInter, fontPlayfair, fontUnifraktur } from "@/config/fonts";
-import Navbar from "@/components/navbar";
+// The Era faces' @font-face rules ship with the site-wide CSS: a face still
+// downloads only when its Era is on screen, but a route using them no longer
+// has a CSS chunk of its own that the nav's prefetch preloads and then leaves
+// unused (a console warning on every other page).
+import "@/config/era-fonts";
+import { fontBody, fontHand, fontSerif, fontSerifItalic } from "@/config/fonts";
+import { SiteFooter } from "@/components/site-footer";
+import { SiteHeader } from "@/components/site-header";
 import { cn } from "@/lib/utils";
 
 import { Providers } from "./providers";
 
+// Icons (app/icon.svg, app/apple-icon.tsx) and the Open Graph card
+// (app/opengraph-image.tsx) are file conventions: Next adds their tags.
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
   title: {
-    default: siteConfig.name,
-    template: `%s - ${siteConfig.name}`,
+    default: `${siteConfig.name}: a Swiftie's scrapbook`,
+    template: `%s · ${siteConfig.name}`,
   },
   description: siteConfig.description,
-  icons: {
-    icon: "/favicon.ico",
-  },
+  applicationName: siteConfig.name,
+  // No og:title/og:description here: a page's own <title> and description
+  // (which link previews fall back to) beat one shared title on every page.
+  openGraph: { type: "website", siteName: siteConfig.name, locale: "en" },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "white" },
-    { media: "(prefers-color-scheme: dark)", color: "black" },
-  ],
+  themeColor: siteConfig.colors.paper,
 };
 
 export default function RootLayout({
@@ -32,25 +40,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html className="light" lang="en">
-      <head />
-      <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          fontInter.variable,
-          fontDancing.variable,
-          fontImpact.variable,
-          fontPlayfair.variable,
-          fontUnifraktur.variable
-        )}
-      >
+    // The font variables sit on <html> so the journal tokens on :root can use them.
+    <html
+      className={cn(fontHand.variable, fontBody.variable, fontSerif.variable, fontSerifItalic.variable)}
+      lang="en"
+    >
+      <body className="flex min-h-dvh flex-col antialiased">
         <Providers>
-          <div className="relative flex flex-col h-screen">
-            <Navbar />
-            <main className="w-screen h-screen">
-              {children}
-            </main>
-          </div>
+          <SiteHeader />
+          <main className="relative flex-1" id="main">
+            {children}
+          </main>
+          <SiteFooter />
         </Providers>
       </body>
     </html>
