@@ -59,4 +59,30 @@ test.describe("Music", () => {
 		expect(names.length).toBeGreaterThanOrEqual(10);
 		expect(names).toEqual(expect.arrayContaining(["reputation", "folklore", "Midnights"]));
 	});
+
+	test("every curated Album belongs to an Era, and every Era has one Album", async ({ request }) => {
+		// Deezer may answer a curated ID with a regional twin (another ID for the
+		// same Album), so the route falls back to the title to find the Era.
+		const { items } = (await (await request.get("/api/albums")).json()) as { items: { id: string; name: string; era: string | null }[] };
+		const eraNames: Record<string, string> = {
+			debut: "Taylor Swift",
+			fearless: "Fearless",
+			"speak-now": "Speak Now",
+			red: "Red",
+			"1989": "1989",
+			reputation: "reputation",
+			lover: "Lover",
+			folklore: "folklore",
+			evermore: "evermore",
+			midnights: "Midnights",
+			ttpd: "The Tortured Poets Department",
+		};
+
+		for (const { id, name, era } of items) {
+			expect(era, `Era of ${name} (${id})`).not.toBeNull();
+			// A Taylor's Version shares its original's Era; TTPD's Anthology is TTPD.
+			expect(name.toLowerCase(), `${name} is in the ${era} Era`).toContain(eraNames[era!].toLowerCase());
+		}
+		expect(items.map(({ era }) => era).sort()).toEqual(Object.keys(eraNames).sort());
+	});
 });

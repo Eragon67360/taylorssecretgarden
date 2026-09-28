@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { eraOfAlbum } from "@/lib/eras";
 import { getAlbums, toAlbum } from '@/service/deezer';
 
 // Curated by Deezer album ID, fetched directly: titles vary with the catalog
@@ -21,5 +22,9 @@ const specifiedAlbumIds = [
 export async function GET() {
     const albums = await getAlbums(specifiedAlbumIds);
 
-    return NextResponse.json({ items: albums.map(toAlbum) });
+    // Each Album carries its Era: by ID, else by title, since Deezer answers
+    // some IDs with a regional twin (a different ID for the same Album).
+    return NextResponse.json({
+        items: albums.map((album) => ({ ...toAlbum(album), era: eraOfAlbum(album) ?? null })),
+    });
 }

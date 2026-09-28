@@ -323,6 +323,7 @@ function baseTitle(title: string) {
   return title
     .replace(/\s*[([][^)\]]*[)\]]/g, "")
     .replace(/:\s*the anthology$/i, "")
+    .replace(/\s+-\s+.*$/, "")
     .trim()
     .toLowerCase();
 }
