@@ -170,9 +170,7 @@
 /* Theme extensions carried over from the Tailwind 3 config. */
 @theme {
   --background-image-tours: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/eras");
-  --background-image-eras: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/gallery");
-  --background-image-home: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/home");
-}
+  --background-image-eras: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/gallery");}
 
 /*
   Legacy font utilities (pages not yet redesigned). next/font sets --font-* on <html> (config/fonts.ts) and the
@@ -184,9 +182,6 @@
 }
 @utility font-dancing {
   font-family: var(--font-dancing);
-}
-@utility font-impact {
-  font-family: var(--font-impact), Impact, sans-serif;
 }
 @utility font-playfair {
   font-family: var(--font-playfair);

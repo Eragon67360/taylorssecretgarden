@@ -63,7 +63,7 @@ test.describe("Navigation", () => {
 		test(`sits at the top of every page without covering its heading (${viewport.width}px)`, async ({ page }) => {
 			await page.setViewportSize(viewport);
 			const headings = [
-				{ path: "/", heading: "Taylor Swift" },
+				{ path: "/", heading: "Taylor's Secret Garden" },
 				{ path: "/music", heading: "pick an Era. the page changes outfits." },
 				{ path: "/tours", heading: "Tours" },
 				{ path: "/tours/the-eras-tour", heading: "The Eras Tour" },
