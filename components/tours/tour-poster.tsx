@@ -8,6 +8,7 @@ type TourPosterProps = {
   tilt?: number;
   /** Rendered width on a wide screen, for the image's `sizes`. */
   width: number;
+  /** The page's lead picture: fetched first, and at the lower quality of above-the-fold pictures (next.config.js). */
   priority?: boolean;
   className?: string;
 };
@@ -23,6 +24,7 @@ export function TourPoster({ tour, caption, tilt = -3, width, priority = false, 
         className="h-auto w-full"
         height={h}
         priority={priority}
+        quality={priority ? 60 : undefined}
         sizes={`(max-width: 640px) 80vw, ${width}px`}
         src={tour.imageUrl}
         width={w}

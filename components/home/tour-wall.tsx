@@ -15,7 +15,7 @@ export function TourWall() {
     <Paper
       aria-labelledby="tour-wall"
       as="section"
-      className="relative mt-16 w-full py-20 shadow-[inset_0_12px_16px_-12px_rgba(0,0,0,.25),inset_0_-12px_16px_-12px_rgba(0,0,0,.25)]"
+      className="below-fold relative mt-16 w-full py-20 shadow-[inset_0_12px_16px_-12px_rgba(0,0,0,.25),inset_0_-12px_16px_-12px_rgba(0,0,0,.25)] [--fold-height:1820px] sm:[--fold-height:1300px] lg:[--fold-height:830px]"
       tone="kraft"
     >
       <div className="mx-auto max-w-[1240px] px-4 sm:px-8">
