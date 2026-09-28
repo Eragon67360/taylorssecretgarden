@@ -122,7 +122,7 @@ test.describe("Swiftter, signed in", () => {
 		const marker = `scripted ${Date.now()}`;
 		const response = await page.request.post(FEED, {
 			data: {
-				content: `<p>${marker}</p><script>window.__swiftterPwned = true</script><img src="x" onerror="window.__swiftterPwned = true">`,
+				content: `<p>${marker}</p><script>window.__swiftterPwned = true</script><svg onload="window.__swiftterPwned = true"></svg>`,
 			},
 		});
 
@@ -130,7 +130,7 @@ test.describe("Swiftter, signed in", () => {
 		const { post } = (await response.json()) as { post: FeedPost };
 
 		expect(post.content).toContain(marker);
-		expect(post.content).not.toMatch(/<script|onerror/i);
+		expect(post.content).not.toMatch(/<script|onload/i);
 
 		await page.reload();
 		const first = feedPosts(page).first();

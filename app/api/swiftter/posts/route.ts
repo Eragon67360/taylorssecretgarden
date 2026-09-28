@@ -1,7 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-import { ensureMember, InvalidPostError, listFeed, memberProfileFromClerk, publishPost } from "@/service/swiftter";
+import { ensureMember, InvalidPostError, listFeed, memberFromClerkUser, publishPost } from "@/service/swiftter";
 
 /** The Swiftter feed: public, newest Posts first. */
 export async function GET() {
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 	if (!user) return NextResponse.json({ error: "Sign in to publish a Post." }, { status: 401 });
 
 	try {
-		await ensureMember(memberProfileFromClerk(user));
+		await ensureMember(memberFromClerkUser(user));
 		const post = await publishPost(user.id, body.content);
 
 		return NextResponse.json({ post }, { status: 201 });

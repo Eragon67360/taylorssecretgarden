@@ -153,7 +153,7 @@ export default function SwiftterPage() {
 							{isSignedIn ? <UserButton /> : <span aria-hidden className="size-8 shrink-0 rounded-full bg-white" />}
 
 							<div className="flex flex-col text-[10px] min-w-0">
-								<p className="truncate">{isSignedIn ? user.fullName || user.username : "Disconnected"}</p>
+								<p className="truncate">{isSignedIn ? user.fullName || user.username || "Swiftie" : "Disconnected"}</p>
 								<p className="truncate">@{isSignedIn ? (user.username ?? "swiftie") : "disconnected"}</p>
 							</div>
 						</div>

@@ -13,7 +13,9 @@ export type Database = NodePgDatabase<typeof schema>;
  * explicitly keeps the same (strict) behaviour without the warning. URLs with
  * no `sslmode` (the plain Postgres in CI) are left alone.
  */
-export function connectionString(url = process.env.DATABASE_URL): string {
+export function connectionString(): string {
+	const url = process.env.DATABASE_URL;
+
 	if (!url) throw new Error("DATABASE_URL is not set: Swiftter needs a Postgres database.");
 
 	const parsed = new URL(url);
@@ -26,8 +28,8 @@ export function connectionString(url = process.env.DATABASE_URL): string {
 	return parsed.toString();
 }
 
-export function createPool(url?: string) {
-	return new Pool({ connectionString: connectionString(url), max: 5 });
+export function createPool() {
+	return new Pool({ connectionString: connectionString(), max: 5 });
 }
 
 // Created on first use, not at import, so `next build` needs no database. Kept

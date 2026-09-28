@@ -9,7 +9,6 @@ name: CI
 #   CLERK_SECRET_KEY                     Clerk server key, used by the proxy (proxy.ts)
 #   NEXT_PUBLIC_CLERK_SIGN_IN_URL        Clerk sign-in route
 #   NEXT_PUBLIC_CLERK_SIGN_UP_URL        Clerk sign-up route
-#   NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL  where Clerk sends new sign-ups
 #   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME    Cloudinary images and videos
 #   E2E_CLERK_USER_USERNAME              the dedicated test Member (email) on the Clerk
 #   E2E_CLERK_USER_PASSWORD              development instance, for the signed-in Swiftter tests
@@ -36,7 +35,8 @@ jobs:
       CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
       NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }}
       NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }}
-      NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL }}
+      # A plain value, not a secret: as a secret, GitHub masks every "/swiftter" in the logs.
+      NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: /swiftter
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
       E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
       E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
