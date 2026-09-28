@@ -1,7 +1,8 @@
 'use client'
+import React, { useState } from "react";
+
 import AlbumDetails from "@/components/music/AlbumDetails";
 import Albums from "@/components/music/Albums";
-import React, { useState } from "react";
 
 export default function MusicLayout({
   children,

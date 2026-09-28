@@ -1,7 +1,7 @@
 "use client"
-import React, { } from "react";
+import React from "react";
+
 import ScrollSection from "@/components/tours/ScrollSection";
-import CldVideo from "@/components/ui/CldVideoWrapper";
 import { VideoProvider, VideoContext } from "@/context/VideoContext";
 
 export default function Tours() {
@@ -11,7 +11,7 @@ export default function Tours() {
       <VideoContext.Consumer>
         {({ videoSrc }) => (
           <>
-            <div className="z-0 fixed top-0 left-0 w-[100dvw] h-[100dvh]  flex flex-col overflow-hidden">
+            <div className="z-0 fixed top-0 left-0 w-dvw h-dvh  flex flex-col overflow-hidden">
               <video
                 key={videoSrc}
                 autoPlay

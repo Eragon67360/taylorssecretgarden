@@ -2,11 +2,12 @@
 import React, { useRef, useEffect, useState, useContext } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
-import Image from "next/image";
-import { VideoContext } from "@/context/VideoContext";
-import CldImage from "../ui/CldImageWrapper";
-import tours from "@/public/json/tours.json"
 import Link from "next/link";
+
+import { VideoContext } from "@/context/VideoContext";
+import tours from "@/public/json/tours.json"
+
+import CldImage from "../ui/CldImageWrapper";
 
 const ScrollSection = () => {
     const sectionRef = useRef<HTMLDivElement | null>(null);
@@ -14,8 +15,6 @@ const ScrollSection = () => {
     const [scrollTriggerInstance, setScrollTriggerInstance] = useState<ScrollTrigger | null>(null);
     const { setVideoSrc } = useContext(VideoContext);
 
-
-    gsap.registerPlugin(ScrollTrigger);
 
     const imageWidth = 280;
     const spaceBetween = 20;
@@ -53,7 +52,10 @@ const ScrollSection = () => {
                         },
                         onUpdate: self => {
                             const progress = self.progress;
-                            const activeIndex = Math.floor(progress * tours.length);
+                            // progress reaches 1 at the end of the timeline, which
+                            // would index one past the last Tour.
+                            const activeIndex = Math.min(Math.floor(progress * tours.length), tours.length - 1);
+
                             setVideoSrc(tours[activeIndex].videoUrl);
                         },
                     },
@@ -61,6 +63,7 @@ const ScrollSection = () => {
             );
 
             const newScrollTrigger = newScrollTriggerInstance.scrollTrigger;
+
             if (newScrollTrigger) {
                 setScrollTriggerInstance(newScrollTrigger);
             }
@@ -68,6 +71,7 @@ const ScrollSection = () => {
             tours.forEach((image, index) => {
                 if (sectionRef.current) {
                     const element = sectionRef.current.querySelectorAll('img')[index];
+
                     if (element) {
                         const imgTrigger = ScrollTrigger.create({
                             trigger: element,
@@ -86,6 +90,9 @@ const ScrollSection = () => {
     };
 
     useEffect(() => {
+        // Registered after hydration: ScrollTrigger touches <body> when it
+        // registers, which React would report as a hydration mismatch.
+        gsap.registerPlugin(ScrollTrigger);
         updateTranslateX();
 
         window.addEventListener('resize', updateTranslateX);
@@ -117,13 +124,13 @@ const ScrollSection = () => {
                                     ))}
                                 </div>
                                 <div className="relative h-2 mx-auto" style={{ width: totalWidth - imageWidth }}>
-                                    <div className="absolute top-1/2 left-0 transform -translate-y-1/2 w-full h-1 bg-white"></div>
+                                    <div className="absolute top-1/2 left-0 transform -translate-y-1/2 w-full h-1 bg-white" />
                                     {tours.map((tour, index) => (
                                         <div
                                             key={index}
                                             className="absolute top-1/2 transform -translate-y-1/2 bg-white rounded-full"
                                             style={{ width: '20px', height: '20px', left: `calc(${index} * (100% / ${tours.length - 1}))` }}
-                                        ></div>
+                                        />
                                     ))}
                                 </div>
                             </div>
@@ -131,7 +138,7 @@ const ScrollSection = () => {
                         <div className={`h-full flex relative text-white font-bold text-2xl overflow-hidden text-ellipsis`} style={{ width: totalWidth, gap: spaceBetween }}>
                             {tours.map((tour, index) => (
                                 <Link key={index} className="h-full py-44 flex items-end justify-center snap-start" href={`/tours/${generateSlug(tour.tour)}`}>
-                                    <CldImage src={tour.imageUrl} alt={`Tour ${index + 1}`} className="image w-[280px] h-[400px] object-cover rounded-2xl" width={280} height={400} />
+                                    <CldImage alt={`Tour ${index + 1}`} className="image w-[280px] h-[400px] object-cover rounded-2xl" height={400} priority={index === 0} src={tour.imageUrl} width={280} />
                                 </Link>
                             ))}
                         </div>

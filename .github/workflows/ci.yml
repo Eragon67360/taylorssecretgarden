@@ -1,0 +1,94 @@
+name: CI
+
+# Lint, typecheck, build, then run the Playwright smoke suite against
+# `next start`, on every pull request and on pushes to dev.
+#
+# Required repository secrets (set from the local env file with
+# `gh secret set -f <file>`; values are never committed):
+#   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY    Clerk (development instance)
+#   CLERK_SECRET_KEY                     Clerk server key, used by the proxy (proxy.ts)
+#   NEXT_PUBLIC_CLERK_SIGN_IN_URL        Clerk sign-in route
+#   NEXT_PUBLIC_CLERK_SIGN_UP_URL        Clerk sign-up route
+#   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME    Cloudinary images and videos
+#   E2E_CLERK_USER_USERNAME              the dedicated test Member (email) on the Clerk
+#   E2E_CLERK_USER_PASSWORD              development instance, for the signed-in Swiftter tests
+#
+# Swiftter's database is a throwaway Postgres service container, migrated and
+# seeded before the tests; the real (Neon) database is never touched.
+
+on:
+  pull_request:
+  push:
+    branches: [dev]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }}
+      NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }}
+      # A plain value, not a secret: as a secret, GitHub masks every "/swiftter" in the logs.
+      NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: /swiftter
+      NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
+      E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
+      E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
+      DATABASE_URL: postgres://swiftter:swiftter@localhost:5432/swiftter
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: swiftter
+          POSTGRES_PASSWORD: swiftter
+          POSTGRES_DB: swiftter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U swiftter"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json # reads `engines.node`
+          cache: npm
+
+      - run: npm ci
+
+      - name: Migrate and seed the test database
+        run: npm run db:migrate && npm run db:seed
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke tests
+        run: npm run test:e2e # the Playwright web server runs `next start` on the build above
+
+      - name: Upload Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
