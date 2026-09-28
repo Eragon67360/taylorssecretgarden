@@ -6,7 +6,7 @@ import { expect, test } from "./fixtures";
 // errors or console errors (checked by the fixture).
 const routes = [
 	{ path: "/", heading: "Taylor Swift" },
-	{ path: "/music", heading: "Albums" },
+	{ path: "/music", heading: "pick an Era. the page changes outfits." },
 	{ path: "/tours", heading: "Tours" },
 	{ path: "/swiftter", heading: "Swiftter" },
 	{ path: "/sign-in", heading: "Sign in to Taylor's Secret Garden" },
