@@ -36,7 +36,7 @@ npm run dev                  # http://localhost:3000
 ## Checks
 
 ```bash
-npm run lint        # ESLint 9 (legacy .eslintrc until the flat-config move, #10)
+npm run lint        # ESLint 9, flat config (eslint.config.mjs)
 npm run typecheck   # tsc --noEmit
 npm run test:e2e    # Playwright smoke suite
 ```
