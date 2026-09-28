@@ -12,7 +12,7 @@ The domain vocabulary (Era, Album, Tour, Swiftter, Post, Member) is defined in [
 ## Stack
 
 - [Next.js 16](https://nextjs.org/) (App Router, Turbopack), React 19, TypeScript 6
-- [NextUI 2.6](https://nextui.org/) (final release, replaced in Phase B) on [Tailwind CSS 3](https://tailwindcss.com/)
+- [Tailwind CSS 4](https://tailwindcss.com/) (CSS-first config in `styles/globals.css`) and [shadcn/ui](https://ui.shadcn.com/) primitives in `components/ui/`
 - [Clerk 7](https://clerk.com/) for sign-in
 - [Neon Postgres](https://neon.com/) (via the Vercel Marketplace) with [Drizzle ORM](https://orm.drizzle.team/) for Swiftter's Members and Posts ([ADR-0003](docs/adr/0003-neon-drizzle-for-swiftter.md))
 - [Cloudinary](https://cloudinary.com/) (via `next-cloudinary`) for Tour images, videos and backgrounds

@@ -1,8 +1,8 @@
 'use client'
-import { Album } from '@/types';
 import React, { useEffect, useState } from 'react'
 import Image from 'next/image';
-import { ScrollShadow } from "@nextui-org/react";
+
+import { Album } from '@/types';
 
 interface AlbumsProps {
     onSelectAlbum: (albumId: string) => void;
@@ -15,6 +15,7 @@ export default function Albums({ onSelectAlbum }: AlbumsProps) {
         const fetchAlbums = async () => {
             const response = await fetch('/api/albums');
             const data = await response.json();
+
             setAlbums(data.items);
         };
 
@@ -24,13 +25,13 @@ export default function Albums({ onSelectAlbum }: AlbumsProps) {
     return (
         <>
             {albums && (
-                <ScrollShadow hideScrollBar className="flex flex-col gap-5 overflow-scroll">
+                <div className="flex flex-col gap-5 overflow-scroll no-scrollbar scroll-fade-y">
                     {albums.map((album, index) => (
-                        <button key={index} onClick={() => onSelectAlbum(album.id)} className='cursor-pointer grayscale-0 hover:grayscale transition-all duration-300'>
-                            <Image priority={index === 0} src={album.images[0].url} alt={`Cover Album ${album.name}`} width={180} height={180} />
+                        <button key={index} className='cursor-pointer grayscale-0 hover:grayscale transition-all duration-300' onClick={() => onSelectAlbum(album.id)}>
+                            <Image alt={`Cover Album ${album.name}`} height={180} priority={index === 0} src={album.images[0].url} width={180} />
                         </button>
                     ))}
-                </ScrollShadow>
+                </div>
             )}
         </>
     )
