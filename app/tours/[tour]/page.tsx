@@ -1,79 +1,140 @@
-import React from "react"
-import Link from 'next/link';
+import type { Metadata } from "next";
 
-import tours from "@/public/json/tours.json"
-import CldImage from '@/components/ui/CldImageWrapper';
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
-export default async function Tour(props: { params: Promise<{ tour: string }> }) {
-    const params = await props.params;
+import { Bracelet, PressedFlower, RuledList, RuledListItem, StickyNote, TicketStub } from "@/components/scrapbook";
+import { TourGallery } from "@/components/tours/tour-gallery";
+import { TourPoster } from "@/components/tours/tour-poster";
+import { TourScope } from "@/components/tours/tour-scope";
+import { TourVideo } from "@/components/tours/tour-video";
+import { ERA_LOOKS } from "@/lib/eras";
+import { TOURS, getTour, tourEraLabel, tourLook, tourYears } from "@/lib/tours";
 
-    const tour = tours.find((t) => t.slug === params.tour);
+type TourPageProps = { params: Promise<{ tour: string }> };
 
-    if (!tour) {
-        return <div>There is no data for this tour for now</div>;
-    }
+// Only the Tours in the data file have a page; any other slug is a 404.
+export const dynamicParams = false;
 
-    return (
-        <>
-            <div className='w-full flex gap-5 justify-between'>
-                <div className='flex flex-col gap-5 w-full mt-[92px]'>
-                    <div className='px-7 py-3 border border-black rounded-2xl'>
-                        <h2 className='uppercase text-[40px] font-extrabold text-center font-playfair'>Tour Dates</h2>
+export function generateStaticParams() {
+  return TOURS.map(({ slug }) => ({ tour: slug }));
+}
 
-                        <p className='text-xs text-end w-full mt-[14px]'>150 shows</p>
-                        <p className='text-xs text-start w-full mt-[14px] capitalize'>start date: 2023</p>
-                        <p className='text-xs text-start w-full mt-[14px] capitalize'>end date: 2024</p>
-                        <div className='flex justify-end w-full'>
-                            <Link className='text-xs text-end w-full mt-[14px]' href={'#'}>See all dates</Link>
-                        </div>
-                    </div>
+export async function generateMetadata({ params }: TourPageProps): Promise<Metadata> {
+  const tour = getTour((await params).tour);
 
-                    <div className="rounded-2xl w-full aspect-square flex items-end"
-                        style={{
-                            background: "url('https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/gallery') lightgray -4.274px -84.206px / 153.228% 149.857% no-repeat"
-                        }}
-                    >
-                        <p className='text-white text-6xl font-extrabold font-playfair uppercase p-[30px] mix-blend-soft-light'>Gallery</p>
-                    </div>
+  return tour ? { title: tour.tour, description: `${tour.tour} (${tourYears(tour)}): ${tour.facts.join(" ")}` } : {};
+}
 
-                    <div className="rounded-2xl w-full h-[232px] flex items-end border border-black bg-white">
-                        <p className='text-black text-[40px] font-bold font-playfair uppercase pb-[52px] w-full text-center'>Bracelets</p>
-                    </div>
-                </div>
-                <div className='flex flex-col gap-5 w-full'>
-                    <h1 className={`mt-12  text-[40px] font-normal text-center`} style={{fontFamily: `var(--font-${tour.font})`}} >{tour?.tour}</h1>
-                    <CldImage
-                        alt='Centered image of the tour'
-                        className='rounded-2xl mt-[60px]'
-                        height={380}
-                        src={'https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/center'}
-                        width={380}
-                    />
-                    <div className="rounded-2xl w-full h-[248px] flex items-end border border-black"
-                        style={{
-                            background: "url('https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/outfits') lightgray -5.5px -144px / 102.895% 210.215% no-repeat"
-                        }}
-                    >
-                        <p className='text-black text-lg font-bold font-playfair uppercase p-0 w-full text-center'>Outfits</p>
-                    </div>
-                </div>
-                <div className='flex flex-col gap-5 w-full mt-[92px]'>
-                    <div className="w-full h-[580px] bg-[#D9D9D9CC] p-10 rounded-2xl">
-                        <p className='uppercase text-xs font-inter'>Spotify setlist link</p>
-                    </div>
-                    <div className="rounded-2xl w-full h-[184px] p-5 flex flex-col"
-                        style={{
-                            background: "url('https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto,a_hflip/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/watch') lightgray 0px -1.097px / 112.895% 131.16% no-repeat"
-                        }}
-                    >
-                        <p className='uppercase text-white font-inter text-[20px] font-bold w-full text-end'>Watch it on</p>
-                        <div className='w-full flex justify-end'>
-                            <CldImage alt='Logo VOD' height={56} src='https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/disney' width={103} />
-                        </div>
-                    </div>
-                </div>
+export default async function TourPage({ params }: TourPageProps) {
+  const tour = getTour((await params).tour);
 
-            </div>
-        </>
-    )
+  if (!tour) notFound();
+  const look = tourLook(tour);
+  const era = tour.era ? ERA_LOOKS[tour.era] : undefined;
+
+  return (
+    <TourScope aria-labelledby="tour-title" className="relative overflow-x-clip" tour={tour}>
+      <div className="mx-auto max-w-[1180px] px-4 pt-8 pb-20 sm:px-8 sm:pt-10">
+        <Link className="focus-ring font-hand text-soft hover:text-ink inline-block text-2xl font-bold" href="/tours">
+          <span aria-hidden="true">←</span> back to the Tours
+        </Link>
+
+        {/* The stub, the poster and the numbers. */}
+        <div className="mt-8 grid items-start gap-14 lg:grid-cols-12 lg:gap-10">
+          <div className="lg:col-span-7">
+            <TicketStub
+              className="max-w-[560px]"
+              kicker={`Admit one · ${tourEraLabel(tour)}`}
+              meta={`${tourYears(tour)} · ${tour.shows} shows · ${tour.legs.length} continents`}
+              tilt={-1.5}
+              title={
+                <span className="font-display block text-[clamp(2.4rem,7vw,4rem)] leading-[1] not-italic" id="tour-title">
+                  {tour.tour}
+                </span>
+              }
+              titleAs="h1"
+            />
+            <p className="font-hand mt-10 max-w-[30rem] text-[28px] leading-tight font-bold">
+              <span aria-hidden="true">“</span>
+              {tour.note}
+              <span aria-hidden="true">”</span>
+            </p>
+
+            <dl className="mt-10 grid max-w-[560px] grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3">
+              <Stat label="Years">{tourYears(tour)}</Stat>
+              <Stat label="Shows">{tour.shows} shows</Stat>
+              <Stat label="Era">{tourEraLabel(tour)}</Stat>
+              <div className="col-span-2 sm:col-span-3">
+                <dt className="text-soft text-[11px] font-bold tracking-[.26em] uppercase">Legs</dt>
+                <dd className="mt-2">
+                  <ul className="flex flex-wrap gap-2">
+                    {tour.legs.map((leg) => (
+                      <li key={leg} className="bg-card border-line rounded-full border px-3 py-1 text-[15px] font-semibold">
+                        {leg}
+                      </li>
+                    ))}
+                  </ul>
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="relative flex justify-center lg:col-span-5">
+            <PressedFlower className="absolute -bottom-8 left-0 z-30 h-44 w-24 -rotate-[20deg] sm:left-6" kind={look.flower} />
+            <TourPoster
+              priority
+              caption={tourYears(tour)}
+              className="w-[78%] max-w-[380px]"
+              tilt={2.5}
+              tour={tour}
+              width={380}
+            />
+          </div>
+        </div>
+
+        {/* The facts, on a notebook page, with the footage or the Era's note beside them. */}
+        <div className="mt-20 grid items-start gap-14 lg:grid-cols-12 lg:gap-10">
+          <section aria-labelledby="facts" className="lg:col-span-7">
+            <h2 className="font-serif text-[clamp(2rem,4vw,2.6rem)] leading-tight font-semibold" id="facts">
+              Worth remembering
+            </h2>
+            <RuledList className="mt-6" title="for the record">
+              {tour.facts.map((fact) => (
+                // Wrapped lines sit on the ruling: one 44px line each.
+                <RuledListItem key={fact} className="items-start [&>span]:leading-[44px]">
+                  <p className="text-[17px] leading-[44px]">{fact}</p>
+                </RuledListItem>
+              ))}
+            </RuledList>
+          </section>
+
+          <div className="flex flex-col items-center gap-12 lg:col-span-5 lg:pt-16">
+            {tour.videoUrl && <TourVideo caption="on repeat" className="w-full max-w-[440px]" src={tour.videoUrl} tilt={-2} tour={tour.tour} />}
+            {era ? (
+              <StickyNote attach="tape" className="w-[260px]" tilt={3} tone="era">
+                {era.note}
+              </StickyNote>
+            ) : (
+              <StickyNote attach="tape" className="w-[260px]" tilt={3}>
+                every Era, one night, three and a half hours
+              </StickyNote>
+            )}
+            <Bracelet beads={era ? "era" : "rainbow"} className="max-w-full" word={era ? era.short : "Eras Tour"} />
+          </div>
+        </div>
+
+        {tour.gallery && <TourGallery photos={tour.gallery} />}
+      </div>
+    </TourScope>
+  );
+}
+
+function Stat({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-soft text-[11px] font-bold tracking-[.26em] uppercase">{label}</dt>
+      <dd className="font-serif mt-1 text-2xl font-semibold">{children}</dd>
+    </div>
+  );
 }

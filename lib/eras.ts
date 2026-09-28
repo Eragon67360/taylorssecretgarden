@@ -265,6 +265,12 @@ export const ERA_LOOKS: Record<EraSlug, EraLook> = {
   },
 };
 
+/** The colours and display face of a look: what `eraVariables` applies (an Era's, or a Tour's own). */
+export type EraPalette = Pick<
+  EraLook,
+  "paper" | "card" | "ink" | "soft" | "accent" | "onAccent" | "line" | "tape" | "font" | "fontWeight" | "fontItalic"
+>;
+
 /** Every Era's look, in release order. */
 export const ERAS: EraLook[] = ERA_SLUGS.map((slug) => ERA_LOOKS[slug]);
 
@@ -272,14 +278,14 @@ export const ERAS: EraLook[] = ERA_SLUGS.map((slug) => ERA_LOOKS[slug]);
 export type PaperTexture = "grain" | "dark" | "plaid";
 
 /** The paper texture of an Era (the journal itself, without one, is plain grain). */
-export function paperTexture(look?: EraLook): PaperTexture {
+export function paperTexture(look?: Pick<EraLook, "dark" | "plaid">): PaperTexture {
   if (look?.plaid) return "plaid";
 
   return look?.dark ? "dark" : "grain";
 }
 
 /** The CSS variables that apply an Era's look (the journal tokens in styles/globals.css). */
-export function eraVariables(look: EraLook): CSSProperties {
+export function eraVariables(look: EraPalette): CSSProperties {
   return {
     "--paper": look.paper,
     "--card": look.card,

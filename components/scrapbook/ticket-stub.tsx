@@ -17,6 +17,8 @@ type TicketStubProps = {
   kicker: string;
   /** The event, set large. */
   title: ReactNode;
+  /** The title's element: a heading when the stub heads its section. */
+  titleAs?: "p" | "h1" | "h2" | "h3";
   /** Small print at the bottom, e.g. seat or dates. */
   meta?: string;
   /** A picture on the stub's left (an <img> or next/image filling its box). */
@@ -29,7 +31,7 @@ type TicketStubProps = {
 };
 
 /** A concert ticket stub with notched edges and a perforated tear line. */
-export function TicketStub({ kicker, title, meta, picture, tilt = -3, lift = false, className }: TicketStubProps) {
+export function TicketStub({ kicker, title, titleAs: Title = "p", meta, picture, tilt = -3, lift = false, className }: TicketStubProps) {
   const motionProps = useLift(tilt, lift);
 
   return (
@@ -40,7 +42,7 @@ export function TicketStub({ kicker, title, meta, picture, tilt = -3, lift = fal
         )}
         <div className={cn("flex min-w-0 flex-1 flex-col justify-between gap-2 p-4 pl-5", picture && "border-l-2 border-dashed border-line")}>
           <p className="text-soft text-[11px] font-bold tracking-[.26em] uppercase">{kicker}</p>
-          <p className="font-serif text-[26px] leading-none font-semibold italic">{title}</p>
+          <Title className="font-serif text-[26px] leading-none font-semibold italic">{title}</Title>
           {meta && <p className="text-soft font-mono text-[11px] tracking-wider">{meta}</p>}
         </div>
       </div>
