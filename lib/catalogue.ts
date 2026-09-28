@@ -32,8 +32,8 @@ export type CatalogueAlbum = {
 };
 
 export const CATALOGUE: readonly CatalogueAlbum[] = [
-  { id: "227786", era: "debut", title: "Taylor Swift", edition: "Deluxe Edition", released: "2006-10-24", aliases: ["874936972"] },
-  { id: "426350", era: "fearless", title: "Fearless", edition: "Platinum Edition", released: "2008-11-11", aliases: ["283925"] },
+  { id: "227786", era: "debut", title: "Taylor Swift", edition: "Deluxe Edition", released: "2006-10-24", aliases: ["874936972", "81389452"] },
+  { id: "426350", era: "fearless", title: "Fearless", edition: "Platinum Edition", released: "2008-11-11", aliases: ["283925", "81389432"] },
   { id: "221543452", era: "fearless", title: "Fearless", released: "2021-04-09", reRecords: "426350" },
   { id: "689149", era: "speak-now", title: "Speak Now", edition: "Deluxe Edition", released: "2010-10-25", aliases: ["689148"] },
   { id: "461146065", era: "speak-now", title: "Speak Now", released: "2023-07-07", reRecords: "689149" },
@@ -51,7 +51,7 @@ export const CATALOGUE: readonly CatalogueAlbum[] = [
     title: "Midnights",
     edition: "The Til Dawn Edition",
     released: "2022-10-21",
-    aliases: ["368474187", "368506677"],
+    aliases: ["368474187", "368474237", "368506677"],
   },
   {
     id: "575252501",
@@ -61,7 +61,7 @@ export const CATALOGUE: readonly CatalogueAlbum[] = [
     released: "2024-04-19",
     aliases: ["574109801"],
   },
-  { id: "1103662682", era: "showgirl", title: "The Life of a Showgirl", edition: "The Encore", released: "2025-10-03", aliases: ["829966251"] },
+  { id: "1103662682", era: "showgirl", title: "The Life of a Showgirl", edition: "The Encore", released: "2025-10-03", aliases: ["829966251", "852049722", "835672072"] },
 ];
 
 /** Whether an Album is a Taylor's Version re-recording. */

@@ -29,7 +29,8 @@ export type ShelfAlbum = Album & {
  */
 export async function getShelf(): Promise<ShelfAlbum[]> {
   const albums = await getAlbums(CATALOGUE.map(({ id }) => id));
-  const shelfId = (id: string) => String(albums[CATALOGUE.findIndex((album) => album.id === id)].id);
+  // Deezer may answer with a regional twin: a Taylor's Version points at the ID its original is listed under.
+  const shelfId = (catalogueId: string) => String(albums[CATALOGUE.findIndex(({ id }) => id === catalogueId)].id);
 
   return CATALOGUE.map((entry, index) => ({
     ...toAlbum(albums[index]),

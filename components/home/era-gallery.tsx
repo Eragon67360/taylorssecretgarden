@@ -12,7 +12,7 @@ import { EraFace } from "./era-face";
 import { SectionHead } from "./section-head";
 
 // A hand-placed tilt per pressed page.
-const TILTS = [-2, 1.5, -1, 2.2, -1.8, 1, -2.4, 1.8, -1.2, 2, -1.6, 1.4];
+const TILTS = [-2, 1.5, -1, 2.2, -1.8, 1, -2.4, 1.8, -1.2, 2, -1.6];
 
 /** How the Era is written on its pressed page: the debut by its title, TTPD by its initials. */
 const label = (look: EraLook) => (look.slug === "ttpd" ? look.short : look.name);
