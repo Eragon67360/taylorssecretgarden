@@ -18,7 +18,7 @@ export default function MusicLayout({
 
   return (
     <section className="bg-[#282828] flex h-screen w-screen">
-      <div className="pl-[130px] flex flex-col gap-2 items-center pt-16 pb-[300px] w-1/4">
+      <div className="pl-[130px] flex flex-col gap-2 items-center pt-16 pb-10 w-1/4">
         <h1 className="uppercase font-bold text-2xl text-white">Albums</h1>
         <Albums onSelectAlbum={handleSelectAlbum} />
       </div>

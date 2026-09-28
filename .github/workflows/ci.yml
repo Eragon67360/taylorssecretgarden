@@ -41,6 +41,9 @@ jobs:
       E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
       E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
       DATABASE_URL: postgres://swiftter:swiftter@localhost:5432/swiftter
+      # Builds and serves the development styleguide (/styleguide) for its tests;
+      # production (Vercel) leaves it unset and answers 404.
+      ENABLE_STYLEGUIDE: 1
     services:
       postgres:
         image: postgres:17

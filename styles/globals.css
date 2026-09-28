@@ -1,29 +1,109 @@
 @import "tailwindcss";
 
-/*
-  shadcn/ui tokens. One light theme; the values reproduce the NextUI light
-  theme the site used before (foreground #11181c, primary/focus #792e3a).
-  Only the tokens the added primitives (card, separator, skeleton) use are
-  defined; add the rest (radius, input, popover...) with the next primitive
-  that needs them. Phase B's journal tokens replace these.
-*/
+/* ==========================================================================
+   Journal tokens (the scrapbook design system)
+
+   The neutral journal look is the default. An Era applies by overriding the
+   same variables on a container (components/era-scope.tsx, values in
+   lib/eras.ts). The colours are registered custom properties, so the Era
+   container can transition the variables themselves: every descendant that
+   reads them fades along (instant under reduced motion).
+   ========================================================================== */
+
+@property --paper {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f3eadb;
+}
+@property --card {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #fffcf5;
+}
+@property --ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #2b1d14;
+}
+@property --soft {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #5a4535;
+}
+@property --line {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #e2d3bb;
+}
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #7e2a37;
+}
+@property --on-accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #fff6ec;
+}
+@property --tape {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: rgba(246, 226, 170, 0.62);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #11181c;
-  --card: #ffffff;
-  --card-foreground: #11181c;
-  --primary: #792e3a;
-  --primary-foreground: #ffffff;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --border: #e4e4e7;
-  --ring: #792e3a;
+  /* Journal base; every Era overrides these eight. */
+  --paper: #f3eadb;
+  --card: #fffcf5;
+  --ink: #2b1d14;
+  --soft: #5a4535;
+  --line: #e2d3bb;
+  --accent: #7e2a37;
+  --on-accent: #fff6ec;
+  --tape: rgba(246, 226, 170, 0.62);
+
+  /* Fixed craft colours, the same in every Era. */
+  --kraft: #dcc7a6;
+  --sticky: #fce68a;
+  --sticky-ink: #2b1d14;
+  --pen: #b0231c;
+  --photo: #fffdf8;
+  --photo-ink: #2b1d14;
+  --stem: #6e7f4e;
+
+  /* Display face; an Era sets its own (config/era-fonts.ts). */
+  --era-font: var(--font-fraunces), Georgia, serif;
+  --era-font-weight: 600;
+  --era-font-style: normal;
+
+  /* shadcn/ui tokens, mapped onto the journal. */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card-foreground: var(--ink);
+  --primary: var(--accent);
+  --primary-foreground: var(--on-accent);
+  --muted: color-mix(in srgb, var(--line) 50%, var(--card));
+  --muted-foreground: var(--soft);
+  --border: var(--line);
+  --ring: var(--accent);
 }
 
 @theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-soft: var(--soft);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-tape: var(--tape);
+  --color-kraft: var(--kraft);
+  --color-sticky: var(--sticky);
+  --color-pen: var(--pen);
+  --color-photo: var(--photo);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -31,18 +111,71 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-ring: var(--ring);
+
+  /* next/font sets --font-caveat/karla/fraunces on <html> (app/layout.tsx). */
+  --font-hand: var(--font-caveat), "Segoe Print", cursive;
+  --font-body: var(--font-karla), system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), Georgia, serif;
+}
+
+/* The current Era's display face, weight and style. */
+@utility font-display {
+  font-family: var(--era-font);
+  font-weight: var(--era-font-weight);
+  font-style: var(--era-font-style);
+}
+
+/* An Era container (components/era-scope.tsx): paper, ink and a colour fade. */
+@utility era {
+  background-color: var(--paper);
+  color: var(--ink);
+  transition-property: --paper, --card, --ink, --soft, --line, --accent, --on-accent, --tape;
+  transition-duration: 0.6s;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/*
+  Paper surfaces: grain (noise + fibres), a darker grain for dark Eras, and
+  evermore's flannel plaid over the grain. Textures only: pair with a
+  background colour (bg-paper, bg-card, bg-kraft).
+*/
+@utility paper-grain {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .24 0 0 0 0 .16 0 0 0 .14 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.004 .06' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .3 0 0 0 0 .2 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+}
+@utility paper-dark {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .6 0 0 0 0 .6 0 0 0 0 .6 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@utility paper-plaid {
+  background-image:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--accent) 13%, transparent) 0 14px, transparent 14px 40px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 13%, transparent) 0 14px, transparent 14px 40px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 0 2px, transparent 2px 20px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .24 0 0 0 0 .16 0 0 0 .14 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* A visible focus ring in the current ink (3:1+ on paper and card in every Era; accents are not). */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2.5px solid var(--ink);
+    outline-offset: 3px;
+  }
 }
 
 /* Theme extensions carried over from the Tailwind 3 config. */
 @theme {
-  --background-image-custom-gradient: linear-gradient(180deg, rgba(217, 217, 217, 0) 0%, rgba(79, 79, 79, 0.58) 36.4%, #000 100%);
   --background-image-tours: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/eras");
   --background-image-eras: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/gallery");
   --background-image-home: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/home");
 }
 
 /*
-  Font utilities. next/font sets --font-* on <body> (config/fonts.ts) and the
+  Legacy font utilities (pages not yet redesigned). next/font sets --font-* on <html> (config/fonts.ts) and the
   Tour page reads them by name, so they are exposed as plain utilities rather
   than @theme tokens (a --font-inter token would shadow the next/font variable).
 */
@@ -76,8 +209,11 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+  html {
+    background-color: var(--paper);
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-paper paper-grain font-body text-ink;
   }
 }
 
