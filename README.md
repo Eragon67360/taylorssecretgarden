@@ -4,7 +4,7 @@ A Taylor Swift fan site and portfolio piece:
 
 - **Home**: the journal's opening spread: a taped Eras Tour photo, three ways in (Music, Tours, Swiftter), all eleven Eras pressed like flowers (each opens its Album on Music) and the Tour posters pinned to the wall.
 - **Music**: every Album, with its tracklist, durations, label and release date, fetched live from Deezer's public API.
-- **Tours**: a horizontal, scroll-driven timeline of every Tour, each linking to its own page.
+- **Tours**: a vertical journal of every Tour (ticket stub, poster, footage), each linking to its own page with that Tour's facts (from `public/json/tours.json`, typed in `lib/tours.ts`).
 - **Swiftter** (`/swiftter`, formerly `/forum`): a small feed where signed-in Members publish Posts. Anyone can read it; publishing needs a Clerk sign-in.
 
 The domain vocabulary (Era, Album, Tour, Swiftter, Post, Member) is defined in [`CONTEXT.md`](CONTEXT.md), and design decisions are recorded in [`docs/adr/`](docs/adr/).
@@ -18,7 +18,6 @@ The domain vocabulary (Era, Album, Tour, Swiftter, Post, Member) is defined in [
 - [Cloudinary](https://cloudinary.com/) (via `next-cloudinary`) for Tour images, videos and backgrounds
 - [Deezer API](https://developers.deezer.com/api) for the Album catalogue (no credentials needed)
 - [Motion](https://motion.dev/) (`motion/react`) for the scrapbook's hover lifts and tab transitions
-- [GSAP ScrollTrigger](https://gsap.com/docs/v3/Plugins/ScrollTrigger/) for the Tours timeline (until the Tours redesign)
 - [Playwright](https://playwright.dev/) with [axe](https://github.com/dequelabs/axe-core-npm/tree/develop/packages/playwright) for the smoke tests
 
 ## Design system
@@ -26,7 +25,7 @@ The domain vocabulary (Era, Album, Tour, Swiftter, Post, Member) is defined in [
 The site is a fan's scrapbook (the 2026 redesign, #17), built from:
 
 - **Journal tokens** in `styles/globals.css`: `paper`, `card`, `ink`, `soft`, `line`, `accent`, `on-accent`, `tape` as CSS variables and Tailwind colours (`bg-paper`, `text-soft`...), plus `font-hand` (Caveat), `font-body` (Karla), `font-serif` (Fraunces) and `font-display` (the current Era's face).
-- **Era looks** in `lib/eras.ts`: every Era's palette, flower, fan note and display face, and which Era each Album belongs to. `<EraScope era="…">` (`components/era-scope.tsx`) applies one by overriding the tokens on a container; the colours fade across when the Era changes. Era display faces (`config/era-fonts.ts`) are not preloaded, so a face downloads only when its Era is on screen.
+- **Era looks** in `lib/eras.ts`: every Era's palette, flower, fan note and display face, and which Era each Album belongs to. The Eras Tour, which spans every Era, has a look of its own (`ERAS_TOUR_LOOK` in `lib/tours.ts`). `<EraScope era="…">` (`components/era-scope.tsx`) applies one by overriding the tokens on a container; the colours fade across when the Era changes. Era display faces (`config/era-fonts.ts`) are not preloaded, so a face downloads only when its Era is on screen.
 - **The scrapbook kit** in `components/scrapbook/`: paper, washi tape, pin, polaroid, bracelet, pressed flowers, scribble, arrow, highlight, sticky note, rubber stamp, ticket stub, ruled list.
 
 `/styleguide` shows the kit in several Eras and every Era's palette. It is served by `next dev`, and by a production build only with `ENABLE_STYLEGUIDE=1` (the Playwright suite and CI set it); the live site answers 404.
@@ -53,7 +52,7 @@ npm run typecheck   # tsc --noEmit
 npm run test:e2e    # Playwright smoke suite
 ```
 
-`npm run test:e2e` builds the app and starts it on port 3100 (or reuses a server already listening there), then drives it as a black box: every route renders with no page errors and no console errors or warnings, the nav highlights the current page, the site chrome (and the styleguide) pass axe at WCAG 2.1 AA, fit a 390px phone and stay still under reduced motion (helpers in `e2e/checks.ts`, which each redesigned page enables for its whole route), Music loads Albums and tracklists, the Tours timeline scrolls end to end, and Swiftter reads, publishes and sanitises Posts. The Swiftter tests need a migrated and seeded database at `DATABASE_URL` (see [Seeding](#seeding); never run them against the real one, they publish Posts). The signed-in tests sign in a dedicated test Member of the Clerk development instance with [`@clerk/testing`](https://clerk.com/docs/testing/playwright/overview); set `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` to run them locally, otherwise they are skipped. That test Member (`e2e+swiftter_clerk_test@example.com`, username `swiftter_e2e`, name "Swiftter Tester", which the tests expect) was created with a password through Clerk's Backend API (`POST /v1/users` with the development `CLERK_SECRET_KEY`); its credentials live in the `E2E_CLERK_USER_*` repository secrets. The first run needs a browser: `npx playwright install chromium`.
+`npm run test:e2e` builds the app and starts it on port 3100 (or reuses a server already listening there), then drives it as a black box: every route renders with no page errors and no console errors or warnings, the nav highlights the current page, the site chrome (and the styleguide) pass axe at WCAG 2.1 AA, fit a 390px phone and stay still under reduced motion (helpers in `e2e/checks.ts`, which each redesigned page enables for its whole route), Music loads Albums and tracklists, Tours lists every Tour and each Tour page shows its own facts, and Swiftter reads, publishes and sanitises Posts. The Swiftter tests need a migrated and seeded database at `DATABASE_URL` (see [Seeding](#seeding); never run them against the real one, they publish Posts). The signed-in tests sign in a dedicated test Member of the Clerk development instance with [`@clerk/testing`](https://clerk.com/docs/testing/playwright/overview); set `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` to run them locally, otherwise they are skipped. That test Member (`e2e+swiftter_clerk_test@example.com`, username `swiftter_e2e`, name "Swiftter Tester", which the tests expect) was created with a password through Clerk's Backend API (`POST /v1/users` with the development `CLERK_SECRET_KEY`); its credentials live in the `E2E_CLERK_USER_*` repository secrets. The first run needs a browser: `npx playwright install chromium`.
 
 ## CI
 

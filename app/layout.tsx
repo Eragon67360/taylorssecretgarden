@@ -2,6 +2,11 @@ import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
 
 import { siteConfig } from "@/config/site";
+// The Era faces' @font-face rules ship with the site-wide CSS: a face still
+// downloads only when its Era is on screen, but a route using them no longer
+// has a CSS chunk of its own that the nav's prefetch preloads and then leaves
+// unused (a console warning on every other page).
+import "@/config/era-fonts";
 import {
   fontBody,
   fontDancing,

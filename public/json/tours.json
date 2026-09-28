@@ -1,47 +1,128 @@
 [
-    {
-      "tour": "The Eras Tour",
-      "date": "2023-2024",
-      "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
-      "slug":"the-eras-tour",
-      "font":"playfair"
-    },
-    {
-      "tour": "Reputation Tour",
-      "date": "2018",
-      "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation",
-      "slug":"reputation-tour",
-      "font":"unifraktur"
-    },
-    {
-      "tour": "1989 Tour",
-      "date": "2015",
-      "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/1989",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/nineteeneightynine",
-      "slug":"1989-tour"
-    },
-    {
-      "tour": "The Red Tour",
-      "date": "2013-2014",
-      "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/red",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red",
-      "slug":"the-red-tour"
-    },
-    {
-      "tour": "Speak Now World Tour",
-      "date": "2011-2012",
-      "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/speak_now",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red",
-      "slug":"speak-now-world-tour"
-    },
-    {
-      "tour": "Fearless Tour",
-      "date": "2009-2010",
-      "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/fearless",
-      "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red",
-      "slug":"fearless-tour"
-    }
-  ]
-  
+  {
+    "tour": "The Eras Tour",
+    "slug": "the-eras-tour",
+    "date": "2023-2024",
+    "era": null,
+    "shows": 149,
+    "legs": ["North America", "South America", "Asia", "Oceania", "Europe"],
+    "facts": [
+      "Opened on March 17, 2023, in Glendale, Arizona, and closed on December 8, 2024, in Vancouver.",
+      "The first tour ever to gross over $1 billion; it finished above $2 billion.",
+      "Its concert film became the highest-grossing concert film of all time."
+    ],
+    "note": "the one that broke Ticketmaster (and us)",
+    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
+    "posterSize": [300, 428],
+    "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
+    "gallery": [
+      {
+        "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/center",
+        "alt": "Taylor Swift on stage at the Eras Tour",
+        "caption": "front row energy (from row 40)",
+        "size": [500, 500]
+      },
+      {
+        "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/gallery",
+        "alt": "Taylor Swift singing in stage smoke",
+        "caption": "the smoke machine had a big night",
+        "size": [500, 489]
+      },
+      {
+        "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/outfits",
+        "alt": "Illustration of the Eras Tour outfits, one per Era",
+        "caption": "every Era, every outfit",
+        "size": [500, 667]
+      },
+      {
+        "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/watch",
+        "alt": "Taylor Swift with a guitar in a sparkly bodysuit at the Eras Tour",
+        "caption": "the Lover bodysuit. obviously",
+        "size": [500, 281]
+      }
+    ]
+  },
+  {
+    "tour": "Reputation Stadium Tour",
+    "slug": "reputation-tour",
+    "date": "2018",
+    "era": "reputation",
+    "shows": 53,
+    "legs": ["North America", "Europe", "Oceania", "Asia"],
+    "facts": [
+      "Opened on May 8, 2018, in Glendale, Arizona.",
+      "Camila Cabello and Charli XCX were the opening acts.",
+      "The concert film premiered on Netflix on December 31, 2018."
+    ],
+    "note": "a giant snake on stage. normal Tuesday",
+    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation",
+    "posterSize": [300, 309],
+    "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation"
+  },
+  {
+    "tour": "The 1989 World Tour",
+    "slug": "1989-tour",
+    "date": "2015",
+    "era": "1989",
+    "shows": 85,
+    "legs": ["Asia", "North America", "Europe", "Oceania"],
+    "facts": [
+      "Opened on May 5, 2015, in Tokyo.",
+      "Surprise guests joined her on stage night after night.",
+      "The highest-grossing tour of 2015, at over $250 million."
+    ],
+    "note": "surprise guests every night, somehow",
+    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/1989",
+    "posterSize": [300, 445],
+    "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/nineteeneightynine"
+  },
+  {
+    "tour": "The Red Tour",
+    "slug": "the-red-tour",
+    "date": "2013-2014",
+    "era": "red",
+    "shows": 86,
+    "legs": ["North America", "Oceania", "Europe", "Asia"],
+    "facts": [
+      "Opened on March 13, 2013, in Omaha, Nebraska.",
+      "Ed Sheeran opened the North American shows.",
+      "Grossed over $150 million, then a record for a country tour."
+    ],
+    "note": "22 on the B-stage, hat included",
+    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/red",
+    "posterSize": [300, 450],
+    "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red"
+  },
+  {
+    "tour": "Speak Now World Tour",
+    "slug": "speak-now-world-tour",
+    "date": "2011-2012",
+    "era": "speak-now",
+    "shows": 110,
+    "legs": ["Asia", "Europe", "North America", "Oceania"],
+    "facts": [
+      "Opened on February 9, 2011, in Singapore.",
+      "Grossed over $120 million.",
+      "Released as the live album and concert film Speak Now World Tour – Live (2011)."
+    ],
+    "note": "the ballgown era. there was a tree.",
+    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/speak_now",
+    "posterSize": [300, 450]
+  },
+  {
+    "tour": "Fearless Tour",
+    "slug": "fearless-tour",
+    "date": "2009-2010",
+    "era": "fearless",
+    "shows": 118,
+    "legs": ["North America", "Europe", "Asia", "Oceania"],
+    "facts": [
+      "Her first headlining concert tour.",
+      "Opened on April 23, 2009, in Evansville, Indiana.",
+      "Its story was told in the concert special Journey to Fearless (2010)."
+    ],
+    "note": "where it all started. sparkles included",
+    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/fearless",
+    "posterSize": [300, 433]
+  }
+]
