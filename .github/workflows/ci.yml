@@ -11,8 +11,11 @@ name: CI
 #   NEXT_PUBLIC_CLERK_SIGN_UP_URL        Clerk sign-up route
 #   NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL  where Clerk sends new sign-ups
 #   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME    Cloudinary images and videos
-#   NEXT_PUBLIC_SUPABASE_URL             read at module level, so `next build` fails without it
-#   NEXT_PUBLIC_SUPABASE_ANON_KEY        Supabase client key (database is gone, see #12)
+#   E2E_CLERK_USER_USERNAME              the dedicated test Member (email) on the Clerk
+#   E2E_CLERK_USER_PASSWORD              development instance, for the signed-in Swiftter tests
+#
+# Swiftter's database is a throwaway Postgres service container, migrated and
+# seeded before the tests; the real (Neon) database is never touched.
 
 on:
   pull_request:
@@ -35,8 +38,23 @@ jobs:
       NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }}
       NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL }}
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
+      E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
+      DATABASE_URL: postgres://swiftter:swiftter@localhost:5432/swiftter
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: swiftter
+          POSTGRES_PASSWORD: swiftter
+          POSTGRES_DB: swiftter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U swiftter"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -46,6 +64,9 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Migrate and seed the test database
+        run: npm run db:migrate && npm run db:seed
 
       - name: Lint
         run: npm run lint
