@@ -1,11 +1,18 @@
+import type { Metadata } from "next";
+
 import { SignIn } from "@clerk/nextjs";
 
+import { guestbookAppearance } from "@/components/guestbook/appearance";
+import { Guestbook } from "@/components/guestbook/guestbook";
+
+export const metadata: Metadata = {
+  title: "Sign in",
+};
+
 export default function SignInPage() {
-    return (
-        <>
-            <div className="w-screen h-screen flex items-center justify-center bg-linear-to-r from-black to-red-500">
-                <SignIn />
-            </div>
-        </>
-    );
+  return (
+    <Guestbook note="Been here before? Write your name again.">
+      <SignIn appearance={guestbookAppearance} />
+    </Guestbook>
+  );
 }

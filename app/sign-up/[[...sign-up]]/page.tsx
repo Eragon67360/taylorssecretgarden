@@ -1,11 +1,18 @@
+import type { Metadata } from "next";
+
 import { SignUp } from "@clerk/nextjs";
 
+import { guestbookAppearance } from "@/components/guestbook/appearance";
+import { Guestbook } from "@/components/guestbook/guestbook";
+
+export const metadata: Metadata = {
+  title: "Sign up",
+};
+
 export default function SignUpPage() {
-    return (
-        <>
-            <div className="w-screen h-screen flex items-center justify-center bg-linear-to-r from-[#5eadd7] to-[#ffa7b3]">
-                <SignUp forceRedirectUrl="/swiftter"/>
-            </div>
-        </>
-    );
+  return (
+    <Guestbook note="New here? Leave your name, then pass a note on Swiftter.">
+      <SignUp appearance={guestbookAppearance} forceRedirectUrl="/swiftter" />
+    </Guestbook>
+  );
 }
