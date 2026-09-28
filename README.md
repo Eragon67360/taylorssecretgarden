@@ -11,9 +11,9 @@ The domain vocabulary (Era, Album, Tour, Swiftter, Post, Member) is defined in [
 
 ## Stack
 
-- [Next.js 14](https://nextjs.org/) (App Router), React 18, TypeScript
-- [NextUI 2](https://nextui.org/) on [Tailwind CSS 3](https://tailwindcss.com/)
-- [Clerk](https://clerk.com/) for sign-in
+- [Next.js 16](https://nextjs.org/) (App Router, Turbopack), React 19, TypeScript 6
+- [NextUI 2.6](https://nextui.org/) (final release, replaced in Phase B) on [Tailwind CSS 3](https://tailwindcss.com/)
+- [Clerk 7](https://clerk.com/) for sign-in
 - [Cloudinary](https://cloudinary.com/) (via `next-cloudinary`) for Tour images, videos and backgrounds
 - [Deezer API](https://developers.deezer.com/api) for the Album catalogue (no credentials needed)
 - [GSAP ScrollTrigger](https://gsap.com/docs/v3/Plugins/ScrollTrigger/) for the Tours timeline
@@ -23,7 +23,7 @@ Deployed on Vercel: `main` is production, every branch gets a preview.
 
 ## Getting started
 
-Requires Node 22.
+Requires Node 24 (24.15 or later: isomorphic-dompurify's jsdom needs it).
 
 ```bash
 npm install
@@ -36,7 +36,7 @@ npm run dev                  # http://localhost:3000
 ## Checks
 
 ```bash
-npm run lint        # ESLint (via next lint)
+npm run lint        # ESLint 9 (legacy .eslintrc until the flat-config move, #10)
 npm run typecheck   # tsc --noEmit
 npm run test:e2e    # Playwright smoke suite
 ```

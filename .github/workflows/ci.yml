@@ -6,7 +6,7 @@ name: CI
 # Required repository secrets (set from the local env file with
 # `gh secret set -f <file>`; values are never committed):
 #   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY    Clerk (development instance)
-#   CLERK_SECRET_KEY                     Clerk server key, used by the middleware
+#   CLERK_SECRET_KEY                     Clerk server key, used by the proxy (proxy.ts)
 #   NEXT_PUBLIC_CLERK_SIGN_IN_URL        Clerk sign-in route
 #   NEXT_PUBLIC_CLERK_SIGN_UP_URL        Clerk sign-up route
 #   NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL  where Clerk sends new sign-ups

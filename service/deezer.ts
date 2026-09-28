@@ -26,8 +26,12 @@ type DeezerAlbumDetails = DeezerAlbum & {
 
 // Deezer's public catalog needs no credentials, but reports failures as
 // HTTP 200 with an `error` object in the body.
+//
+// Responses are kept in Next's data cache for a day. Next 14 cached fetches by
+// default; since Next 15 they are uncached, and every page view would then hit
+// Deezer's rate limit (50 requests per 5 seconds) within a few visits.
 async function deezerGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`);
+  const response = await fetch(`${API_URL}${path}`, { next: { revalidate: 86400 } });
   const data = await response.json();
 
   if (!response.ok || data.error) {

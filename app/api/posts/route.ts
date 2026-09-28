@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   const { content } = await request.json();
 
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     const user = await currentUser();
     const id = user?.id;
 
