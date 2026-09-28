@@ -7,7 +7,7 @@ const sections = [
   { name: "Home", path: "/" },
   { name: "Music", path: "/music" },
   { name: "Tours", path: "/tours" },
-  { name: "Forum", path: "/forum" },
+  { name: "Swiftter", path: "/swiftter" },
 ];
 
 // A section is current on its own path and on every page below it

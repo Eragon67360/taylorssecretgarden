@@ -9,6 +9,7 @@ const baseURL = `http://localhost:${PORT}`;
 // workflow builds in its own step, so the web server only starts it.
 export default defineConfig({
 	testDir: "./e2e",
+	globalSetup: "./e2e/global-setup.ts",
 	timeout: 60_000,
 	expect: { timeout: 15_000 },
 	fullyParallel: true,

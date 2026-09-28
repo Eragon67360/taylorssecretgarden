@@ -35,3 +35,26 @@
     /* Adjust size as needed */
     scale: 110%;
   }
+/* Swiftter Posts: Tailwind's preflight strips list markers; bring them back.
+   Quill 2 stores bullet lists either as <ul> or as <ol> items marked
+   data-list="bullet". */
+.post-content ul,
+.post-content ol {
+    padding-left: 1.5em;
+}
+
+.post-content ul {
+    list-style-type: disc;
+}
+
+.post-content ol {
+    list-style-type: decimal;
+}
+
+.post-content li[data-list="bullet"] {
+    list-style-type: disc;
+}
+
+.post-content a {
+    text-decoration: underline;
+}

@@ -1,13 +1,11 @@
-'use client'
+"use client";
 
-import DOMPurify from "isomorphic-dompurify";
+import { sanitisePostHtml } from "@/service/post-html";
 
+// Posts are sanitised when they are published; sanitising again on render
+// keeps rows written any other way from running scripts in the browser.
 const PostContent = ({ content }: { content: string }) => {
-  const createMarkup = () => {
-    return { __html: DOMPurify.sanitize(content) };
-  };
-
-  return <div dangerouslySetInnerHTML={createMarkup()} />;
+	return <div dangerouslySetInnerHTML={{ __html: sanitisePostHtml(content) }} className="post-content" />;
 };
 
 export default PostContent;

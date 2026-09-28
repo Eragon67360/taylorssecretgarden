@@ -8,7 +8,7 @@ const sections = [
 	{ name: "Home", path: "/" },
 	{ name: "Music", path: "/music" },
 	{ name: "Tours", path: "/tours" },
-	{ name: "Forum", path: "/forum" },
+	{ name: "Swiftter", path: "/swiftter" },
 ];
 
 const nav = (page: Page) => page.getByRole("navigation", { name: "Main" });
@@ -23,9 +23,7 @@ async function expectCurrent(page: Page, current: string) {
 }
 
 test.describe("Navigation", () => {
-	// /forum is left out of direct loads: Swiftter falls back to the error
-	// boundary until #12 rebuilds it (see routes.spec.ts).
-	for (const { name, path } of sections.filter(({ path }) => path !== "/forum")) {
+	for (const { name, path } of sections) {
 		test(`a direct load of ${path} highlights ${name}`, async ({ page }) => {
 			await page.goto(path);
 			await expectCurrent(page, name);

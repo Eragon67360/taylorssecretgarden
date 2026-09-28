@@ -85,17 +85,6 @@ const config = [
       ],
     },
   },
-  {
-    // TEMPORARY: the forum page is rewritten in #12 (Swiftter on Neon + Drizzle); these
-    // errors are fixed there. Remove this block once that rewrite lands.
-    name: "project/forum-pending-rewrite",
-    files: ["app/forum/page.tsx"],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-      "react-hooks/set-state-in-effect": "off",
-      "react-hooks/static-components": "off",
-    },
-  },
   // Must stay last: turns off stylistic rules that conflict with Prettier.
   prettier,
 ];
