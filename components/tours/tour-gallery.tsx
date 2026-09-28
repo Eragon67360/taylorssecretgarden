@@ -7,7 +7,8 @@ const TILTS = [-3, 2, -1.5, 3];
 /** A Tour's photos, taped into the diary as polaroids. */
 export function TourGallery({ photos }: { photos: GalleryPhoto[] }) {
   return (
-    <section aria-labelledby="gallery" className="mt-24">
+    // At the foot of the page: rendered (and its photos fetched) only when scrolled near (globals.css).
+    <section aria-labelledby="gallery" className="below-fold mt-24 [--fold-height:1760px] sm:[--fold-height:1100px] lg:[--fold-height:510px]">
       <h2 className="font-serif text-[clamp(2rem,4vw,2.6rem)] leading-tight font-semibold" id="gallery">
         Gallery
       </h2>

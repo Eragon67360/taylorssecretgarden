@@ -33,6 +33,33 @@ test.describe("Home", () => {
 		await expect(page.getByRole("img", { name: /Stamp: This is NOT Taylor's Version/i })).toBeVisible();
 	});
 
+	test("the taped photo, the first screen's largest picture, is fetched first and sized for the screen", async ({ page }) => {
+		await page.goto("/");
+
+		const photo = page.getByRole("img", { name: /Taylor Swift singing on stage/ });
+
+		await expect(photo).toHaveAttribute("fetchpriority", "high");
+		await expect(photo).toHaveAttribute("loading", "eager");
+		// A width per screen, picked by `sizes`, not one large file for every phone.
+		await expect(photo).toHaveAttribute("sizes", /\dvw/);
+		await expect(photo).toHaveAttribute("srcset", /\s\d+w,/);
+	});
+
+	test("nothing else is fetched for the next page until the visitor shows interest in a link", async ({ page }) => {
+		const prefetches: string[] = [];
+
+		// A page prefetched by the router: its payload (?_rsc=…).
+		page.on("request", (request) => {
+			if (new URL(request.url()).searchParams.has("_rsc")) prefetches.push(request.url());
+		});
+		await page.goto("/", { waitUntil: "load" });
+		await page.waitForTimeout(1500);
+		expect(prefetches, "no page is prefetched as the first screen loads").toEqual([]);
+
+		await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Tours" }).hover();
+		await expect.poll(() => prefetches.some((url) => new URL(url).pathname === "/tours")).toBe(true);
+	});
+
 	test("the sticky note is handwritten in a loaded web font, not a system fallback", async ({ page }) => {
 		await page.goto("/");
 

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { IntentLink } from "@/components/intent-link";
 import { Bracelet, PressedFlower, RuledList, RuledListItem, StickyNote } from "@/components/scrapbook";
 import { TourGallery } from "@/components/tours/tour-gallery";
 import { TourPoster } from "@/components/tours/tour-poster";
@@ -37,9 +37,9 @@ export default async function TourPage({ params }: TourPageProps) {
   return (
     <TourScope aria-labelledby="tour-title" className="relative overflow-x-clip" tour={tour}>
       <div className="mx-auto max-w-[1180px] px-4 pt-8 pb-20 sm:px-8 sm:pt-10">
-        <Link className="focus-ring font-hand text-soft hover:text-ink inline-block text-2xl font-bold" href="/tours">
+        <IntentLink className="focus-ring font-hand text-soft hover:text-ink inline-block text-2xl font-bold" href="/tours">
           <span aria-hidden="true">←</span> back to the Tours
-        </Link>
+        </IntentLink>
 
         {/* The stub, the poster and the numbers. */}
         <div className="mt-8 grid items-start gap-14 lg:grid-cols-12 lg:gap-10">

@@ -20,7 +20,10 @@ const label = (look: EraLook) => (look.slug === "ttpd" ? look.short : look.name)
 /** The herbarium: every Era pressed in their own paper, each opening its Album on the Music page. */
 export function EraGallery({ albums }: { albums: Record<EraSlug, EraAlbum> }) {
   return (
-    <section aria-labelledby="eras" className="relative mx-auto w-full max-w-[1240px] px-4 pt-20 pb-10 sm:px-8">
+    <section
+      aria-labelledby="eras"
+      className="below-fold relative mx-auto w-full max-w-[1240px] px-4 pt-20 pb-10 [--fold-height:2300px] sm:px-8 sm:[--fold-height:2000px] lg:[--fold-height:1680px]"
+    >
       <SectionHead aside="tap one to open its Album" id="eras" kicker="page 3 · the herbarium" title="Every Era, pressed and kept" />
 
       <ol className="mt-12 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-7 lg:gap-y-10">

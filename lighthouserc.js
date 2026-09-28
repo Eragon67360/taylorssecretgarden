@@ -7,7 +7,11 @@
   Why Performance only warns: on GitHub's shared runners the scores swing by
   up to 0.3 between runs of the same build (the first, cold run of a page is
   the usual outlier) and sit a few points under a local run of the same code.
-  Check Performance on the Vercel preview (PageSpeed Insights) before merging.
+  After #49 the CI medians are 0.88–0.93 (Home 0.90, Music 0.88, Tours 0.90,
+  the Eras Tour 0.92, Swiftter 0.93): too close to 0.9 for an error that must
+  not flake. `next start` serves HTTP/1.1 here, which Lighthouse's simulation
+  scores lower than the HTTP/2 of production. Check Performance on the Vercel
+  preview (PageSpeed Insights) before merging.
   Build first (`npm run build`).
 */
 const PORT = process.env.LHCI_PORT ?? "3180";
