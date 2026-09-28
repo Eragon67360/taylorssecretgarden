@@ -130,7 +130,7 @@ const ScrollSection = () => {
                                             key={index}
                                             className="absolute top-1/2 transform -translate-y-1/2 bg-white rounded-full"
                                             style={{ width: '20px', height: '20px', left: `calc(${index} * (100% / ${tours.length - 1}))` }}
-                                         />
+                                        />
                                     ))}
                                 </div>
                             </div>
