@@ -18,8 +18,6 @@ type ComposerProps = {
   member: { name: string; avatarUrl: string | null };
   /** Publishes the Post's HTML; resolves true once it is published. */
   onPublish: (html: string) => Promise<boolean>;
-  /** Controls beside the Member's name (e.g. sign out). */
-  memberActions?: ReactNode;
 };
 
 /**
@@ -28,7 +26,7 @@ type ComposerProps = {
  * Tiptap with bold, italic, bullet and numbered lists and links; it writes
  * HTML, which the server sanitises when the Post is published.
  */
-export default function Composer({ member, onPublish, memberActions }: ComposerProps) {
+export default function Composer({ member, onPublish }: ComposerProps) {
   const headingId = useId();
   const [publishing, setPublishing] = useState(false);
 
@@ -97,7 +95,6 @@ export default function Composer({ member, onPublish, memberActions }: ComposerP
             writing as {member.name}
           </p>
         </div>
-        {memberActions}
       </header>
 
       <Toolbar editor={editor} />

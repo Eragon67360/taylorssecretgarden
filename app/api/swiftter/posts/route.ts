@@ -1,7 +1,7 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-import { ensureMember, InvalidPostError, listFeed, memberFromClerkUser, publishPost } from "@/service/swiftter";
+import { getSessionUser } from "@/lib/auth/server";
+import { ensureMember, InvalidPostError, listFeed, memberFromAuthUser, publishPost } from "@/service/swiftter";
 
 /** The Swiftter feed: public, newest Posts first. */
 export async function GET() {
@@ -17,9 +17,9 @@ export async function GET() {
 
 /** Publishes a Post as the signed-in Member. Body: `{ content: string }` (HTML). */
 export async function POST(request: Request) {
-	const { userId } = await auth();
+	const user = await getSessionUser();
 
-	if (!userId) return NextResponse.json({ error: "Sign in to publish a Post." }, { status: 401 });
+	if (!user) return NextResponse.json({ error: "Sign in to publish a Post." }, { status: 401 });
 
 	const body = (await request.json().catch(() => null)) as { content?: unknown } | null;
 
@@ -27,12 +27,8 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Expected a JSON body with a `content` string." }, { status: 400 });
 	}
 
-	const user = await currentUser();
-
-	if (!user) return NextResponse.json({ error: "Sign in to publish a Post." }, { status: 401 });
-
 	try {
-		await ensureMember(memberFromClerkUser(user));
+		await ensureMember(memberFromAuthUser(user));
 		const post = await publishPost(user.id, body.content);
 
 		return NextResponse.json({ post }, { status: 201 });

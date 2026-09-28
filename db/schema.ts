@@ -1,6 +1,6 @@
 import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-/** A signed-in person who can publish Posts, keyed by their Clerk user id. */
+/** A signed-in person who can publish Posts, keyed by their Neon Auth user id (a UUID, as text). */
 export const members = pgTable("members", {
 	id: text("id").primaryKey(),
 	displayName: text("display_name").notNull(),

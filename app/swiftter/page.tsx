@@ -2,8 +2,8 @@
 
 import type { FeedPost } from "@/service/swiftter";
 
-import { SignOutButton, useUser } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -11,6 +11,7 @@ import { PressedFlower, Scribble, WashiTape } from "@/components/scrapbook";
 import { FeedEmpty, FeedError, FeedLoading } from "@/components/swiftter/feed-states";
 import { NoteSheet, PAPERS, ruling } from "@/components/swiftter/note-paper";
 import { paperFor, PostNote } from "@/components/swiftter/post-note";
+import { authClient } from "@/lib/auth/client";
 
 const FEED_URL = "/api/swiftter/posts";
 const SIGN_IN_URL = "/sign-in?redirect_url=%2Fswiftter";
@@ -34,7 +35,10 @@ async function fetchFeed(): Promise<Feed> {
 }
 
 export default function SwiftterPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
+  // Also completes a Google sign-in: coming back from Google, this page's
+  // session request carries the verifier Neon Auth exchanges for the session.
+  const { data: session, isPending } = authClient.useSession();
+  const user = session?.user;
   const [feed, setFeed] = useState<Feed>({ status: "loading" });
   const [feedRequest, setFeedRequest] = useState(0);
 
@@ -104,20 +108,10 @@ export default function SwiftterPage() {
 
       <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-14">
         <aside aria-label="Write" className="lg:sticky lg:top-8 lg:order-2 lg:self-start">
-          {!isLoaded ? (
+          {isPending ? (
             <ComposerPlaceholder />
-          ) : isSignedIn ? (
-            <Composer
-              member={{ name: user.fullName || user.username || "Swiftie", avatarUrl: user.imageUrl || null }}
-              memberActions={
-                <SignOutButton redirectUrl="/swiftter">
-                  <button className="focus-ring min-h-9 rounded-[6px] px-1 text-[14px] font-bold underline underline-offset-2" type="button">
-                    Sign out
-                  </button>
-                </SignOutButton>
-              }
-              onPublish={publish}
-            />
+          ) : user ? (
+            <Composer member={{ name: user.name || user.email.split("@")[0], avatarUrl: user.image || null }} onPublish={publish} />
           ) : (
             <GuestbookPrompt />
           )}
@@ -129,7 +123,7 @@ export default function SwiftterPage() {
           </h2>
           {feed.status === "loading" && <FeedLoading />}
           {feed.status === "error" && <FeedError onRetry={retry} />}
-          {feed.status === "ready" && feed.posts.length === 0 && <FeedEmpty action={isSignedIn ? undefined : <GuestbookLink />} />}
+          {feed.status === "ready" && feed.posts.length === 0 && <FeedEmpty action={user ? undefined : <GuestbookLink />} />}
           {feed.status === "ready" && feed.posts.length > 0 && (
             <div aria-label="Posts" className="flex flex-col gap-9 sm:gap-11" role="feed">
               {feed.posts.map((post, index) => (
@@ -143,11 +137,9 @@ export default function SwiftterPage() {
   );
 }
 
-// A full page load, not a client-side navigation: Swiftter loads Clerk without
-// its prebuilt forms (app/swiftter/layout.tsx), and the guestbook needs them.
 function GuestbookLink() {
   return (
-    <a
+    <Link
       className="font-hand focus-ring decoration-pen rounded-sm text-[25px] leading-snug font-bold underline decoration-wavy decoration-[1.5px] underline-offset-[5px]"
       href={SIGN_IN_URL}
     >
@@ -155,7 +147,7 @@ function GuestbookLink() {
       <span className="whitespace-nowrap">
         note <span aria-hidden="true">→</span>
       </span>
-    </a>
+    </Link>
   );
 }
 

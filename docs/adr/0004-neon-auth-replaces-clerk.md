@@ -1,0 +1,9 @@
+# Neon Auth replaces Clerk for sign-in
+
+Members now sign in with Neon Auth (Neon's managed Better Auth) instead of Clerk, superseding the identity half of [ADR-0003](0003-neon-drizzle-for-swiftter.md). With Clerk, the guestbook was Clerk's prebuilt forms restyled through its appearance API, with its "Secured by Clerk" badge, which only a paid plan removes; Neon Auth is included in the Neon project Swiftter already uses, is headless, and keeps the Members' accounts in the same database (schema `neon_auth`), so the guestbook pages are our own scrapbook forms and there is one vendor fewer.
+
+- Email + password and Google. Neon Auth offers no Apple sign-in (nor generic OAuth), so there is none. Email verification is off for now; emails would come from Neon's shared sender until we configure our own SMTP.
+- The browser only talks to this origin: `app/api/auth/[...path]` proxies to the branch's `NEON_AUTH_BASE_URL` and sets the session cookies first-party, signed with `NEON_AUTH_COOKIE_SECRET`. There is no `proxy.ts`: no page is protected, and the POST route checks the session itself. A Google sign-in is completed by the session request of the page it returns to.
+- `members.id` stays `text` and holds the Neon Auth user id (a UUID). No foreign key into `neon_auth`, and drizzle-kit's `schemaFilter` is `['public']`, so our migrations never touch Neon's tables. Members who signed in with Clerk cannot be carried over (Clerk password hashes cannot be imported, and the ids differ): they sign up again, and their old Posts stay under their old Member rows.
+- Neon Auth cannot run against a plain Postgres, so CI creates a Neon branch per run (its own database and Auth URL, deleted at the end) instead of a Postgres container, and the test Member signs up through our own form. Tests that write refuse to run on the production branch.
+- The SDK (`@neondatabase/auth`) is still beta while the service is GA: its version is pinned exactly and upgraded deliberately.

@@ -1,12 +1,13 @@
 import type { Page } from "@playwright/test";
 
-import { clerk, setupClerkTestingToken } from "@clerk/testing/playwright";
+import { existsSync } from "node:fs";
 
 import { PHONE, expectNoAxeViolations, expectNoHorizontalOverflow, expectReducedMotion } from "./checks";
 import { expect, test } from "./fixtures";
+import { MEMBER_STATE, readTestMember, writeGuard } from "./member";
 
-// Swiftter against a real (throwaway) Postgres: CI migrates and seeds it
-// before the suite runs (`npm run db:migrate && npm run db:seed`).
+// Swiftter against a real (throwaway) Neon branch: CI creates one per run,
+// migrates and seeds it before the suite runs (`npm run db:migrate && npm run db:seed`).
 const FEED = "/api/swiftter/posts";
 
 type FeedPost = {
@@ -17,20 +18,9 @@ type FeedPost = {
 	author: { displayName: string; username: string | null; avatarUrl: string | null };
 };
 
-// The dedicated test Member on the development Clerk instance (see README).
-const testMember = {
-	identifier: process.env.E2E_CLERK_USER_USERNAME ?? "",
-	password: process.env.E2E_CLERK_USER_PASSWORD ?? "",
-	displayName: "Swiftter Tester",
-};
-
+/** Opens Swiftter as the test Member (signed up by e2e/member.setup.ts). */
 async function signIn(page: Page) {
-	await setupClerkTestingToken({ page });
 	await page.goto("/swiftter");
-	await clerk.signIn({
-		page,
-		signInParams: { strategy: "password", identifier: testMember.identifier, password: testMember.password },
-	});
 	await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 }
 
@@ -196,21 +186,13 @@ test.describe("Swiftter, signed out", () => {
 	});
 });
 
-// These tests publish Posts, so they must never run against the real database.
-function databaseIsLocal(): boolean {
-	const url = process.env.DATABASE_URL;
-
-	if (!url) return false;
-
-	return ["localhost", "127.0.0.1", "::1"].includes(new URL(url).hostname);
-}
-
+// These tests publish Posts, so they only run on a disposable Neon branch,
+// never on the real database (e2e/member.ts), as the test Member.
 test.describe("Swiftter, signed in", () => {
-	test.skip(
-		!process.env.CI && !testMember.password,
-		"Set E2E_CLERK_USER_USERNAME / E2E_CLERK_USER_PASSWORD to run the signed-in tests locally",
-	);
-	test.skip(!databaseIsLocal(), "Publishing tests only run against a local Postgres, never the real database");
+	test.skip(!!writeGuard(), writeGuard() ?? "");
+	// Checked when each test runs: the setup project signs the Member up first.
+	test.skip(() => !readTestMember(), "The setup project signs up the test Member");
+	test.use({ storageState: async ({}, provide) => provide(existsSync(MEMBER_STATE) ? MEMBER_STATE : undefined) });
 
 	test("a Member publishes a Post and it appears first in the feed", async ({ page }) => {
 		await signIn(page);
@@ -225,7 +207,7 @@ test.describe("Swiftter, signed in", () => {
 		const first = feedPosts(page).first();
 
 		await expect(first).toContainText(text);
-		await expect(first.getByText(testMember.displayName)).toBeVisible();
+		await expect(first.getByText(readTestMember()!.name)).toBeVisible();
 
 		// Still first after a reload, so it was stored, not just shown.
 		await page.reload();

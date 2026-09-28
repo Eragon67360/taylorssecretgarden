@@ -1,7 +1,5 @@
 import "server-only";
 
-import type { User } from "@clerk/nextjs/server";
-
 import { desc, eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
@@ -22,7 +20,7 @@ export type FeedPost = {
 	author: { displayName: string; username: string | null; avatarUrl: string | null };
 };
 
-/** What Swiftter keeps about a Member, copied from their Clerk user. */
+/** What Swiftter keeps about a Member, copied from their Neon Auth user. */
 export type MemberDetails = {
 	id: string;
 	displayName: string;
@@ -65,7 +63,7 @@ export async function listFeed(): Promise<FeedPost[]> {
 	return rows.map(toFeedPost);
 }
 
-/** Creates the Member, or refreshes their name and avatar if they changed on Clerk. */
+/** Creates the Member, or refreshes their name and avatar if they changed since. */
 export async function ensureMember(member: MemberDetails): Promise<void> {
 	const { displayName, username, avatarUrl } = member;
 
@@ -75,15 +73,19 @@ export async function ensureMember(member: MemberDetails): Promise<void> {
 		.onConflictDoUpdate({ target: members.id, set: { displayName, username, avatarUrl } });
 }
 
-/** The Member details of a Clerk user. */
-export function memberFromClerkUser(user: User): MemberDetails {
-	const emailName = user.primaryEmailAddress?.emailAddress.split("@")[0];
+/** The person signed in, as Neon Auth describes them (lib/auth/server.ts). */
+export type AuthUser = { id: string; name?: string | null; email: string; image?: string | null };
 
+/**
+ * The Member details of a signed-in person. Neon Auth has no usernames, so a
+ * Member's handle is left empty; the name falls back to the email's local part.
+ */
+export function memberFromAuthUser(user: AuthUser): MemberDetails {
 	return {
 		id: user.id,
-		displayName: user.fullName?.trim() || user.username || emailName || "Swiftie",
-		username: user.username,
-		avatarUrl: user.imageUrl || null,
+		displayName: user.name?.trim() || user.email.split("@")[0] || "Swiftie",
+		username: null,
+		avatarUrl: user.image || null,
 	};
 }
 

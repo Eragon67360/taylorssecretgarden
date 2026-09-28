@@ -1,12 +1,35 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as m from "motion/react-m";
+import { useEffect, useState } from "react";
 
 import { GardenMark } from "@/components/garden-mark";
 import { Scribble } from "@/components/scrapbook";
+import { afterLoad } from "@/lib/after-load";
 import { cn } from "@/lib/utils";
+
+// Sign-out for Members. Neon Auth's client and the session request come once
+// the page has loaded and gone idle: visitors (and first paint) never wait for them.
+const MemberMenu = dynamic(() => import("@/components/member-menu"), { ssr: false });
+
+function LazyMemberMenu() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let current = true;
+
+    afterLoad().then(() => current && setReady(true));
+
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  return ready ? <MemberMenu /> : null;
+}
 
 /** The site's sections, each an index tab in its own pastel. */
 const SECTIONS = [
@@ -47,6 +70,11 @@ export function SiteHeader() {
           <GardenMark className="size-9 transition-transform duration-500 motion-safe:group-hover:rotate-[30deg]" />
           <span className="font-hand text-[26px] leading-none font-bold md:text-[28px]">Taylor&apos;s Secret Garden</span>
         </Link>
+
+        {/* Beside the name on a phone (the tabs take the next row), before the tabs on wider screens. */}
+        <div className="ml-auto">
+          <LazyMemberMenu />
+        </div>
 
         <nav aria-label="Main" className="w-full sm:w-auto">
           <ul className="font-body flex items-end gap-1 text-[15px] font-semibold sm:gap-1.5">

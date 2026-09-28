@@ -20,7 +20,14 @@ const nextConfig = {
 				port: "",
 				pathname: "/dluezegi8/**",
 			},
-			// Member avatars from Clerk.
+			// Member avatars: Google profile photos (Neon Auth's Google sign-in).
+			{
+				protocol: "https",
+				hostname: "lh3.googleusercontent.com",
+				port: "",
+				pathname: "/**",
+			},
+			// Avatars stored for Members who signed in with Clerk, before Neon Auth (ADR-0004).
 			{
 				protocol: "https",
 				hostname: "img.clerk.com",

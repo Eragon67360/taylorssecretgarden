@@ -7,7 +7,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { createPool } from "./client";
 import { members, posts } from "./schema";
 
-// Fictional fans. Their ids cannot collide with Clerk user ids (user_...).
+// Fictional fans. Their ids cannot collide with Neon Auth user ids (UUIDs).
 const demoMembers = [
 	{ id: "demo_juniper", displayName: "Juniper Wells", username: "juniper_in_cardigan" },
 	{ id: "demo_marcus", displayName: "Marcus Hale", username: "marcus13" },

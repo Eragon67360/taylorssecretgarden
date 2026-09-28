@@ -18,7 +18,7 @@
 		"lighthouse": "lhci autorun"
 	},
 	"dependencies": {
-		"@clerk/nextjs": "^7.9.7",
+		"@neondatabase/auth": "0.5.0-beta",
 		"@tiptap/extensions": "^3.31.3",
 		"@tiptap/pm": "^3.31.3",
 		"@tiptap/react": "^3.31.3",
@@ -36,7 +36,6 @@
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.13.0",
-		"@clerk/testing": "^2.2.39",
 		"@lhci/cli": "^0.15.1",
 		"@playwright/test": "^1.63.0",
 		"@tailwindcss/postcss": "^4.3.3",
