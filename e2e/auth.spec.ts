@@ -8,7 +8,7 @@ import { newTestMember, readTestMember, writeGuard } from "./member";
 // card, in the journal's hand, backed by Neon Auth through /api/auth.
 const pages = [
 	{ path: "/sign-in", title: "Sign in to Taylor's Secret Garden", submit: "Sign in", fields: ["Email", "Password"] },
-	{ path: "/sign-up", title: "Create your account", submit: "Sign the guestbook", fields: ["Name", "Email", "Password"] },
+	{ path: "/sign-up", title: "Become a Member", submit: "Sign the guestbook", fields: ["Name", "Email", "Password"] },
 ];
 
 const field = (page: Page, name: string) =>

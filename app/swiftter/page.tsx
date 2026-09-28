@@ -12,6 +12,7 @@ import { FeedEmpty, FeedError, FeedLoading } from "@/components/swiftter/feed-st
 import { NoteSheet, PAPERS, ruling } from "@/components/swiftter/note-paper";
 import { paperFor, PostNote } from "@/components/swiftter/post-note";
 import { authClient } from "@/lib/auth/client";
+import { displayNameOf } from "@/lib/display-name";
 
 const FEED_URL = "/api/swiftter/posts";
 const SIGN_IN_URL = "/sign-in?redirect_url=%2Fswiftter";
@@ -111,7 +112,7 @@ export default function SwiftterPage() {
           {isPending ? (
             <ComposerPlaceholder />
           ) : user ? (
-            <Composer member={{ name: user.name || user.email.split("@")[0], avatarUrl: user.image || null }} onPublish={publish} />
+            <Composer member={{ name: displayNameOf(user), avatarUrl: user.image || null }} onPublish={publish} />
           ) : (
             <GuestbookPrompt />
           )}

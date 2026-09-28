@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useRef, useState } from "react";
 
+import { GOOGLE_ERROR } from "@/components/guestbook/guestbook";
 import { authClient } from "@/lib/auth/client";
 import { cn } from "@/lib/utils";
 
@@ -17,26 +18,34 @@ type GuestbookFormProps = {
   initialError?: string | null;
 };
 
-const COPY = {
+const MIN_PASSWORD_LENGTH = 8;
+
+/** Each page's words, and what its password field asks for. */
+const PAGES = {
   "sign-in": {
+    path: "/sign-in",
     title: "Sign in to Taylor's Secret Garden",
     subtitle: "Welcome back. Your pen is where you left it.",
     submit: "Sign in",
     pending: "Signing in…",
     switchText: "New here?",
     switchLink: { href: "/sign-up", label: "Sign up" },
+    password: { autoComplete: "current-password", minLength: undefined, hint: undefined },
   },
   "sign-up": {
-    title: "Create your account",
+    path: "/sign-up",
+    title: "Become a Member",
     subtitle: "Your name goes in the guestbook, then on every note you pass.",
     submit: "Sign the guestbook",
     pending: "Signing…",
     switchText: "Already in the guestbook?",
     switchLink: { href: "/sign-in", label: "Sign in" },
+    password: { autoComplete: "new-password", minLength: MIN_PASSWORD_LENGTH, hint: `At least ${MIN_PASSWORD_LENGTH} characters.` },
   },
 } as const;
 
-export const MIN_PASSWORD_LENGTH = 8;
+const ALREADY_SIGNED = "That email has already signed the guestbook. Sign in instead.";
+const TOO_MANY_TRIES = "Too many tries in a row. Wait a minute, then try again.";
 
 type AuthFailure = { code?: string; message?: string; status?: number };
 
@@ -56,7 +65,7 @@ function describeError(failure: unknown): string {
       return "That email or password doesn't match anyone in the guestbook.";
     case "user_already_exists":
     case "user_already_exists_use_another_email":
-      return "That email has already signed the guestbook. Sign in instead.";
+      return ALREADY_SIGNED;
     case "weak_password":
     case "password_too_short":
       return `Passwords need at least ${MIN_PASSWORD_LENGTH} characters.`;
@@ -64,11 +73,11 @@ function describeError(failure: unknown): string {
     case "invalid_email":
       return "That doesn't look like an email address.";
     case "over_request_rate_limit":
-      return "Too many tries in a row. Wait a minute, then try again.";
+      return TOO_MANY_TRIES;
   }
   // Better Auth's "User already exists. Use another email." has no code of its own here.
-  if (/already exists/i.test(message)) return "That email has already signed the guestbook. Sign in instead.";
-  if (status === 429) return "Too many tries in a row. Wait a minute, then try again.";
+  if (/already exists/i.test(message)) return ALREADY_SIGNED;
+  if (status === 429) return TOO_MANY_TRIES;
   if (status === undefined || status === 0) return "The guestbook can't be reached right now. Check your connection and try again.";
 
   return "The guestbook couldn't be signed just now. Try again in a moment.";
@@ -83,7 +92,7 @@ const inputClass =
  * fields and an ink-stamp button. Talks to Neon Auth through /api/auth.
  */
 export function GuestbookForm({ mode, redirectTo, initialError = null }: GuestbookFormProps) {
-  const copy = COPY[mode];
+  const copy = PAGES[mode];
   const router = useRouter();
   const id = useId();
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -132,13 +141,14 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
       .social({
         provider: "google",
         callbackURL: new URL(redirectTo, here).href,
-        // Neon Auth adds `?error=…` (see guestbookError in components/guestbook/guestbook.tsx).
-        errorCallbackURL: new URL(`/${mode}`, here).href,
+        // Back to this page, still headed for the same place; Neon Auth adds `?error=…`
+        // (see guestbookError in components/guestbook/guestbook.tsx).
+        errorCallbackURL: new URL(`${copy.path}?redirect_url=${encodeURIComponent(redirectTo)}`, here).href,
       })
       .catch((thrown: unknown) => ({ error: thrown }));
 
     if (failure) {
-      setError("Google sign-in didn't go through. Try again, or use your email.");
+      setError(GOOGLE_ERROR);
       setPending(null);
     }
   };
@@ -208,7 +218,7 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
         </Field>
 
         <Field
-          hint={mode === "sign-up" ? `At least ${MIN_PASSWORD_LENGTH} characters.` : undefined}
+          hint={copy.password.hint}
           hintId={hintId}
           id={`${id}-password`}
           label="Password"
@@ -216,12 +226,12 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
           <input
             ref={passwordRef}
             required
-            aria-describedby={mode === "sign-up" ? hintId : undefined}
+            aria-describedby={copy.password.hint ? hintId : undefined}
             aria-invalid={fieldsInvalid || undefined}
-            autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
+            autoComplete={copy.password.autoComplete}
             className={inputClass}
             id={`${id}-password`}
-            minLength={mode === "sign-up" ? MIN_PASSWORD_LENGTH : undefined}
+            minLength={copy.password.minLength}
             name="password"
             type="password"
           />

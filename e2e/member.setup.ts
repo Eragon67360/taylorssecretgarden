@@ -11,6 +11,10 @@ setup("a visitor signs the guestbook and lands on Swiftter as a Member", async (
 
 	const refusal = writeGuard();
 
+	// Locally, no disposable branch just means no signed-in tests. CI always
+	// has one, so a refusal there is a misconfiguration and fails the run
+	// (and with it every test that depends on this setup).
+	if (refusal && process.env.CI) throw new Error(refusal);
 	setup.skip(!!refusal, refusal ?? "");
 
 	const member = newTestMember();

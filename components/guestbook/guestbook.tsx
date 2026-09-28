@@ -11,21 +11,24 @@ type GuestbookProps = {
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
-const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+const firstParam = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+
+/** Shown when a Google sign-in comes back with an error, or cannot start. */
+export const GOOGLE_ERROR = "Google sign-in didn't go through. Try again, or use your email.";
 
 /**
  * Where to go once signed in: `redirect_url` when it is a path on this site
  * (never another origin), else Swiftter.
  */
 export function guestbookRedirect(params: SearchParams): string {
-  const target = first(params.redirect_url);
+  const target = firstParam(params.redirect_url);
 
   return target && target.startsWith("/") && !target.startsWith("//") && !target.startsWith("/\\") ? target : "/swiftter";
 }
 
 /** The explanation to show when Google sent the visitor back with `?error=…`. */
 export function guestbookError(params: SearchParams): string | null {
-  return first(params.error) ? "Google sign-in didn't go through. Try again, or use your email." : null;
+  return firstParam(params.error) ? GOOGLE_ERROR : null;
 }
 
 /**

@@ -12,24 +12,22 @@ import { createNeonAuth, type NeonAuth } from "@neondatabase/auth/next/server";
 let instance: NeonAuth | undefined;
 
 export function getAuth(): NeonAuth {
-	if (instance) return instance;
+  if (instance) return instance;
 
-	const baseUrl = process.env.NEON_AUTH_BASE_URL;
-	const secret = process.env.NEON_AUTH_COOKIE_SECRET;
+  const baseUrl = process.env.NEON_AUTH_BASE_URL;
+  const secret = process.env.NEON_AUTH_COOKIE_SECRET;
 
-	if (!baseUrl) throw new Error("NEON_AUTH_BASE_URL is not set: sign-in needs the Neon Auth URL of the database's branch.");
-	if (!secret) throw new Error("NEON_AUTH_COOKIE_SECRET is not set: sign-in needs a secret (32+ characters) to sign its cookies.");
+  if (!baseUrl) throw new Error("NEON_AUTH_BASE_URL is not set: sign-in needs the Neon Auth URL of the database's branch.");
+  if (!secret) throw new Error("NEON_AUTH_COOKIE_SECRET is not set: sign-in needs a secret (32+ characters) to sign its cookies.");
 
-	instance = createNeonAuth({ baseUrl, cookies: { secret } });
+  instance = createNeonAuth({ baseUrl, cookies: { secret } });
 
-	return instance;
+  return instance;
 }
 
 /** The person signed in on this request, or null. */
 export async function getSessionUser() {
-	const { data } = await getAuth().getSession();
+  const { data } = await getAuth().getSession();
 
-	return data?.user ?? null;
+  return data?.user ?? null;
 }
-
-export type SessionUser = NonNullable<Awaited<ReturnType<typeof getSessionUser>>>;

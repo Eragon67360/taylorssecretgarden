@@ -3,6 +3,7 @@ import "server-only";
 import { desc, eq } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
+import { displayNameOf } from "@/lib/display-name";
 import { members, posts } from "@/db/schema";
 import { postText, sanitisePostHtml } from "@/service/post-html";
 
@@ -78,12 +79,12 @@ export type AuthUser = { id: string; name?: string | null; email: string; image?
 
 /**
  * The Member details of a signed-in person. Neon Auth has no usernames, so a
- * Member's handle is left empty; the name falls back to the email's local part.
+ * Member's handle is left empty.
  */
 export function memberFromAuthUser(user: AuthUser): MemberDetails {
 	return {
 		id: user.id,
-		displayName: user.name?.trim() || user.email.split("@")[0] || "Swiftie",
+		displayName: displayNameOf(user),
 		username: null,
 		avatarUrl: user.image || null,
 	};
