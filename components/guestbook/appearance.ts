@@ -3,11 +3,14 @@ import type { ComponentProps } from "react";
 
 type Appearance = NonNullable<ComponentProps<typeof SignIn>["appearance"]>;
 
+// The journal's pen and text faces: the stacks of `--font-hand` and
+// `--font-body` (styles/globals.css). Those are inline @theme tokens, compiled
+// into the font utilities, so Clerk reads next/font's variables directly.
 const HAND = "var(--font-caveat), 'Segoe Print', cursive";
 const BODY = "var(--font-karla), system-ui, sans-serif";
 
 /** The site's focus ring (styles/globals.css `focus-ring`): a solid outline in ink. */
-const FOCUS = { outline: "2.5px solid var(--ink)", outlineOffset: "2px", boxShadow: "none" };
+const FOCUS = { outline: "2.5px solid var(--ink)", outlineOffset: "3px", boxShadow: "none" };
 
 /**
  * Clerk draws control borders as box-shadows under `[data-variant]` and state
