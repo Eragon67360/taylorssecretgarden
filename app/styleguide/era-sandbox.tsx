@@ -10,7 +10,7 @@ import { EraTitle } from "./era-title";
 import { KitSpread } from "./kit-spread";
 
 /**
- * The kit in any Era, re-themed in place: the container's variables change
+ * The kit in any Era, re-coloured in place: the container's variables change
  * and the colours fade across (instantly under reduced motion). Picking an
  * Era is also what downloads its display face.
  */

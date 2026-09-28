@@ -59,16 +59,27 @@ test.describe("Navigation", () => {
 		await expect(nav(page).getByRole("link", { name: "Events" })).toHaveCount(0);
 	});
 
-	test("sits at the top of the page, above the content", async ({ page }) => {
-		await page.goto("/music");
-		const navBox = await nav(page).boundingBox();
+	for (const viewport of [{ width: 1440, height: 900 }, PHONE]) {
+		test(`sits at the top of every page without covering its heading (${viewport.width}px)`, async ({ page }) => {
+			await page.setViewportSize(viewport);
+			const headings = [
+				{ path: "/", heading: "Taylor Swift" },
+				{ path: "/music", heading: "Albums" },
+				{ path: "/tours", heading: "Tours" },
+				{ path: "/tours/the-eras-tour", heading: "The Eras Tour" },
+				{ path: "/sign-in", heading: "Sign in to Taylor's Secret Garden" },
+			];
 
-		expect(navBox!.y).toBeLessThan(200);
-		// The nav is part of the page flow: the page's main heading starts below it.
-		const headingBox = await page.getByRole("heading", { name: "Albums", exact: true }).boundingBox();
+			for (const { path, heading } of headings) {
+				await page.goto(path);
+				const header = (await page.locator("#site-header").boundingBox())!;
+				const title = (await page.getByRole("heading", { name: heading, exact: true }).boundingBox())!;
 
-		expect(headingBox!.y).toBeGreaterThanOrEqual(navBox!.y + navBox!.height);
-	});
+				expect(header.y, `header on ${path}`).toBe(0);
+				expect(title.y, `"${heading}" on ${path} starts below the header`).toBeGreaterThanOrEqual(header.y + header.height);
+			}
+		});
+	}
 
 	test("is operable from the keyboard, with a visible focus ring", async ({ page }) => {
 		await page.goto("/");

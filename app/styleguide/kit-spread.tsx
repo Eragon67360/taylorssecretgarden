@@ -19,8 +19,7 @@ import {
   TicketStub,
   WashiTape,
 } from "@/components/scrapbook";
-import { paperOf } from "@/components/era-scope";
-import { ERA_LOOKS, type EraSlug } from "@/lib/eras";
+import { ERA_LOOKS, type EraSlug, paperTexture } from "@/lib/eras";
 import { cn } from "@/lib/utils";
 
 const PHOTO = "/img/eras.jpg";
@@ -29,7 +28,7 @@ const PHOTO_ALT = "Taylor Swift on the Eras Tour stage";
 /** Every kit component, in whatever Era surrounds it. */
 export function KitSpread({ era }: { era?: EraSlug }) {
   const look = era ? ERA_LOOKS[era] : undefined;
-  const texture = paperOf(look);
+  const texture = paperTexture(look);
 
   return (
     <div className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-flow-dense lg:grid-cols-3">
@@ -73,7 +72,7 @@ export function KitSpread({ era }: { era?: EraSlug }) {
 
       <Specimen name="Bracelet">
         <div className="flex flex-col items-center gap-5 py-4">
-          <Bracelet beads="era" word={look?.short === "rep" ? "reputation" : (look?.short ?? "Secret Garden")} />
+          <Bracelet beads="era" word={look?.name.split(" ").length === 1 ? look.name : (look?.short ?? "Secret Garden")} />
           <Bracelet className="-rotate-2" size="sm" word="Swiftie" />
         </div>
       </Specimen>

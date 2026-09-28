@@ -78,6 +78,27 @@ test.describe("Styleguide", () => {
 		}
 	});
 
+	test("every curated Album belongs to an Era, and every Era has an Album", async ({ page, request }) => {
+		const { items } = (await (await request.get("/api/albums")).json()) as { items: { id: string; name: string }[] };
+
+		await page.goto("/styleguide");
+		const table = page.getByRole("region", { name: "Album → Era" }).getByRole("table");
+		const eraOf = async (albumId: string) =>
+			(await table.getByRole("row").filter({ has: page.getByRole("cell", { name: albumId, exact: true }) }).getByRole("cell").nth(1).textContent())?.trim();
+
+		const eras = new Set<string | undefined>();
+
+		for (const { id, name } of items) {
+			const era = await eraOf(id);
+
+			expect(era, `Era of ${name} (${id})`).toBeTruthy();
+			eras.add(era);
+			// A Taylor's Version shares its original's Era.
+			if (/taylor's version/i.test(name)) expect(name.toLowerCase()).toContain(era!.toLowerCase());
+		}
+		expect([...eras].sort()).toEqual([...ERAS].sort());
+	});
+
 	test("passes axe (WCAG 2.1 AA), every Era palette included", async ({ page }) => {
 		await page.goto("/styleguide");
 		await expectNoAxeViolations(page);
@@ -108,7 +129,7 @@ test.describe("Styleguide", () => {
 		await expect(page.getByRole("img", { name: /NOT Taylor's Version/i }).first()).toBeVisible();
 	});
 
-	test("picking an Era re-themes the sandbox with a colour transition", async ({ page }) => {
+	test("picking an Era re-colours the sandbox with a colour transition", async ({ page }) => {
 		await page.goto("/styleguide");
 		const before = await background(page);
 
@@ -120,7 +141,7 @@ test.describe("Styleguide", () => {
 		await expect.poll(() => background(page)).toBe("rgb(19, 29, 54)");
 	});
 
-	test("under reduced motion the re-theme is instant", async ({ page }) => {
+	test("under reduced motion the re-colouring is instant", async ({ page }) => {
 		await page.emulateMedia({ reducedMotion: "reduce" });
 		await page.goto("/styleguide");
 

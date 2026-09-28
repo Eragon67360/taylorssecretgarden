@@ -1,5 +1,6 @@
-import { getAlbums, toAlbum } from '@/service/deezer';
 import { NextResponse } from "next/server";
+
+import { getAlbums, toAlbum } from '@/service/deezer';
 
 // Curated by Deezer album ID, fetched directly: titles vary with the catalog
 // region, and title matching dropped the debut album on Vercel's build machines.

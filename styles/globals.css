@@ -112,7 +112,7 @@
   --color-border: var(--border);
   --color-ring: var(--ring);
 
-  /* next/font sets --font-caveat/karla/fraunces on <body> (config/fonts.ts). */
+  /* next/font sets --font-caveat/karla/fraunces on <html> (app/layout.tsx). */
   --font-hand: var(--font-caveat), "Segoe Print", cursive;
   --font-body: var(--font-karla), system-ui, sans-serif;
   --font-serif: var(--font-fraunces), Georgia, serif;
@@ -159,10 +159,10 @@
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .24 0 0 0 0 .16 0 0 0 .14 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* A visible pen-ring focus style in the current accent, for journal controls. */
+/* A visible focus ring in the current ink (3:1+ on paper and card in every Era; accents are not). */
 @utility focus-ring {
   &:focus-visible {
-    outline: 2.5px solid var(--accent);
+    outline: 2.5px solid var(--ink);
     outline-offset: 3px;
   }
 }

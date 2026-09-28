@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import { eraFontFamilies } from "@/config/era-fonts";
 
 /*
@@ -265,6 +267,33 @@ export const ERA_LOOKS: Record<EraSlug, EraLook> = {
 
 /** Every Era's look, in release order. */
 export const ERAS: EraLook[] = ERA_SLUGS.map((slug) => ERA_LOOKS[slug]);
+
+/** The paper an Era's pages are printed on. */
+export type PaperTexture = "grain" | "dark" | "plaid";
+
+/** The paper texture of an Era (the journal itself, without one, is plain grain). */
+export function paperTexture(look?: EraLook): PaperTexture {
+  if (look?.plaid) return "plaid";
+
+  return look?.dark ? "dark" : "grain";
+}
+
+/** The CSS variables that apply an Era's look (the journal tokens in styles/globals.css). */
+export function eraVariables(look: EraLook): CSSProperties {
+  return {
+    "--paper": look.paper,
+    "--card": look.card,
+    "--ink": look.ink,
+    "--soft": look.soft,
+    "--line": look.line,
+    "--accent": look.accent,
+    "--on-accent": look.onAccent,
+    "--tape": look.tape,
+    "--era-font": look.font,
+    "--era-font-weight": String(look.fontWeight ?? 400),
+    "--era-font-style": look.fontItalic ? "italic" : "normal",
+  } as CSSProperties;
+}
 
 export function isEraSlug(value: unknown): value is EraSlug {
   return typeof value === "string" && (ERA_SLUGS as readonly string[]).includes(value);

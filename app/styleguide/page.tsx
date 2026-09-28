@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { EraScope } from "@/components/era-scope";
-import { ERAS, type EraSlug } from "@/lib/eras";
+import { ERAS, ERA_BY_ALBUM_ID, ERA_LOOKS, type EraSlug, paperTexture } from "@/lib/eras";
 
 import { EraSandbox } from "./era-sandbox";
 import { EraTitle } from "./era-title";
@@ -47,7 +47,7 @@ export default function Styleguide() {
               <EraScope as="article" className="border-line h-full border p-4" era={look.slug}>
                 <h3 className="text-[18px] font-bold">{look.name}</h3>
                 <p className="text-soft text-[13px]">
-                  {look.year} · {look.flower} · {look.dark ? "dark paper" : look.plaid ? "plaid" : "grain"}
+                  {look.year} · {look.flower} · {paperTexture(look)} paper
                 </p>
                 <div aria-hidden="true" className="mt-3 flex gap-1.5">
                   {[look.paper, look.card, look.accent, look.line, look.tape].map((colour, index) => (
@@ -67,12 +67,37 @@ export default function Styleguide() {
         </ul>
       </section>
 
+      <section aria-labelledby="album-eras" className="mx-auto max-w-[1240px] px-4 pb-14 sm:px-8">
+        <h2 className="font-serif text-[32px] font-semibold" id="album-eras">
+          Album → Era
+        </h2>
+        <p className="text-soft mt-1 text-[15px]">
+          The curated Deezer Albums (app/api/albums/route.ts). A Taylor&apos;s Version shares its original&apos;s Era.
+        </p>
+        <table className="mt-4 w-full max-w-[520px] text-left text-[15px]">
+          <thead className="text-soft text-[11px] tracking-[.2em] uppercase">
+            <tr className="border-line border-b">
+              <th className="py-2 font-bold">Deezer Album ID</th>
+              <th className="py-2 font-bold">Era</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(ERA_BY_ALBUM_ID).map(([albumId, era]) => (
+              <tr key={albumId} className="border-line border-b">
+                <td className="py-1.5 font-mono text-[14px]">{albumId}</td>
+                <td className="py-1.5">{ERA_LOOKS[era].name}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
       <EraSandbox />
 
       {SPREADS.map((era) => (
         <EraScope key={era ?? "journal"} as="section" className="overflow-x-clip px-4 py-14 sm:px-8" era={era}>
           <div className="mx-auto max-w-[1176px]">
-            <EraTitle look={era ? ERAS.find((look) => look.slug === era) : undefined} />
+            <EraTitle look={era && ERA_LOOKS[era]} />
             <div className="mt-8">
               <KitSpread era={era} />
             </div>
