@@ -4,7 +4,6 @@ import type { FeedPost } from "@/service/swiftter";
 
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -144,9 +143,11 @@ export default function SwiftterPage() {
   );
 }
 
+// A full page load, not a client-side navigation: Swiftter loads Clerk without
+// its prebuilt forms (app/swiftter/layout.tsx), and the guestbook needs them.
 function GuestbookLink() {
   return (
-    <Link
+    <a
       className="font-hand focus-ring decoration-pen rounded-sm text-[25px] leading-snug font-bold underline decoration-wavy decoration-[1.5px] underline-offset-[5px]"
       href={SIGN_IN_URL}
     >
@@ -154,7 +155,7 @@ function GuestbookLink() {
       <span className="whitespace-nowrap">
         note <span aria-hidden="true">→</span>
       </span>
-    </Link>
+    </a>
   );
 }
 

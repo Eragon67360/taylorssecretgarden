@@ -72,21 +72,11 @@ export const ERAS_TOUR_LOOK: TourLook = {
   line: "#DCC9E3",
   tape: "rgba(242, 181, 200, 0.6)",
   flower: "daisy",
-  font: "var(--font-fraunces), Georgia, serif",
+  font: "var(--font-fraunces-italic), Georgia, serif",
   fontWeight: 600,
   fontItalic: true,
 };
 
 export function tourLook(tour: Pick<Tour, "era">): TourLook {
   return tour.era ? ERA_LOOKS[tour.era] : ERAS_TOUR_LOOK;
-}
-
-/** A Cloudinary delivery URL with a width transformation, for a small, fast copy. */
-export function cloudinaryWidth(url: string, width: number) {
-  return url.replace("/upload/", `/upload/w_${width},c_limit,`);
-}
-
-/** A still frame of a Cloudinary video, for its poster. */
-export function videoStill(url: string, width: number) {
-  return url.replace(/\/upload\/[^/]*\/v1\//, `/upload/so_12,w_${width},c_limit,f_auto,q_auto/v1/`) + ".jpg";
 }

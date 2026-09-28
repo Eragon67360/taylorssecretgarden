@@ -37,7 +37,7 @@ export function RubberStamp({ top, big, bottom, tilt = -14, color = "var(--pen)"
     >
       <span className="px-3 text-[11px] leading-tight font-extrabold tracking-[.12em] uppercase sm:text-[11.5px]">
         {top}
-        <span className="font-serif block text-[28px] leading-none tracking-normal italic sm:text-[30px]">{big}</span>
+        <span className="font-serif-italic block text-[28px] leading-none tracking-normal sm:text-[30px]">{big}</span>
         {bottom}
       </span>
     </div>

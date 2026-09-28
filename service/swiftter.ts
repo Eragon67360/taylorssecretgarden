@@ -51,8 +51,11 @@ function selectFeedPosts() {
 
 type FeedRow = Awaited<ReturnType<typeof selectFeedPosts>>[number];
 
-function toFeedPost({ displayName, username, avatarUrl, createdAt, ...post }: FeedRow): FeedPost {
-	return { ...post, createdAt: createdAt.toISOString(), author: { displayName, username, avatarUrl } };
+// Every Post leaves the server sanitised, including rows written some other way
+// than publishPost, so the browser renders feed HTML as is (and never downloads
+// the sanitiser).
+function toFeedPost({ displayName, username, avatarUrl, createdAt, content, ...post }: FeedRow): FeedPost {
+	return { ...post, content: sanitisePostHtml(content), createdAt: createdAt.toISOString(), author: { displayName, username, avatarUrl } };
 }
 
 /** The newest Posts first, each with its Member. */

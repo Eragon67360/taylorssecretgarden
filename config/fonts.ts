@@ -1,4 +1,4 @@
-import { Caveat, Dancing_Script as Dancing, Fraunces, Inter, Karla, Playfair_Display, UnifrakturMaguntia } from "next/font/google";
+import { Caveat, Fraunces, Karla } from "next/font/google";
 
 /*
   The journal's own faces, used on every page and preloaded: a pen (Caveat),
@@ -22,39 +22,23 @@ export const fontBody = Karla({
 
 export const fontSerif = Fraunces({
   subsets: ["latin"],
-  style: ["normal", "italic"],
   display: "swap",
   variable: "--font-fraunces",
   fallback: ["Georgia", "serif"],
 });
 
 /*
-  Faces of the pages not yet redesigned (Music, Tour pages).
-  Not preloaded: they download only on the pages that still use them, and go
-  away with those pages (#20-#24).
+  Fraunces italic, for the few italic words set in it (the `font-serif-italic`
+  utility, and the Eras Tour's display face). Not preloaded: most pages never
+  use it, and a preloaded face is downloaded on every page whether it is used
+  or not (~45 KB). Its own family (next/font names each call uniquely), so
+  italic serif text elsewhere is synthesised from the upright face.
 */
-export const fontInter = Inter({
+export const fontSerifItalic = Fraunces({
   subsets: ["latin"],
-  variable: "--font-inter",
+  style: "italic",
+  display: "swap",
   preload: false,
-});
-
-export const fontDancing = Dancing({
-  subsets: ["latin"],
-  variable: "--font-dancing",
-  preload: false,
-});
-
-export const fontPlayfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
-  preload: false,
-});
-
-export const fontUnifraktur = UnifrakturMaguntia({
-  weight: "400",
-  style: "normal",
-  subsets: ["latin"],
-  variable: "--font-unifraktur",
-  preload: false,
+  variable: "--font-fraunces-italic",
+  fallback: ["Georgia", "serif"],
 });

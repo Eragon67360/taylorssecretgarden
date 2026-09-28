@@ -1,15 +1,25 @@
 import type { CSSProperties } from "react";
 
+import { getImageProps } from "next/image";
 import Link from "next/link";
 
 import { Arrow, Bracelet, Polaroid, PressedFlower, RubberStamp, Scribble, StickyNote } from "@/components/scrapbook";
+import { homePhoto } from "@/lib/cloudinary";
 import { cn } from "@/lib/utils";
 
 import styles from "./home.module.css";
 
-/** The Eras Tour photo, cropped to a 4:5 print around Taylor by Cloudinary. */
-const photo = (width: number) =>
-  `https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto,c_fill,g_auto,ar_4:5,w_${width}/v1/images/upload/taylorssecretgarden/backgrounds/home`;
+// Resized by Next's image optimiser from a Cloudinary crop (lib/cloudinary.ts).
+const { props: heroPhoto } = getImageProps({
+  alt: "Taylor Swift singing on stage in the orange sequinned Eras Tour two-piece",
+  src: homePhoto(1100),
+  width: 420,
+  height: 525,
+  quality: 60,
+  sizes: "(min-width: 1024px) 420px, 80vw",
+  fetchPriority: "high",
+  loading: "eager",
+});
 
 /** Staggers a dropped piece (home.module.css). */
 const dropDelay = (ms: number) => ({ "--drop-delay": `${ms}ms` }) as CSSProperties;
@@ -29,7 +39,7 @@ export function Hero() {
             id="home-title"
           >
             <span className="block">Taylor&apos;s</span>{" "}
-            <span className="text-accent relative inline-block font-normal italic">
+            <span className="text-accent font-serif-italic relative inline-block font-normal">
               Secret
               <PressedFlower
                 className="absolute -top-8 -right-9 h-24 w-14 rotate-[28deg] sm:-top-10 sm:-right-14 sm:h-36 sm:w-20"
@@ -96,24 +106,15 @@ export function Hero() {
           >
             {/*
               The largest paint on the page, so it is fetched eagerly at high
-              priority, straight from the HTML. The <picture> keeps React from
-              hoisting a <link rel="preload"> for it: that hint would also ride
-              along in Home's prefetched payload on every page linking here, and
-              go unused there.
+              priority, straight from the HTML, and from this origin (Next's
+              image optimiser) rather than a new connection to Cloudinary. The
+              <picture> keeps React from hoisting a <link rel="preload"> for it:
+              that hint would also ride along in Home's prefetched payload on
+              every page linking here, and go unused there.
             */}
             <picture className="block">
-              <img
-                alt="Taylor Swift singing on stage in the orange sequinned Eras Tour two-piece"
-                className="block aspect-[4/5] w-full object-cover"
-                decoding="async"
-                fetchPriority="high"
-                height={525}
-                loading="eager"
-                sizes="(min-width: 1024px) 420px, 80vw"
-                src={photo(840)}
-                srcSet={[420, 640, 840, 1100].map((width) => `${photo(width)} ${width}w`).join(", ")}
-                width={420}
-              />
+              {/* alt comes with heroPhoto; spelled out for jsx-a11y */}
+              <img {...heroPhoto} alt={heroPhoto.alt} className="block aspect-[4/5] w-full object-cover" />
             </picture>
           </Polaroid>
 

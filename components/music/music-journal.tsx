@@ -5,7 +5,8 @@ import type { AlbumDetails } from "@/types";
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { useEffect, useOptimistic, useTransition } from "react";
 
 import { EraScope } from "@/components/era-scope";
@@ -93,7 +94,7 @@ export function MusicJournal({ shelf, albumId, details }: MusicJournalProps) {
                 style={{ opacity: look.dark ? 0.8 : 1 }}
               />
               <AnimatePresence initial={false} mode="wait">
-                <motion.div
+                <m.div
                   key={album?.id}
                   animate={{ opacity: 1, y: 0, rotate: 0, scale: 1 }}
                   className="relative mx-auto w-[88%]"
@@ -108,13 +109,14 @@ export function MusicJournal({ shelf, albumId, details }: MusicJournalProps) {
                         alt={`${album.name} Album cover`}
                         className="aspect-square object-cover"
                         height={440}
+                        quality={60}
                         sizes="(min-width: 1024px) 400px, 80vw"
                         src={album.images[0].url}
                         width={440}
                       />
                     )}
                   </Polaroid>
-                </motion.div>
+                </m.div>
               </AnimatePresence>
             </div>
 

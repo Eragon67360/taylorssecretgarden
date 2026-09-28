@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 
 import { Polaroid } from "@/components/scrapbook";
-import { cloudinaryWidth, videoStill } from "@/lib/tours";
+import { cloudinaryWidth, videoStill } from "@/lib/cloudinary";
 import { cn } from "@/lib/utils";
 
 type TourVideoProps = {

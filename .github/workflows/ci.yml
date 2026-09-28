@@ -1,7 +1,10 @@
 name: CI
 
-# Lint, typecheck, build, then run the Playwright smoke suite against
-# `next start`, on every pull request and on pushes to dev.
+# Two jobs on every pull request and on pushes to dev, each on its own
+# production build under `next start`:
+#   smoke       lint, typecheck, build, then the Playwright smoke suite
+#   lighthouse  build, then Lighthouse CI (lighthouserc.js): mobile, median of
+#               3 runs; Accessibility under 0.9 fails, Performance under 0.9 warns
 #
 # Required repository secrets (set from the local env file with
 # `gh secret set -f <file>`; values are never committed):
@@ -9,12 +12,12 @@ name: CI
 #   CLERK_SECRET_KEY                     Clerk server key, used by the proxy (proxy.ts)
 #   NEXT_PUBLIC_CLERK_SIGN_IN_URL        Clerk sign-in route
 #   NEXT_PUBLIC_CLERK_SIGN_UP_URL        Clerk sign-up route
-#   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME    Cloudinary images and videos
 #   E2E_CLERK_USER_USERNAME              the dedicated test Member (email) on the Clerk
 #   E2E_CLERK_USER_PASSWORD              development instance, for the signed-in Swiftter tests
 #
 # Swiftter's database is a throwaway Postgres service container, migrated and
-# seeded before the tests; the real (Neon) database is never touched.
+# seeded before the tests (so /swiftter has a feed to audit); the real (Neon)
+# database is never touched.
 
 on:
   pull_request:
@@ -25,25 +28,25 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NEXT_TELEMETRY_DISABLED: 1
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+  CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+  NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }}
+  NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }}
+  # A plain value, not a secret: as a secret, GitHub masks every "/swiftter" in the logs.
+  NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: /swiftter
+  E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
+  E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
+  DATABASE_URL: postgres://swiftter:swiftter@localhost:5432/swiftter
+  # Builds and serves the development styleguide (/styleguide) for its tests;
+  # production (Vercel) leaves it unset and answers 404.
+  ENABLE_STYLEGUIDE: 1
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      NEXT_TELEMETRY_DISABLED: 1
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-      NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }}
-      NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }}
-      # A plain value, not a secret: as a secret, GitHub masks every "/swiftter" in the logs.
-      NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: /swiftter
-      NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
-      E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
-      E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
-      DATABASE_URL: postgres://swiftter:swiftter@localhost:5432/swiftter
-      # Builds and serves the development styleguide (/styleguide) for its tests;
-      # production (Vercel) leaves it unset and answers 404.
-      ENABLE_STYLEGUIDE: 1
     services:
       postgres:
         image: postgres:17
@@ -94,4 +97,52 @@ jobs:
           path: |
             playwright-report/
             test-results/
+          retention-days: 14
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: swiftter
+          POSTGRES_PASSWORD: swiftter
+          POSTGRES_DB: swiftter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U swiftter"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: npm
+
+      - run: npm ci
+
+      - name: Migrate and seed the test database
+        run: npm run db:migrate && npm run db:seed
+
+      - name: Build
+        run: npm run build
+
+      - name: Lighthouse CI
+        run: npm run lighthouse # starts `next start` itself (lighthouserc.js); uses the runner's Chrome
+
+      - name: Scores
+        if: always() && hashFiles('.lighthouseci/reports/manifest.json') != ''
+        run: node scripts/lighthouse-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/reports/
           retention-days: 14

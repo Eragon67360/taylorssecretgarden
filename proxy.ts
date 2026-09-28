@@ -3,10 +3,8 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 export default clerkMiddleware();
 
 export const config = {
-  matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
-    "/(api|trpc)(.*)",
-  ],
+  // Only the API asks who is signed in on the server (auth() in
+  // app/api/swiftter/posts). Pages read the Member on the client, so they skip
+  // the proxy and, with it, Clerk's handshake redirect on a first visit.
+  matcher: ["/(api|trpc)(.*)"],
 };

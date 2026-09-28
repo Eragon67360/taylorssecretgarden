@@ -12,10 +12,10 @@ The domain vocabulary (Era, Album, Tour, Swiftter, Post, Member) is defined in [
 ## Stack
 
 - [Next.js 16](https://nextjs.org/) (App Router, Turbopack), React 19, TypeScript 6
-- [Tailwind CSS 4](https://tailwindcss.com/) (CSS-first config in `styles/globals.css`) and [shadcn/ui](https://ui.shadcn.com/) primitives in `components/ui/`
+- [Tailwind CSS 4](https://tailwindcss.com/) (CSS-first config in `styles/globals.css`); [shadcn/ui](https://ui.shadcn.com/) is configured (`components.json`, [ADR-0002](docs/adr/0002-shadcn-replaces-nextui.md)) for primitives copied into `components/ui/` when a page needs one (none does yet: the scrapbook kit covers them)
 - [Clerk 7](https://clerk.com/) for sign-in
 - [Neon Postgres](https://neon.com/) (via the Vercel Marketplace) with [Drizzle ORM](https://orm.drizzle.team/) for Swiftter's Members and Posts ([ADR-0003](docs/adr/0003-neon-drizzle-for-swiftter.md))
-- [Cloudinary](https://cloudinary.com/) (via `next-cloudinary`) for Tour images, videos and backgrounds
+- [Cloudinary](https://cloudinary.com/) for Tour images, videos and the home photo, resized and encoded by URL transformations (`f_auto,q_auto,w_…`; `components/cloudinary-image.tsx` is next/image with a Cloudinary loader)
 - [Deezer API](https://developers.deezer.com/api) for the Album catalogue (no credentials needed)
 - [Motion](https://motion.dev/) (`motion/react`) for the scrapbook's hover lifts and tab transitions
 - [Playwright](https://playwright.dev/) with [axe](https://github.com/dequelabs/axe-core-npm/tree/develop/packages/playwright) for the smoke tests
@@ -50,13 +50,21 @@ npm run dev                  # http://localhost:3000
 npm run lint        # ESLint 9, flat config (eslint.config.mjs)
 npm run typecheck   # tsc --noEmit
 npm run test:e2e    # Playwright smoke suite
+npm run lighthouse  # Lighthouse CI on a production build (run `npm run build` first)
 ```
 
 `npm run test:e2e` builds the app and starts it on port 3100 (or reuses a server already listening there), then drives it as a black box: every route renders with no page errors and no console errors or warnings, the nav highlights the current page, the site chrome (and the styleguide) pass axe at WCAG 2.1 AA, fit a 390px phone and stay still under reduced motion (helpers in `e2e/checks.ts`, which each redesigned page enables for its whole route), Music loads Albums and tracklists, Tours lists every Tour and each Tour page shows its own facts, and Swiftter reads, publishes and sanitises Posts. The Swiftter tests need a migrated and seeded database at `DATABASE_URL` (see [Seeding](#seeding); never run them against the real one, they publish Posts). The signed-in tests sign in a dedicated test Member of the Clerk development instance with [`@clerk/testing`](https://clerk.com/docs/testing/playwright/overview); set `E2E_CLERK_USER_USERNAME` and `E2E_CLERK_USER_PASSWORD` to run them locally, otherwise they are skipped. That test Member (`e2e+swiftter_clerk_test@example.com`, username `swiftter_e2e`, name "Swiftter Tester", which the tests expect) was created with a password through Clerk's Backend API (`POST /v1/users` with the development `CLERK_SECRET_KEY`); its credentials live in the `E2E_CLERK_USER_*` repository secrets. The first run needs a browser: `npx playwright install chromium`.
 
 ## CI
 
-[GitHub Actions](.github/workflows/ci.yml) runs lint, typecheck, build and the Playwright suite on every pull request and on pushes to `dev`. The environment variables come from repository secrets; Swiftter runs against a Postgres 17 service container that is migrated and seeded before the tests. On failure the Playwright report and traces are uploaded as an artifact.
+[GitHub Actions](.github/workflows/ci.yml) runs two jobs on every pull request and on pushes to `dev`, each on a production build under `next start`:
+
+- **smoke**: lint, typecheck, build and the Playwright suite. On failure the Playwright report and traces are uploaded as an artifact.
+- **lighthouse**: [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) ([`lighthouserc.js`](lighthouserc.js)) audits Home, Music, Tours, the Eras Tour page and Swiftter with Lighthouse's mobile emulation, three runs each: the median run must score at least 0.9 for Accessibility (an error) and should for Performance (a warning, since shared runners swing it by up to 0.3 between runs; check it on the Vercel preview). The scores table lands in the run summary and the full reports are uploaded as an artifact.
+
+The environment variables come from repository secrets; Swiftter runs against a Postgres 17 service container that is migrated and seeded first (so Lighthouse audits a real feed).
+
+To run Lighthouse locally, build first, then `npm run lighthouse` (it starts `next start` on port 3180; set `LHCI_PORT` to change it, and `CHROME_PATH` if Chrome is not found, e.g. Playwright's Chromium).
 
 ## Database
 

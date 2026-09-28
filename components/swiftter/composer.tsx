@@ -151,7 +151,7 @@ function Toolbar({ editor }: { editor: Editor | null }) {
           <span className="font-extrabold">B</span>
         </ToolButton>
         <ToolButton label="Italic" pressed={active?.italic} onClick={run((e) => e.chain().focus().toggleItalic().run())}>
-          <span className="font-serif italic">i</span>
+          <span className="font-serif-italic">i</span>
         </ToolButton>
         <ToolButton label="Bullet list" pressed={active?.bulletList} onClick={run((e) => e.chain().focus().toggleBulletList().run())}>
           <BulletIcon />
