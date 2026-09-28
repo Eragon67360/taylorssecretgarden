@@ -8,7 +8,7 @@ const routes = [
 	{ path: "/", heading: "Taylor Swift" },
 	{ path: "/music", heading: "Albums" },
 	{ path: "/tours", heading: "Tours" },
-	{ path: "/swiftter", heading: "Welcome to the swiftter" },
+	{ path: "/swiftter", heading: "Swiftter" },
 	{ path: "/sign-in", heading: "Sign in to Taylor's Secret Garden" },
 ];
 
