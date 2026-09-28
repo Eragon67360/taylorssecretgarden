@@ -6,7 +6,6 @@ import {
   fontBody,
   fontDancing,
   fontHand,
-  fontImpact,
   fontInter,
   fontPlayfair,
   fontSerif,
@@ -47,7 +46,6 @@ export default function RootLayout({
         fontSerif.variable,
         fontInter.variable,
         fontDancing.variable,
-        fontImpact.variable,
         fontPlayfair.variable,
         fontUnifraktur.variable,
       )}

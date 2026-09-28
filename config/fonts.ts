@@ -1,4 +1,4 @@
-import { Anton, Caveat, Dancing_Script as Dancing, Fraunces, Inter, Karla, Playfair_Display, UnifrakturMaguntia } from "next/font/google";
+import { Caveat, Dancing_Script as Dancing, Fraunces, Inter, Karla, Playfair_Display, UnifrakturMaguntia } from "next/font/google";
 
 /*
   The journal's own faces, used on every page and preloaded: a pen (Caveat),
@@ -29,22 +29,13 @@ export const fontSerif = Fraunces({
 });
 
 /*
-  Faces of the pages not yet redesigned (Home captions, Music, Tour pages).
+  Faces of the pages not yet redesigned (Music, Tour pages).
   Not preloaded: they download only on the pages that still use them, and go
   away with those pages (#20-#24).
 */
 export const fontInter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-  preload: false,
-});
-
-// Impact-style display face for the home page captions. Impact itself is not
-// installed on every OS (nor licensed for the web), so Anton stands in.
-export const fontImpact = Anton({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-impact",
   preload: false,
 });
 

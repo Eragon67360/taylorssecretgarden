@@ -171,7 +171,6 @@
 @theme {
   --background-image-tours: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/eras");
   --background-image-eras: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/gallery");
-  --background-image-home: url("https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/backgrounds/home");
 }
 
 /*
@@ -184,9 +183,6 @@
 }
 @utility font-dancing {
   font-family: var(--font-dancing);
-}
-@utility font-impact {
-  font-family: var(--font-impact), Impact, sans-serif;
 }
 @utility font-playfair {
   font-family: var(--font-playfair);

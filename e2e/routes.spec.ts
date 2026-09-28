@@ -5,7 +5,7 @@ import { expect, test } from "./fixtures";
 // Every public route answers 200 and shows its main heading, with no page
 // errors or console errors (checked by the fixture).
 const routes = [
-	{ path: "/", heading: "Taylor Swift" },
+	{ path: "/", heading: "Taylor's Secret Garden" },
 	{ path: "/music", heading: "pick an Era. the page changes outfits." },
 	{ path: "/tours", heading: "Tours" },
 	{ path: "/swiftter", heading: "Swiftter" },
