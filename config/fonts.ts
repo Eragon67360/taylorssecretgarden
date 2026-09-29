@@ -1,4 +1,3 @@
-import { Karla } from "next/font/google";
 import localFont from "next/font/local";
 
 /*
@@ -7,9 +6,10 @@ import localFont from "next/font/local";
   the `font-hand`, `font-body` and `font-serif` utilities (styles/globals.css).
   Each Era's display face lives in config/era-fonts.ts and is not preloaded.
 
-  Caveat and Fraunces are self-hosted static cuts (assets/fonts/, built by
-  scripts/build-fonts.py) of the one weight the site sets them in, half the
-  size of Google's variable files. Each face is declared for a weight range,
+  All three are self-hosted (assets/fonts/, built by scripts/build-fonts.py),
+  so the build never downloads fonts. Caveat and Fraunces are static cuts of
+  the one weight the site sets them in, half the size of Google's variable
+  files; Karla is Google's variable file. Each face is declared for a weight range,
   so text asking for another weight in that range uses it as is (no faux bold).
 */
 const Caveat = localFont({
@@ -20,12 +20,15 @@ const Caveat = localFont({
   fallback: ["Segoe Print", "Bradley Hand", "cursive"],
 });
 
-export const fontBody = Karla({
-  subsets: ["latin"],
+// Karla, variable (200–800), as Google serves it.
+const Karla = localFont({
+  src: [{ path: "../assets/fonts/karla.woff2", weight: "200 800", style: "normal" }],
   display: "swap",
   variable: "--font-karla",
   fallback: ["system-ui", "sans-serif"],
 });
+
+export const fontBody = Karla;
 
 const Fraunces = localFont({
   // Fraunces SemiBold: the journal's headings.
