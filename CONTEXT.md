@@ -12,6 +12,10 @@ _Avoid_: Theme, album (when meaning the cycle)
 A released record belonging to exactly one Era. A Taylor's Version re-recording is a separate Album in the same Era as the original; The Tortured Poets Department and its Anthology edition are one Era. An Album is shown in its most complete edition (e.g. Midnights as The Til Dawn Edition).
 _Avoid_: Record, release
 
+**Version**:
+Another release of an Album on Deezer: its other editions (standard, international, 3am…), a live or acoustic album, a "Chapter" compilation. Opening an Album on Music lists its Versions; each opens the same Album, in its Era, on that Version's tracklist. Karaoke releases, playlists and one song's remixes are not Versions.
+_Avoid_: Edition (when meaning any Version), variant
+
 **Taylor's Version**:
 A re-recording of an earlier Album. It belongs to the original Album's Era and uses that Era's look.
 

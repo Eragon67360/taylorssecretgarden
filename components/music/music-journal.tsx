@@ -1,6 +1,6 @@
 "use client";
 
-import type { ShelfAlbum } from "./catalogue";
+import type { AlbumVersionCard, ShelfAlbum } from "./catalogue";
 import type { AlbumDetails } from "@/types";
 
 import Image from "next/image";
@@ -14,6 +14,7 @@ import { Bracelet, Highlight, Polaroid, PressedFlower, StickyNote } from "@/comp
 import { ERA_LOOKS, ERA_SLUGS } from "@/lib/eras";
 
 import { AlbumShelf } from "./album-shelf";
+import { AlbumVersions } from "./album-versions";
 import { formatReleaseDate, formatRunningTime } from "./format";
 import { Tracklist } from "./tracklist";
 import { usePreviewPlayer } from "./use-preview-player";
@@ -22,7 +23,11 @@ type MusicJournalProps = {
   shelf: ShelfAlbum[];
   /** The shelf Album selected by `?album`. */
   albumId: string | undefined;
-  /** Its details, fetched on the server. */
+  /** The version of it `?album` asks for (the shelf Album's own ID for the shelf edition). */
+  versionId: string | undefined;
+  /** Every version of the selected Album, the shelf edition first; empty when it has only one. */
+  versions: AlbumVersionCard[];
+  /** The version's details, fetched on the server. */
   details: AlbumDetails | undefined;
 };
 
@@ -30,32 +35,39 @@ type MusicJournalProps = {
  * The music journal: a shelf of Album polaroids over a two-page spread for
  * the selected Album, the whole page dressed in that Album's Era. Selecting
  * an Album dresses the page in its Era's look at once; its details follow
- * from the server.
+ * from the server. Under the Album's title, its other versions switch the
+ * tracklist the same way.
  */
-export function MusicJournal({ shelf, albumId, details }: MusicJournalProps) {
+export function MusicJournal({ shelf, albumId, versionId, versions, details }: MusicJournalProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [selectedId, setSelectedId] = useOptimistic(albumId);
+  const [selection, setSelection] = useOptimistic({ albumId, versionId });
+  const { albumId: selectedId, versionId: selectedVersionId } = selection;
   const player = usePreviewPlayer();
   const { stop } = player;
 
   const album = shelf.find(({ id }) => id === selectedId) ?? shelf[0];
   const era = album?.era ?? "debut";
   const look = ERA_LOOKS[era];
-  // The details are the server's Album's: stale while another is on its way.
-  const ready = !!details && albumId === selectedId;
+  // The details and versions are the server's: stale while others are on their way.
+  const ready = !!details && albumId === selectedId && versionId === selectedVersionId;
   const tracks = ready ? details.tracks.items : undefined;
+  const shownVersions = albumId === selectedId ? versions : [];
+  // The version open, when it is not the shelf's own edition.
+  const version = selectedVersionId !== album?.id ? shownVersions.find(({ id }) => id === selectedVersionId) : undefined;
 
-  // A new Album: whatever was playing stops.
-  useEffect(() => stop(), [selectedId, stop]);
+  // Another Album or version: whatever was playing stops.
+  useEffect(() => stop(), [selectedVersionId, stop]);
 
-  const select = (next: ShelfAlbum) => {
-    if (next.id === selectedId) return;
+  const open = (next: { albumId: string; versionId: string }) => {
+    if (next.versionId === selectedVersionId) return;
     startTransition(() => {
-      setSelectedId(next.id);
-      router.push(`/music?album=${next.id}`, { scroll: false });
+      setSelection(next);
+      router.push(`/music?album=${next.versionId}`, { scroll: false });
     });
   };
+  const select = (next: ShelfAlbum) => open({ albumId: next.id, versionId: next.id });
+  const selectVersion = (next: AlbumVersionCard) => album && open({ albumId: album.id, versionId: next.id });
 
   const title = album?.title ?? look.name;
   const eraNumber = String(ERA_SLUGS.indexOf(era) + 1).padStart(2, "0");
@@ -95,7 +107,7 @@ export function MusicJournal({ shelf, albumId, details }: MusicJournalProps) {
               />
               <AnimatePresence initial={false} mode="wait">
                 <m.div
-                  key={album?.id}
+                  key={selectedVersionId}
                   animate={{ opacity: 1, y: 0, rotate: 0, scale: 1 }}
                   className="relative mx-auto w-[88%]"
                   exit={{ opacity: 0, x: 40, rotate: 6, transition: { duration: 0.18 } }}
@@ -106,12 +118,12 @@ export function MusicJournal({ shelf, albumId, details }: MusicJournalProps) {
                     {album && (
                       <Image
                         priority
-                        alt={`${album.name} Album cover`}
+                        alt={`${album.name}${version ? `, ${version.name},` : ""} Album cover`}
                         className="aspect-square object-cover"
                         height={440}
                         quality={60}
                         sizes="(min-width: 1024px) 400px, 80vw"
-                        src={album.images[0].url}
+                        src={version?.cover ?? album.images[0].url}
                         width={440}
                       />
                     )}
@@ -139,24 +151,28 @@ export function MusicJournal({ shelf, albumId, details }: MusicJournalProps) {
           <h2 className={title.length > 18 ? "font-display mt-2 text-[clamp(2rem,4.6vw,3.6rem)] leading-[1.05] break-words" : "font-display mt-2 text-[clamp(2.5rem,6.5vw,5.2rem)] leading-[1.02] break-words"}>
             {title}
           </h2>
-          {(album?.taylorsVersion || album?.edition) && (
+          {(album?.taylorsVersion || album?.edition || version) && (
             <div className="font-hand mt-1 flex -rotate-2 flex-wrap items-baseline gap-x-5 text-[26px] leading-tight font-bold">
               {album.taylorsVersion && (
                 <p>
                   <Highlight>(Taylor&apos;s Version)</Highlight> <span className="text-soft">the one we stream</span>
                 </p>
               )}
-              {album.edition && (
-                <p className="text-soft">
-                  <span className="text-ink">{album.edition}</span>, every last bonus track
-                </p>
+              {version ? (
+                <p className="text-ink">{version.name}</p>
+              ) : (
+                album.edition && (
+                  <p className="text-soft">
+                    <span className="text-ink">{album.edition}</span>, every last bonus track
+                  </p>
+                )
               )}
             </div>
           )}
 
           <dl className="border-line mt-7 grid max-w-[640px] grid-cols-2 gap-x-6 gap-y-3 border-y py-4 text-[15px] sm:grid-cols-[1.5fr_.6fr_1fr_1fr]">
             {[
-              ["Released", album ? formatReleaseDate(album.released) : "…"],
+              ["Released", album ? formatReleaseDate(version?.released ?? album.released) : "…"],
               ["Songs", tracks ? String(tracks.length) : "…"],
               ["Running time", tracks ? formatRunningTime(tracks.reduce((total, track) => total + track.duration_ms, 0)) : "…"],
               ["Label", ready ? details.label || "n/a" : "…"],
@@ -167,6 +183,10 @@ export function MusicJournal({ shelf, albumId, details }: MusicJournalProps) {
               </div>
             ))}
           </dl>
+
+          {album && shownVersions.length > 0 && (
+            <AlbumVersions selectedId={selectedVersionId} title={album.name} versions={shownVersions} onSelect={selectVersion} />
+          )}
 
           <div className="mt-10">
             <Tracklist player={player} tracks={tracks} />

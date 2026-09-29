@@ -10,8 +10,9 @@ const IDS = {
 	folklore: "167766152",
 	midnights: "446218925",
 	showgirl: "1103662682",
-	/** Fearless (International Version), another edition of the Fearless Album. */
+	/** Fearless (International Version), another version of the Fearless Album. */
 	fearlessInternational: "283925",
+	midnights3am: "368506677",
 };
 
 /** The shelf, in Era order: each Taylor's Version right after its original. */
@@ -36,6 +37,8 @@ const SHELF: { name: string; id: string; era: string }[] = [
 const ERA_COUNT = new Set(SHELF.map(({ era }) => era)).size;
 
 const shelf = (page: Page) => page.getByRole("list", { name: "Albums" });
+/** The open Album's versions, under its title. */
+const versions = (page: Page, album: string) => page.getByRole("list", { name: `Versions of ${album}` });
 const polaroid = (page: Page, name: string) => shelf(page).getByRole("link", { name, exact: true });
 /** The Era's name, spelled in bracelet beads. */
 const eraBracelet = (page: Page, era: string) => page.getByRole("img", { name: era, exact: true });
@@ -147,7 +150,9 @@ test.describe("Music", () => {
 		await expect(eraPage(page)).toHaveAttribute("data-era", "showgirl");
 		await expect(eraBracelet(page, "Showgirl")).toBeVisible();
 		await expect(page.getByText(/Era No\. 12 · 2025/)).toBeVisible();
-		await expect(page.getByText("The Encore", { exact: true })).toBeVisible();
+		// Named under the title (first), and current among the Album's versions.
+		await expect(page.getByText("The Encore", { exact: true }).first()).toBeVisible();
+		await expect(versions(page, "The Life of a Showgirl").getByRole("link", { name: /The Encore/ })).toHaveAttribute("aria-current", "true");
 		// Mint-water paper (lib/eras.ts).
 		await expect.poll(() => background(eraPage(page))).toBe("rgb(221, 241, 234)");
 		await expect(page.getByRole("definition").nth(1)).toHaveText("16");
@@ -157,7 +162,9 @@ test.describe("Music", () => {
 		await page.goto(`/music?album=${IDS.midnights}`);
 
 		await expectAlbumShown(page, "Midnights");
-		await expect(page.getByText("The Til Dawn Edition", { exact: true })).toBeVisible();
+		// Named under the title (first), and current among the Album's versions.
+		await expect(page.getByText("The Til Dawn Edition", { exact: true }).first()).toBeVisible();
+		await expect(versions(page, "Midnights").getByRole("link", { name: /The Til Dawn Edition/ })).toHaveAttribute("aria-current", "true");
 		await expect(page.getByRole("definition").nth(1)).toHaveText("23");
 	});
 
@@ -170,11 +177,48 @@ test.describe("Music", () => {
 		}
 	});
 
-	test("a deep link to another edition of an Album opens that Album", async ({ page }) => {
+	test("a deep link to another version of an Album opens that Album on that version", async ({ page }) => {
 		await page.goto(`/music?album=${IDS.fearlessInternational}`);
 
 		await expect(polaroid(page, "Fearless")).toHaveAttribute("aria-current", "true");
 		await expect(eraPage(page)).toHaveAttribute("data-era", "fearless");
+		await expectAlbumShown(page, "Fearless");
+		await expect(versions(page, "Fearless").getByRole("link", { name: /International Version/ })).toHaveAttribute("aria-current", "true");
+		await expect(page.getByRole("definition").nth(0)).toHaveText("March 9, 2009");
+		await expect(page.getByRole("definition").nth(1)).toHaveText("16");
+	});
+
+	test("an open Album lists every version; picking one switches the cover, facts and tracklist in place", async ({ page }) => {
+		await page.goto(`/music?album=${IDS.midnights}`);
+		await expectAlbumShown(page, "Midnights");
+
+		const list = versions(page, "Midnights");
+
+		await expect(list.getByRole("link")).toHaveCount(3);
+		await expect(list.getByRole("link", { name: /The Til Dawn Edition/ })).toHaveAttribute("aria-current", "true");
+
+		await list.getByRole("link", { name: /3am Edition/ }).click();
+		await expect(page).toHaveURL(`/music?album=${IDS.midnights3am}`);
+		await expect(list.getByRole("link", { name: /3am Edition/ })).toHaveAttribute("aria-current", "true");
+		await expect(page.getByText("3am Edition", { exact: true }).first()).toBeVisible();
+		await expect(page.getByRole("definition").nth(1)).toHaveText("20");
+		await expect(page.getByRole("img", { name: /3am Edition, Album cover/ })).toBeVisible();
+		// Still the Midnights Album, in its Era.
+		await expect(polaroid(page, "Midnights")).toHaveAttribute("aria-current", "true");
+		await expect(eraPage(page)).toHaveAttribute("data-era", "midnights");
+		await expectNoAxeViolations(page);
+
+		await list.getByRole("link", { name: /The Til Dawn Edition/ }).click();
+		await expect(page).toHaveURL(`/music?album=${IDS.midnights}`);
+		await expect(page.getByRole("definition").nth(1)).toHaveText("23");
+	});
+
+	test("an Album with a single version shows no list of versions", async ({ page }) => {
+		await page.goto(`/music?album=${IDS.reputation}`);
+		await expectAlbumShown(page, "reputation");
+
+		await expect(versions(page, "reputation")).toHaveCount(0);
+		await expect(page.getByText(/^every version/)).toHaveCount(0);
 	});
 
 	test("Fearless (Taylor's Version) is in the Fearless Era", async ({ page }) => {
@@ -316,7 +360,16 @@ test.describe("Music", () => {
 
 		expect(response.status()).toBe(200);
 		const { items } = (await response.json()) as {
-			items: { id: string; name: string; era: string; taylorsVersion: boolean; reRecords: string | null; year: number; edition: string | null }[];
+			items: {
+				id: string;
+				name: string;
+				era: string;
+				taylorsVersion: boolean;
+				reRecords: string | null;
+				year: number;
+				edition: string | null;
+				versions: { id: string; name: string; released: string }[];
+			}[];
 		};
 
 		expect(items.map(({ name, era }) => ({ name, era }))).toEqual(SHELF.map(({ name, era }) => ({ name, era })));
@@ -329,5 +382,8 @@ test.describe("Music", () => {
 			expect(album.era).toBe(items[index - 1].era);
 		}
 		expect(items.find(({ name }) => name === "The Life of a Showgirl")).toMatchObject({ edition: "The Encore", year: 2025 });
+		expect(items.find(({ name }) => name === "folklore")).toMatchObject({
+			versions: expect.arrayContaining([expect.objectContaining({ id: "188803732", name: "The Long Pond Studio Sessions" })]),
+		});
 	});
 });

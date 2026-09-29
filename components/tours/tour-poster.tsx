@@ -1,5 +1,6 @@
-import { Polaroid } from "@/components/scrapbook";
 import Image from "next/image";
+
+import { Polaroid } from "@/components/scrapbook";
 import { type Tour } from "@/lib/tours";
 
 type TourPosterProps = {

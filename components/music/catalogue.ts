@@ -22,6 +22,16 @@ export type ShelfAlbum = Album & {
   reRecords: string | null;
 };
 
+/** One version of the open Album, for the row of versions under its title. */
+export type AlbumVersionCard = {
+  /** The Deezer ID its link and tracklist use. */
+  id: string;
+  /** "Standard Edition", "3am Edition"; the shelf's own edition first. */
+  name: string;
+  released: string;
+  cover: string;
+};
+
 /**
  * Every catalogue Album (lib/catalogue.ts), in Era order, with its Deezer
  * cover. Names come from the catalogue, not Deezer, whose titles vary by
@@ -55,4 +65,30 @@ export function pickAlbum(shelf: ShelfAlbum[], wanted: string | undefined): Shel
   const catalogueId = findAlbum(wanted)?.id;
 
   return shelf.find(({ id }) => id === wanted) ?? shelf.find((album) => album.catalogueId === catalogueId) ?? shelf[0];
+}
+
+/**
+ * The ID of the version a `?album=<id>` asks for, when it is one of this
+ * Album's versions; otherwise the Album's own (shelf) ID.
+ */
+export function pickVersion(album: ShelfAlbum, wanted: string | undefined): string {
+  const entry = CATALOGUE.find(({ id }) => id === album.catalogueId);
+
+  return entry?.versions?.some(({ id }) => id === wanted) ? wanted! : album.id;
+}
+
+/**
+ * Every version of an Album, the shelf's own edition first, each with its
+ * Deezer cover; empty when the Album has only the one.
+ */
+export async function getVersions(album: ShelfAlbum): Promise<AlbumVersionCard[]> {
+  const versions = CATALOGUE.find(({ id }) => id === album.catalogueId)?.versions ?? [];
+
+  if (!versions.length) return [];
+  const covers = await getAlbums(versions.map(({ id }) => id));
+
+  return [
+    { id: album.id, name: album.edition ?? "The Album", released: album.released, cover: album.images[0].url },
+    ...versions.map((version, index) => ({ ...version, cover: toAlbum(covers[index]).images[0].url })),
+  ];
 }

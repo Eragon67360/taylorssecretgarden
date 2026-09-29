@@ -1,0 +1,41 @@
+# Every Monday, checks Deezer for albums and EPs by Taylor Swift that the
+# catalogue (lib/catalogue.ts) does not know, and opens an issue listing them
+# (or updates the one already open). See scripts/check-releases.ts.
+name: Release check
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json # reads `engines.node`
+          cache: npm
+
+      - run: npm ci
+
+      - name: Compare Deezer with the catalogue
+        run: npm run releases:check -- --report new-releases.md
+
+      - name: Open or update the issue
+        if: hashFiles('new-releases.md') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          issue=$(gh issue list --label new-release --state open --json number --jq '.[0].number')
+          if [ -n "$issue" ]; then
+            gh issue edit "$issue" --body-file new-releases.md
+          else
+            gh issue create --title "New Taylor Swift releases on Deezer" --label new-release --label needs-triage --body-file new-releases.md
+          fi
