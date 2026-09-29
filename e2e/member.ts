@@ -66,3 +66,11 @@ export function newTestMember(): TestMember {
 export function readTestMember(): TestMember | null {
 	return existsSync(MEMBER_FILE) ? (JSON.parse(readFileSync(MEMBER_FILE, "utf8")) as TestMember) : null;
 }
+
+/**
+ * BotID's token header, for requests the tests send without a browser. Off
+ * Vercel (locally, CI) BotID cannot verify tokens, so the app's stand-in
+ * (lib/bot-protection.ts) treats a request carrying one as human and one
+ * without as a bot; the browser gets a real token from BotID's challenge.
+ */
+export const BOTID_HUMAN = { "x-is-human": "e2e" };

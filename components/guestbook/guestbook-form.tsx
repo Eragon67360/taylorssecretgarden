@@ -6,6 +6,7 @@ import { type FormEvent, useId, useRef, useState } from "react";
 
 import { GOOGLE_ERROR } from "@/components/guestbook/guestbook";
 import { authClient } from "@/lib/auth/client";
+import { BOT_REFUSAL } from "@/lib/botid-routes";
 import { cn } from "@/lib/utils";
 
 type Mode = "sign-in" | "sign-up";
@@ -74,6 +75,9 @@ function describeError(failure: unknown): string {
       return "That doesn't look like an email address.";
     case "over_request_rate_limit":
       return TOO_MANY_TRIES;
+    // Refused by BotID (app/api/auth/[...path]) before reaching Neon Auth.
+    case "bot_detected":
+      return BOT_REFUSAL;
   }
   // Better Auth's "User already exists. Use another email." has no code of its own here.
   if (/already exists/i.test(message)) return ALREADY_SIGNED;
@@ -119,7 +123,8 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
       const { status = 0 } = failure as AuthFailure;
 
       setError(describeError(failure));
-      setFieldsInvalid(status >= 400 && status < 500 && status !== 429);
+      // Only a refused email or password marks the fields: not a rate limit, nor BotID (403).
+      setFieldsInvalid(status >= 400 && status < 500 && status !== 429 && status !== 403);
       setPending(null);
       // Try again from the password, typed afresh.
       if (passwordRef.current) passwordRef.current.value = "";

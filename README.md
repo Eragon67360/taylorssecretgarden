@@ -68,9 +68,16 @@ Each job creates its own Neon branch from production with [`create-branch-action
 
 To run Lighthouse locally, build first, then `npm run lighthouse` (it starts `next start` on port 3180; set `LHCI_PORT` to change it, and `CHROME_PATH` if Chrome is not found, e.g. Playwright's Chromium).
 
+## Swiftter's protections
+
+Why these two, and how they behave off Vercel: [ADR-0005](docs/adr/0005-botid-and-posting-limit.md).
+
+- **Vercel BotID** ([`botid`](https://vercel.com/docs/botid), invisible, no puzzle) guards signing up, signing in (email and Google) and publishing a Post. The routes are listed once in [`lib/botid-routes.ts`](lib/botid-routes.ts): `instrumentation-client.ts` attaches BotID's token to those requests (its challenge script loads only when one is made), and the publish route and `app/api/auth/[...path]` (in front of Neon Auth's proxy) refuse a bot with 403 ([`lib/bot-protection.ts`](lib/bot-protection.ts)). `withBotId` in `next.config.js` proxies BotID through this origin. It runs in Basic mode (free); Deep Analysis is a Firewall setting in the Vercel dashboard. Off Vercel (`next dev`, `next start`, CI) BotID has no OIDC token to verify with, so a stand-in treats a request carrying a token (`x-is-human`) as human and one without as a bot: the browser still fetches a real token, and the Playwright suite sends `BOTID_HUMAN` ([`e2e/member.ts`](e2e/member.ts)) with the requests it makes itself.
+- **Posting limit:** a Member may publish 5 Posts per 10 minutes (`POSTING_LIMIT` in [`service/swiftter.ts`](service/swiftter.ts)), counted in Postgres and checked again under a per-Member lock when the Post is inserted. The 6th gets 429 with `Retry-After` and a message saying when the next one is allowed; the composer shows it on the note and keeps the text.
+
 ## Database
 
-Swiftter's schema lives in [`db/schema.ts`](db/schema.ts): `members` (keyed by Neon Auth user id) and `posts` (sanitised HTML, newest first). All Swiftter data access goes through [`service/swiftter.ts`](service/swiftter.ts); the API is `GET /api/swiftter/posts` (public feed) and `POST /api/swiftter/posts` (publish as the signed-in Member).
+Swiftter's schema lives in [`db/schema.ts`](db/schema.ts): `members` (keyed by Neon Auth user id) and `posts` (sanitised HTML, newest first). All Swiftter data access goes through [`service/swiftter.ts`](service/swiftter.ts); the API is `GET /api/swiftter/posts` (public feed) and `POST /api/swiftter/posts` (publish as the signed-in Member; see [Swiftter's protections](#swiftters-protections)).
 
 Every database command uses `DATABASE_URL` (read from `.env.local` when it is not already set in the environment). Point it at the database you mean: `.env.local` pulled from Vercel holds the real Neon database.
 
