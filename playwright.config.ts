@@ -39,6 +39,7 @@ export default defineConfig({
 		timeout: 300_000,
 		reuseExistingServer: !isCI,
 		// Serves the development styleguide (/styleguide) from the production build.
-		env: { ENABLE_STYLEGUIDE: "1" },
+		// Moderates Posts with the fake (service/moderation.ts): no AI calls from the tests.
+		env: { ENABLE_STYLEGUIDE: "1", SWIFTTER_MODERATION: "fake" },
 	},
 });

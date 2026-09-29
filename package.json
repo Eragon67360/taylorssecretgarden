@@ -16,7 +16,8 @@
 		"db:migrate": "tsx --env-file-if-exists=.env.local db/migrate.ts",
 		"db:seed": "tsx --env-file-if-exists=.env.local db/seed.ts",
 		"db:unseed": "tsx --env-file-if-exists=.env.local db/unseed.ts",
-		"lighthouse": "lhci autorun"
+		"lighthouse": "lhci autorun",
+		"moderation:check": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/check-moderation.ts"
 	},
 	"dependencies": {
 		"@neondatabase/auth": "0.5.0-beta",
@@ -24,6 +25,7 @@
 		"@tiptap/pm": "^3.31.3",
 		"@tiptap/react": "^3.31.3",
 		"@tiptap/starter-kit": "^3.31.3",
+		"ai": "^7.0.122",
 		"botid": "^1.5.11",
 		"cn": "^0.4.0",
 		"drizzle-orm": "^0.45.3",
@@ -34,7 +36,8 @@
 		"react-dom": "19.3.0",
 		"sanitize-html": "^2.17.7",
 		"server-only": "^0.0.1",
-		"sonner": "^2.0.8"
+		"sonner": "^2.0.8",
+		"zod": "^4.6.5"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.13.0",
