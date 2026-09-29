@@ -26,7 +26,7 @@ The site's fan feed, where Members publish Posts.
 _Avoid_: Forum
 
 **Post**:
-A single rich-text message a Member publishes on Swiftter.
+A single rich-text message a Member publishes on Swiftter. Its Member can delete it ("tear up" in the interface); Posts cannot be edited.
 _Avoid_: Tweet, message, swift
 
 **Member**:

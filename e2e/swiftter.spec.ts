@@ -15,7 +15,7 @@ type FeedPost = {
 	content: string;
 	isDemo: boolean;
 	createdAt: string;
-	author: { displayName: string; username: string | null; avatarUrl: string | null };
+	author: { id: string; displayName: string; username: string | null; avatarUrl: string | null };
 };
 
 /** Opens Swiftter as the test Member (signed up by e2e/member.setup.ts). */
@@ -38,7 +38,7 @@ const stubPost = (id: string, content: string, createdAt = new Date(Date.now() -
 	content,
 	isDemo: false,
 	createdAt,
-	author: { displayName: "Stub Member", username: "stub", avatarUrl: null },
+	author: { id: "stub-member", displayName: "Stub Member", username: "stub", avatarUrl: null },
 });
 
 /** Relative dates as the feed writes them ("just now", "3 days ago", "last week"). */
@@ -152,6 +152,21 @@ test.describe("Swiftter, signed out", () => {
 		const { posts } = (await (await request.get(FEED)).json()) as { posts: FeedPost[] };
 
 		expect(posts.some((post) => post.content.includes(content))).toBe(false);
+	});
+
+	test("deleting a Post while signed out is rejected with 401, and visitors see no way to", async ({ page, request }) => {
+		const { posts } = (await (await request.get(FEED)).json()) as { posts: FeedPost[] };
+		const response = await request.delete(`${FEED}/${posts[0].id}`);
+
+		expect(response.status()).toBe(401);
+
+		const after = (await (await request.get(FEED)).json()) as { posts: FeedPost[] };
+
+		expect(after.posts.some((post) => post.id === posts[0].id)).toBe(true);
+
+		await page.goto("/swiftter");
+		await expect(feedPosts(page).first()).toBeVisible();
+		await expect(page.getByRole("button", { name: /tear up/ })).toHaveCount(0);
 	});
 
 	test("visitors are asked to sign the guestbook, which leads to sign-in", async ({ page }) => {
@@ -310,6 +325,65 @@ test.describe("Swiftter, signed in", () => {
 		await expect(editor).toHaveText("");
 	});
 
+	test("a Member tears up their own Post, after confirming, and it is gone for good", async ({ page }) => {
+		await signIn(page);
+
+		const text = `short-lived note ${Date.now()}`;
+		const published = await page.request.post(FEED, { headers: BOTID_HUMAN, data: { content: `<p>${text}</p>` } });
+
+		expect(published.status()).toBe(201);
+		const { post } = (await published.json()) as { post: FeedPost };
+
+		await page.reload();
+		const note = feedPosts(page).filter({ hasText: text });
+		const tearUp = note.getByRole("button", { name: "tear up this Post" });
+		const dialog = page.getByRole("dialog", { name: "Tear up this note?" });
+
+		// Changing their mind, with the button or with Escape, keeps the note.
+		await tearUp.click();
+		await expect(dialog).toBeVisible();
+		await expect(dialog.getByRole("button", { name: "Keep it" })).toBeFocused();
+		await expectNoAxeViolations(page);
+		await dialog.getByRole("button", { name: "Keep it" }).click();
+		await expect(dialog).toBeHidden();
+		await tearUp.click();
+		await page.keyboard.press("Escape");
+		await expect(dialog).toBeHidden();
+		await expect(note).toHaveCount(1);
+
+		await tearUp.click();
+		await dialog.getByRole("button", { name: "Tear it up" }).click();
+		await expect(note).toHaveCount(0);
+		await expect(page.getByText("Note torn up.")).toBeVisible();
+
+		await page.reload();
+		await expect(feedPosts(page).first()).toBeVisible();
+		await expect(feedPosts(page).filter({ hasText: text })).toHaveCount(0);
+		const { posts } = (await (await page.request.get(FEED)).json()) as { posts: FeedPost[] };
+
+		expect(posts.some((shown) => shown.id === post.id)).toBe(false);
+		// Already gone.
+		expect((await page.request.delete(`${FEED}/${post.id}`)).status()).toBe(404);
+	});
+
+	test("a Member can only tear up their own Posts: no button on others', 404 from the route", async ({ page }) => {
+		await signIn(page);
+
+		const { posts } = (await (await page.request.get(FEED)).json()) as { posts: FeedPost[] };
+		const demo = posts.find((post) => post.isDemo)!;
+
+		await expect(feedPosts(page).filter({ hasText: "Juniper Wells" }).first()).toBeVisible();
+		await expect(feedPosts(page).filter({ hasText: "Juniper Wells" }).getByRole("button", { name: /tear up/ })).toHaveCount(0);
+
+		expect((await page.request.delete(`${FEED}/${demo.id}`)).status()).toBe(404);
+		expect((await page.request.delete(`${FEED}/not-a-post`)).status()).toBe(404);
+		expect((await page.request.delete(`${FEED}/00000000-0000-4000-8000-000000000000`)).status()).toBe(404);
+
+		const after = (await (await page.request.get(FEED)).json()) as { posts: FeedPost[] };
+
+		expect(after.posts.some((post) => post.id === demo.id)).toBe(true);
+	});
+
 	test("passes axe, fits a phone and is still under reduced motion", async ({ page }) => {
 		await signIn(page);
 		await expect(page.getByRole("textbox", { name: "Write a Post" })).toBeVisible();
@@ -449,6 +523,12 @@ test.describe("Swiftter, posting limit", () => {
 		const { posts } = (await (await page.request.get(FEED)).json()) as { posts: FeedPost[] };
 
 		expect(posts.filter((post) => post.content.includes(String(stamp)))).toHaveLength(5);
+
+		// Tearing a note up doesn't give its place back: deleting is no way round the limit.
+		const torn = posts.find((post) => post.content.includes(String(stamp)))!;
+
+		expect((await page.request.delete(`${FEED}/${torn.id}`)).status()).toBe(204);
+		expect((await page.request.post(FEED, { headers: BOTID_HUMAN, data: { content: `<p>after tearing up, ${stamp}</p>` } })).status()).toBe(429);
 	});
 });
 

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
 import { type Database, getDb } from "@/db/client";
 import { displayNameOf } from "@/lib/display-name";
@@ -18,7 +18,8 @@ export type FeedPost = {
 	content: string;
 	isDemo: boolean;
 	createdAt: string;
-	author: { displayName: string; username: string | null; avatarUrl: string | null };
+	/** `id` is the Member's, so the browser can offer them to delete their own Posts. */
+	author: { id: string; displayName: string; username: string | null; avatarUrl: string | null };
 };
 
 /** What Swiftter keeps about a Member, copied from their Neon Auth user. */
@@ -39,6 +40,7 @@ const feedColumns = {
 	content: posts.content,
 	isDemo: posts.isDemo,
 	createdAt: posts.createdAt,
+	memberId: posts.memberId,
 	displayName: members.displayName,
 	username: members.username,
 	avatarUrl: members.avatarUrl,
@@ -53,13 +55,18 @@ type FeedRow = Awaited<ReturnType<typeof selectFeedPosts>>[number];
 // Every Post leaves the server sanitised, including rows written some other way
 // than publishPost, so the browser renders feed HTML as is (and never downloads
 // the sanitiser).
-function toFeedPost({ displayName, username, avatarUrl, createdAt, content, ...post }: FeedRow): FeedPost {
-	return { ...post, content: sanitisePostHtml(content), createdAt: createdAt.toISOString(), author: { displayName, username, avatarUrl } };
+function toFeedPost({ memberId, displayName, username, avatarUrl, createdAt, content, ...post }: FeedRow): FeedPost {
+	return {
+		...post,
+		content: sanitisePostHtml(content),
+		createdAt: createdAt.toISOString(),
+		author: { id: memberId, displayName, username, avatarUrl },
+	};
 }
 
-/** The newest Posts first, each with its Member. */
+/** The newest Posts first, each with its Member; deleted ones left out. */
 export async function listFeed(): Promise<FeedPost[]> {
-	const rows = await selectFeedPosts().orderBy(desc(posts.createdAt));
+	const rows = await selectFeedPosts().where(isNull(posts.deletedAt)).orderBy(desc(posts.createdAt));
 
 	return rows.map(toFeedPost);
 }
@@ -161,4 +168,45 @@ export async function publishPost(memberId: string, html: string): Promise<FeedP
 	const [row] = await selectFeedPosts().where(eq(posts.id, id));
 
 	return toFeedPost(row);
+}
+
+/** No Post with this id that the Member may delete: not theirs, already deleted, or none at all. */
+export class PostNotFoundError extends Error {
+	constructor() {
+		super("Post not found");
+	}
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Deletes one of the Member's own Posts. Throws PostNotFoundError otherwise,
+ * the same for someone else's Post as for a missing one.
+ *
+ * A Post still inside the posting limit's window keeps counting towards it,
+ * or deleting would be a way round the limit (and round what moderation
+ * costs): its content is erased and `deleted_at` set, and the row goes on a
+ * later delete, once the window has passed. An older Post is removed at once.
+ * Under the same per-Member lock as publishPost.
+ */
+export async function deletePost(memberId: string, postId: string): Promise<void> {
+	if (!UUID.test(postId)) throw new PostNotFoundError();
+
+	await getDb().transaction(async (tx) => {
+		await tx.execute(sql`select pg_advisory_xact_lock(hashtext('swiftter-post:' || ${memberId}))`);
+
+		const inWindow = sql`${posts.createdAt} > now() - make_interval(mins => ${POSTING_LIMIT.minutes})`;
+		const own = and(eq(posts.id, postId), eq(posts.memberId, memberId), isNull(posts.deletedAt));
+		const erased = await tx
+			.update(posts)
+			.set({ content: "", deletedAt: sql`now()` })
+			.where(and(own, inWindow))
+			.returning({ id: posts.id });
+		const removed = erased.length ? erased : await tx.delete(posts).where(own).returning({ id: posts.id });
+
+		if (!removed.length) throw new PostNotFoundError();
+
+		// The Member's deleted Posts that no longer count towards the limit.
+		await tx.delete(posts).where(and(eq(posts.memberId, memberId), sql`${posts.deletedAt} is not null`, sql`not (${inWindow})`));
+	});
 }

@@ -21,6 +21,12 @@ export const posts = pgTable(
 		content: text("content").notNull(),
 		isDemo: boolean("is_demo").notNull().default(false),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		/**
+		 * Set when its Member deleted a Post that still counts towards their
+		 * posting limit: its content is erased and the feed no longer shows it; the
+		 * row itself goes once the limit's window has passed (service/swiftter.ts).
+		 */
+		deletedAt: timestamp("deleted_at", { withTimezone: true }),
 	},
 	(table) => [index("posts_created_at_idx").on(table.createdAt.desc())],
 );

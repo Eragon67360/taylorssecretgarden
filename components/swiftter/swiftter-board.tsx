@@ -5,7 +5,7 @@ import type { PublishResult } from "./composer";
 import type { SessionState } from "./session-probe";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { IntentLink } from "@/components/intent-link";
@@ -20,6 +20,7 @@ import { paperFor, PostNote } from "./post-note";
 const FEED_URL = "/api/swiftter/posts";
 const SIGN_IN_URL = "/sign-in?redirect_url=%2Fswiftter";
 const PUBLISH_FAILED = "Your note couldn't be passed just now. Check your connection and try again.";
+const DELETE_FAILED = "That note couldn't be torn up just now. Try again in a moment.";
 
 // Only Members write, so visitors never download the editor, nor Neon Auth's
 // client: the session is asked for with one small request first (lib/auth/member-hint.ts).
@@ -48,6 +49,7 @@ export function SwiftterBoard() {
   const user = session.pending ? null : session.user;
   const [feed, setFeed] = useState<Feed>({ status: "loading" });
   const [feedRequest, setFeedRequest] = useState(0);
+  const feedHeading = useRef<HTMLHeadingElement>(null);
 
   // Neon Auth's client only when someone may be signed in; otherwise a visitor.
   useEffect(() => {
@@ -105,6 +107,30 @@ export function SwiftterBoard() {
     }
   };
 
+  // Gone from the feed at once; put back where it was if the server refuses.
+  const remove = async (post: FeedPost) => {
+    const restore = (posts: FeedPost[]) => {
+      const all = posts.some((shown) => shown.id === post.id) ? posts : [...posts, post];
+
+      return all.toSorted((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    };
+
+    setFeed((previous) => (previous.status === "ready" ? { status: "ready", posts: previous.posts.filter((shown) => shown.id !== post.id) } : previous));
+    // Its "tear up" button is gone with it: keep the keyboard in the feed.
+    feedHeading.current?.focus();
+
+    try {
+      const response = await fetch(`${FEED_URL}/${post.id}`, { method: "DELETE" });
+
+      // 404: it was already gone (torn up in another tab).
+      if (!response.ok && response.status !== 404) throw new Error(`HTTP ${response.status}`);
+      toast.success("Note torn up.");
+    } catch {
+      setFeed((previous) => (previous.status === "ready" ? { status: "ready", posts: restore(previous.posts) } : previous));
+      toast.error(DELETE_FAILED);
+    }
+  };
+
   return (
     <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-14">
       {probe && <SessionProbe onChange={setSession} />}
@@ -119,7 +145,7 @@ export function SwiftterBoard() {
       </aside>
 
       <section aria-labelledby="swiftter-feed" className="min-w-0 lg:order-1">
-        <h2 className="sr-only" id="swiftter-feed">
+        <h2 ref={feedHeading} className="sr-only" id="swiftter-feed" tabIndex={-1}>
           Posts
         </h2>
         {feed.status === "loading" && <FeedLoading />}
@@ -128,7 +154,12 @@ export function SwiftterBoard() {
         {feed.status === "ready" && feed.posts.length > 0 && (
           <div aria-label="Posts" className="flex flex-col gap-9 sm:gap-11" role="feed">
             {feed.posts.map((post, index) => (
-              <PostNote key={post.id} paper={paperFor(index, feed.posts.length)} post={post} />
+              <PostNote
+                key={post.id}
+                paper={paperFor(index, feed.posts.length)}
+                post={post}
+                onDelete={user && post.author.id === user.id ? () => remove(post) : undefined}
+              />
             ))}
           </div>
         )}
