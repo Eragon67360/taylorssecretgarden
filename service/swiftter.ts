@@ -1,8 +1,8 @@
 import "server-only";
 
-import { and, desc, eq, gt } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 
-import { getDb } from "@/db/client";
+import { type Database, getDb } from "@/db/client";
 import { displayNameOf } from "@/lib/display-name";
 import { members, posts } from "@/db/schema";
 import { postText, sanitisePostHtml } from "@/service/post-html";
@@ -93,28 +93,42 @@ export function memberFromAuthUser(user: AuthUser): MemberDetails {
 /** How many Posts a Member may publish within a window of time. */
 export const POSTING_LIMIT = { posts: 5, minutes: 10 } as const;
 
-/**
- * When the Member may publish their next Post: null if now, otherwise the
- * moment the oldest of their last POSTING_LIMIT.posts Posts leaves the window.
- * Counted in Postgres; two Posts sent at the same instant may both slip
- * through, which is fine for a flood limit.
- */
-export async function nextPostAllowedAt(memberId: string, now = new Date()): Promise<Date | null> {
-	const windowMs = POSTING_LIMIT.minutes * 60_000;
-	const recent = await getDb()
-		.select({ createdAt: posts.createdAt })
-		.from(posts)
-		.where(and(eq(posts.memberId, memberId), gt(posts.createdAt, new Date(now.getTime() - windowMs))))
-		.orderBy(desc(posts.createdAt))
-		.limit(POSTING_LIMIT.posts);
-
-	if (recent.length < POSTING_LIMIT.posts) return null;
-
-	return new Date(recent[recent.length - 1].createdAt.getTime() + windowMs);
+/** The Member has published POSTING_LIMIT.posts Posts within the window. */
+export class PostingLimitError extends Error {
+	constructor(
+		/** Seconds until the next Post is allowed (at least 1). */
+		readonly retryAfter: number,
+	) {
+		super("Posting limit reached");
+	}
 }
 
-/** Publishes a Post as the given Member; throws InvalidPostError if there is nothing to publish. */
-export async function publishPost(memberId: string, html: string): Promise<FeedPost> {
+/**
+ * Seconds until the Member may publish their next Post (when the oldest of
+ * their last POSTING_LIMIT.posts Posts leaves the window), or null if they may
+ * now. Counted in Postgres, on the database's clock, like `created_at`.
+ */
+export async function postingLimitWait(memberId: string, db: Pick<Database, "execute"> = getDb()): Promise<number | null> {
+	const { rows } = await db.execute<{ count: number; wait: number | null }>(sql`
+		select count(*)::int as count,
+			ceil(extract(epoch from min(created_at) + make_interval(mins => ${POSTING_LIMIT.minutes}) - now()))::int as wait
+		from (
+			select ${posts.createdAt} as created_at from ${posts}
+			where ${posts.memberId} = ${memberId} and ${posts.createdAt} > now() - make_interval(mins => ${POSTING_LIMIT.minutes})
+			order by ${posts.createdAt} desc
+			limit ${POSTING_LIMIT.posts}
+		) as recent
+	`);
+	const [{ count, wait }] = rows;
+
+	return count < POSTING_LIMIT.posts ? null : Math.max(1, wait ?? 1);
+}
+
+/**
+ * The Post's content as it will be stored: sanitised HTML. Throws
+ * InvalidPostError if it is too long or has no text left.
+ */
+export function preparePost(html: string): string {
 	// Checked on the raw HTML, before any parsing.
 	if (html.length > MAX_CONTENT_LENGTH) throw new InvalidPostError("This Post is too long.");
 
@@ -122,7 +136,28 @@ export async function publishPost(memberId: string, html: string): Promise<FeedP
 
 	if (!postText(content)) throw new InvalidPostError("A Post needs some text.");
 
-	const [{ id }] = await getDb().insert(posts).values({ memberId, content }).returning({ id: posts.id });
+	return content;
+}
+
+/**
+ * Publishes a Post as the given Member. Throws InvalidPostError if there is
+ * nothing to publish, and PostingLimitError if the Member is at the limit:
+ * checked again here, holding a per-Member lock until the Post is inserted, so
+ * Posts sent all at once cannot slip past it.
+ */
+export async function publishPost(memberId: string, html: string): Promise<FeedPost> {
+	const content = preparePost(html);
+
+	const id = await getDb().transaction(async (tx) => {
+		await tx.execute(sql`select pg_advisory_xact_lock(hashtext('swiftter-post:' || ${memberId}))`);
+
+		const wait = await postingLimitWait(memberId, tx);
+
+		if (wait !== null) throw new PostingLimitError(wait);
+		const [inserted] = await tx.insert(posts).values({ memberId, content }).returning({ id: posts.id });
+
+		return inserted.id;
+	});
 	const [row] = await selectFeedPosts().where(eq(posts.id, id));
 
 	return toFeedPost(row);

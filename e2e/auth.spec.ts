@@ -121,7 +121,8 @@ test("a Google sign-in that went wrong comes back with an explanation", async ({
 // BotID guards signing up and signing in (lib/bot-protection.ts). These
 // requests are refused before they reach Neon Auth, and would be invalid there
 // anyway (no email, no password), so they are safe on any database.
-for (const path of ["/api/auth/sign-up/email", "/api/auth/sign-in/email"]) {
+// (The encoded spelling reaches the same Neon Auth endpoint, so it is guarded too.)
+for (const path of ["/api/auth/sign-up/email", "/api/auth/sign-in/email", "/api/auth/sign%2Dup/email"]) {
 	test(`a request to ${path} without BotID's token is refused with 403`, async ({ request }) => {
 		const response = await request.post(path, { data: {} });
 

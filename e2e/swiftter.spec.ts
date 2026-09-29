@@ -329,7 +329,7 @@ test.describe("Swiftter, posting limit", () => {
 	// The browser logs the refused 6th Post as a failed request.
 	test.use({ expectedConsoleMessages: [/Failed to load resource: the server responded with a status of 429/] });
 
-	test("the 6th Post within 10 minutes is refused with 429, and the composer keeps it", async ({ page }) => {
+	test("only 5 Posts get through in 10 minutes, even sent at once; the composer keeps a refused one", async ({ page }) => {
 		const member = newTestMember();
 
 		await page.goto("/sign-up");
@@ -341,11 +341,14 @@ test.describe("Swiftter, posting limit", () => {
 
 		const stamp = Date.now();
 
-		for (let count = 1; count <= 5; count++) {
-			const response = await page.request.post(FEED, { headers: BOTID_HUMAN, data: { content: `<p>note ${count} of 5, ${stamp}</p>` } });
+		// Seven at once: exactly five get through, however they interleave.
+		const statuses = await Promise.all(
+			Array.from({ length: 7 }, (_, index) =>
+				page.request.post(FEED, { headers: BOTID_HUMAN, data: { content: `<p>note ${index + 1} at once, ${stamp}</p>` } }).then((response) => response.status()),
+			),
+		);
 
-			expect(response.status(), `Post ${count}`).toBe(201);
-		}
+		expect(statuses.toSorted()).toEqual([201, 201, 201, 201, 201, 429, 429]);
 
 		const refused = await page.request.post(FEED, { headers: BOTID_HUMAN, data: { content: `<p>one too many, ${stamp}</p>` } });
 

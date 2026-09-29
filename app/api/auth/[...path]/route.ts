@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getAuth } from "@/lib/auth/server";
 import { isBot } from "@/lib/bot-protection";
-import { isBotIdProtected } from "@/lib/botid-routes";
+import { BOT_REFUSAL, isBotIdProtected } from "@/lib/botid-routes";
 
 /*
   Neon Auth's API on this origin: sign-up, sign-in (email and Google),
@@ -13,8 +13,13 @@ import { isBotIdProtected } from "@/lib/botid-routes";
 type Context = { params: Promise<{ path: string[] }> };
 
 const handler = async (request: Request, context: Context) => {
-	if (isBotIdProtected(request.method, new URL(request.url).pathname) && (await isBot(request))) {
-		return NextResponse.json({ code: "BOT_DETECTED", message: "Access denied." }, { status: 403 });
+	// The decoded path segments, which are what Neon Auth's handler proxies
+	// (so `sign%2Dup` cannot slip past as something else).
+	const { path } = await context.params;
+
+	if (isBotIdProtected(request.method, `/api/auth/${path.join("/")}`) && (await isBot(request))) {
+		// Shaped like Neon Auth's own errors, which the guestbook form reads (`code`).
+		return NextResponse.json({ code: "BOT_DETECTED", message: BOT_REFUSAL }, { status: 403 });
 	}
 
 	const methods = getAuth().handler();

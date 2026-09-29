@@ -13,6 +13,9 @@ export const BOTID_PROTECTED_ROUTES = [
 	{ path: "/api/auth/sign-in/*", method: "POST" },
 ];
 
+/** What a Member reads when BotID refuses their request (403). */
+export const BOT_REFUSAL = "This browser couldn't be checked just now. Reload the page and try again.";
+
 /** The header BotID's client adds, carrying its token. */
 export const BOTID_TOKEN_HEADER = "x-is-human";
 

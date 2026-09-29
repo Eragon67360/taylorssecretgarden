@@ -70,8 +70,10 @@ To run Lighthouse locally, build first, then `npm run lighthouse` (it starts `ne
 
 ## Swiftter's protections
 
+Why these two, and how they behave off Vercel: [ADR-0005](docs/adr/0005-botid-and-posting-limit.md).
+
 - **Vercel BotID** ([`botid`](https://vercel.com/docs/botid), invisible, no puzzle) guards signing up, signing in (email and Google) and publishing a Post. The routes are listed once in [`lib/botid-routes.ts`](lib/botid-routes.ts): `instrumentation-client.ts` attaches BotID's token to those requests (its challenge script loads only when one is made), and the publish route and `app/api/auth/[...path]` (in front of Neon Auth's proxy) refuse a bot with 403 ([`lib/bot-protection.ts`](lib/bot-protection.ts)). `withBotId` in `next.config.js` proxies BotID through this origin. It runs in Basic mode (free); Deep Analysis is a Firewall setting in the Vercel dashboard. Off Vercel (`next dev`, `next start`, CI) BotID has no OIDC token to verify with, so a stand-in treats a request carrying a token (`x-is-human`) as human and one without as a bot: the browser still fetches a real token, and the Playwright suite sends `BOTID_HUMAN` ([`e2e/member.ts`](e2e/member.ts)) with the requests it makes itself.
-- **Posting limit:** a Member may publish 5 Posts per 10 minutes (`POSTING_LIMIT` in [`service/swiftter.ts`](service/swiftter.ts)), counted in Postgres. The 6th gets 429 with `Retry-After` and a message saying when the next one is allowed; the composer shows it on the note and keeps the text.
+- **Posting limit:** a Member may publish 5 Posts per 10 minutes (`POSTING_LIMIT` in [`service/swiftter.ts`](service/swiftter.ts)), counted in Postgres and checked again under a per-Member lock when the Post is inserted. The 6th gets 429 with `Retry-After` and a message saying when the next one is allowed; the composer shows it on the note and keeps the text.
 
 ## Database
 
