@@ -15,7 +15,7 @@ import {
 	publishPost,
 } from "@/service/swiftter";
 import { type ModerationCategory, moderatePost, ModerationUnavailableError } from "@/service/moderation";
-import { postText } from "@/service/post-html";
+import { postPlainText } from "@/service/post-html";
 
 /** Why a Post was refused by moderation, in the journal's voice. */
 const REFUSALS: Record<ModerationCategory, string> = {
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
 		}
 
 		const content = preparePost(body.content);
-		const moderation = await moderatePost(postText(content));
+		const moderation = await moderatePost(postPlainText(content));
 
 		if (moderation.verdict === "rejected") {
 			return NextResponse.json({ category: moderation.category, message: REFUSALS[moderation.category] }, { status: 422 });
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 			console.error("Moderation failed", error.cause ?? error);
 
 			return NextResponse.json(
-				{ error: "Our note-checker didn't answer in time, so your note wasn't passed. Try again in a moment." },
+				{ error: "Your note couldn't be checked just now, so it wasn't passed. Try again in a moment." },
 				{ status: 503 },
 			);
 		}

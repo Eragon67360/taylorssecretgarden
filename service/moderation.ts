@@ -48,12 +48,16 @@ Answer with:
 - decision: "allowed", "insult" (breaks rule 1) or "off_topic" (breaks rule 2). If it breaks both, "insult".
 - reason: one short sentence explaining the decision.`;
 
-const VERDICT = z.object({
+/** What the model answers (structured output). */
+const MODEL_ANSWER = z.object({
 	decision: z.enum(["allowed", "insult", "off_topic"]),
 	reason: z.string(),
 });
 
-export type ModerationCategory = "insult" | "off_topic";
+type ModelAnswer = z.infer<typeof MODEL_ANSWER>;
+
+/** Why a Post was refused: unkind, or off-topic. */
+export type ModerationCategory = Exclude<ModelAnswer["decision"], "allowed">;
 
 export type ModerationResult =
 	| { verdict: "allowed"; reason: string }
@@ -63,25 +67,29 @@ export type ModerationResult =
 export class ModerationUnavailableError extends Error {}
 
 /**
- * Judges a Post's plain text (tags stripped, see `postText`) against the
+ * Judges a Post's plain text (see `postPlainText`) against the
  * policy. Throws ModerationUnavailableError if no verdict came in time.
  */
 export async function moderatePost(text: string): Promise<ModerationResult> {
-	const decision = isFake() ? fakeDecision(text) : await askModel(text);
+	const { decision, reason } = isFake() ? fakeAnswer(text) : await askModel(text);
 
-	return decision.decision === "allowed"
-		? { verdict: "allowed", reason: decision.reason }
-		: { verdict: "rejected", category: decision.decision, reason: decision.reason };
+	if (decision === "allowed") return { verdict: "allowed", reason };
+
+	// The reason, not the Post: enough to see how the policy is applied.
+	// eslint-disable-next-line no-console
+	console.info(`Moderation refused a Post (${decision}): ${reason}`);
+
+	return { verdict: "rejected", category: decision, reason };
 }
 
-async function askModel(text: string): Promise<z.infer<typeof VERDICT>> {
+async function askModel(text: string): Promise<ModelAnswer> {
 	try {
 		const { output } = await generateText({
 			model: MODERATION_MODEL,
 			instructions: INSTRUCTIONS,
-			// A closing tag inside the Post cannot end the data early.
-			prompt: `<post>\n${text.replaceAll(/<\/?post>/gi, "")}\n</post>`,
-			output: Output.object({ schema: VERDICT }),
+			// Tags that look like the delimiters are dropped, so the Post cannot end its data early.
+			prompt: `<post>\n${text.replaceAll(/<\s*\/?\s*post\b[^>]*>/gi, "")}\n</post>`,
+			output: Output.object({ schema: MODEL_ANSWER }),
 			temperature: 0,
 			timeout: TIMEOUT_MS,
 			// One attempt within the timeout: the Member is asked to try again instead.
@@ -97,11 +105,11 @@ async function askModel(text: string): Promise<z.infer<typeof VERDICT>> {
 /*
   The fake, for the Playwright suite and CI (SWIFTTER_MODERATION=fake): no AI
   call, deterministic verdicts from marker words in the Post. Never used on a
-  production deployment, whatever the variable says.
+  Vercel deployment (preview or production), whatever the variable says.
 */
-const isFake = () => process.env.SWIFTTER_MODERATION === "fake" && process.env.VERCEL_ENV !== "production";
+const isFake = () => process.env.SWIFTTER_MODERATION === "fake" && !process.env.VERCEL;
 
-function fakeDecision(text: string): z.infer<typeof VERDICT> {
+function fakeAnswer(text: string): ModelAnswer {
 	if (text.includes("fake-moderation-down")) throw new ModerationUnavailableError("Fake moderation is down");
 	if (text.includes("fake-insult")) return { decision: "insult", reason: "Fake: marked as an insult." };
 	if (text.includes("fake-off-topic")) return { decision: "off_topic", reason: "Fake: marked as off-topic." };
