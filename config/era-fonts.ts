@@ -1,52 +1,55 @@
-import {
-  Abril_Fatface,
-  Bebas_Neue,
-  Bodoni_Moda,
-  Cinzel,
-  Cormorant_Garamond,
-  IM_Fell_English,
-  Pacifico,
-  Permanent_Marker,
-  Pinyon_Script,
-  Rye,
-  Special_Elite,
-  UnifrakturMaguntia,
-} from "next/font/google";
+import localFont from "next/font/local";
 
 /*
-  One display face per Era. None is preloaded: the browser downloads a face
-  only when text set in it is on screen, i.e. when that Era is shown (the Era
-  container sets `--era-font`, see components/era-scope.tsx). next/font's
-  metric-adjusted fallback (adjustFontFallback, on by default) plus a close
-  system face keep the swap from shifting the layout.
+  One display face per Era, self-hosted (assets/fonts/, fetched from Google
+  Fonts by scripts/build-fonts.py). None is preloaded: the browser downloads a
+  face only when text set in it is on screen, i.e. when that Era is shown (the
+  Era container sets `--era-font`, see components/era-scope.tsx). next/font's
+  metric-adjusted fallback, measured from each file, plus a close system face
+  keep the swap from shifting the layout.
 */
 
-const debut = Rye({ subsets: ["latin"], display: "swap", preload: false, weight: "400", fallback: ["Georgia", "serif"] });
-const fearless = Cinzel({ subsets: ["latin"], display: "swap", preload: false, weight: ["600", "700"], fallback: ["Georgia", "serif"] });
-const speakNow = Pinyon_Script({ subsets: ["latin"], display: "swap", preload: false, weight: "400", fallback: ["cursive"] });
-const red = Abril_Fatface({ subsets: ["latin"], display: "swap", preload: false, weight: "400", fallback: ["Georgia", "serif"] });
-const nineteen89 = Permanent_Marker({ subsets: ["latin"], display: "swap", preload: false, weight: "400", fallback: ["cursive"] });
-const reputation = UnifrakturMaguntia({ subsets: ["latin"], display: "swap", preload: false, weight: "400", fallback: ["Georgia", "serif"] });
-const lover = Pacifico({ subsets: ["latin"], display: "swap", preload: false, weight: "400", fallback: ["cursive"] });
-const folklore = IM_Fell_English({ subsets: ["latin"], display: "swap", preload: false, weight: "400", style: ["normal", "italic"], fallback: ["Georgia", "serif"] });
-const evermore = Cormorant_Garamond({ subsets: ["latin"], display: "swap", preload: false, weight: ["600", "700"], style: ["italic"], fallback: ["Georgia", "serif"] });
-const midnights = Bodoni_Moda({ subsets: ["latin"], display: "swap", preload: false, weight: ["500", "700"], fallback: ["Didot", "Georgia", "serif"] });
-const ttpd = Special_Elite({ subsets: ["latin"], display: "swap", preload: false, weight: "400", fallback: ["Courier New", "monospace"] });
+const Rye = localFont({ src: "../assets/fonts/rye.woff2", weight: "400", display: "swap", preload: false, fallback: ["Georgia", "serif"], adjustFontFallback: "Times New Roman" });
+const Cinzel = localFont({ src: "../assets/fonts/cinzel.woff2", weight: "600 700", display: "swap", preload: false, fallback: ["Georgia", "serif"], adjustFontFallback: "Times New Roman" });
+const Pinyon_Script = localFont({ src: "../assets/fonts/pinyon-script.woff2", weight: "400", display: "swap", preload: false, fallback: ["cursive"] });
+const Abril_Fatface = localFont({ src: "../assets/fonts/abril-fatface.woff2", weight: "400", display: "swap", preload: false, fallback: ["Georgia", "serif"], adjustFontFallback: "Times New Roman" });
+const Permanent_Marker = localFont({ src: "../assets/fonts/permanent-marker.woff2", weight: "400", display: "swap", preload: false, fallback: ["cursive"] });
+const UnifrakturMaguntia = localFont({ src: "../assets/fonts/unifraktur-maguntia.woff2", weight: "400", display: "swap", preload: false, fallback: ["Georgia", "serif"], adjustFontFallback: "Times New Roman" });
+const Pacifico = localFont({ src: "../assets/fonts/pacifico.woff2", weight: "400", display: "swap", preload: false, fallback: ["cursive"] });
+const IM_Fell_English = localFont({
+  src: [
+    { path: "../assets/fonts/im-fell-english.woff2", weight: "400", style: "normal" },
+    { path: "../assets/fonts/im-fell-english-italic.woff2", weight: "400", style: "italic" },
+  ],
+  display: "swap",
+  preload: false,
+  fallback: ["Georgia", "serif"],
+  adjustFontFallback: "Times New Roman",
+});
+const Cormorant_Garamond = localFont({
+  src: [{ path: "../assets/fonts/cormorant-garamond-italic.woff2", weight: "600 700", style: "italic" }],
+  display: "swap",
+  preload: false,
+  fallback: ["Georgia", "serif"],
+  adjustFontFallback: "Times New Roman",
+});
+const Bodoni_Moda = localFont({ src: "../assets/fonts/bodoni-moda.woff2", weight: "500 700", display: "swap", preload: false, fallback: ["Didot", "Georgia", "serif"], adjustFontFallback: "Times New Roman" });
+const Special_Elite = localFont({ src: "../assets/fonts/special-elite.woff2", weight: "400", display: "swap", preload: false, fallback: ["Courier New", "monospace"] });
 // Condensed marquee capitals, like the lights over a Vegas stage door.
-const showgirl = Bebas_Neue({ subsets: ["latin"], display: "swap", preload: false, weight: "400", fallback: ["Impact", "Arial Narrow", "sans-serif"] });
+const Bebas_Neue = localFont({ src: "../assets/fonts/bebas-neue.woff2", weight: "400", display: "swap", preload: false, fallback: ["Impact", "Arial Narrow", "sans-serif"] });
 
 /** Each Era's display face: the CSS font-family list to set on its container. */
 export const eraFontFamilies = {
-  debut: debut.style.fontFamily,
-  fearless: fearless.style.fontFamily,
-  "speak-now": speakNow.style.fontFamily,
-  red: red.style.fontFamily,
-  "1989": nineteen89.style.fontFamily,
-  reputation: reputation.style.fontFamily,
-  lover: lover.style.fontFamily,
-  folklore: folklore.style.fontFamily,
-  evermore: evermore.style.fontFamily,
-  midnights: midnights.style.fontFamily,
-  ttpd: ttpd.style.fontFamily,
-  showgirl: showgirl.style.fontFamily,
+  debut: Rye.style.fontFamily,
+  fearless: Cinzel.style.fontFamily,
+  "speak-now": Pinyon_Script.style.fontFamily,
+  red: Abril_Fatface.style.fontFamily,
+  "1989": Permanent_Marker.style.fontFamily,
+  reputation: UnifrakturMaguntia.style.fontFamily,
+  lover: Pacifico.style.fontFamily,
+  folklore: IM_Fell_English.style.fontFamily,
+  evermore: Cormorant_Garamond.style.fontFamily,
+  midnights: Bodoni_Moda.style.fontFamily,
+  ttpd: Special_Elite.style.fontFamily,
+  showgirl: Bebas_Neue.style.fontFamily,
 } as const;
