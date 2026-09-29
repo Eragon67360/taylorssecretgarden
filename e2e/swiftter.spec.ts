@@ -322,6 +322,79 @@ test.describe("Swiftter, signed in", () => {
 	});
 });
 
+// Every Post is checked by AI moderation before it is stored (service/moderation.ts).
+// The suite runs it in its fake mode (SWIFTTER_MODERATION=fake): a Post containing
+// a marker word is refused as unkind or off-topic, or moderation fails; the rest are allowed.
+const MARKER = { insult: "fake-insult", offTopic: "fake-off-topic", down: "fake-moderation-down" };
+
+test.describe("Swiftter, moderation", () => {
+	test.skip(!!writeGuard(), writeGuard() ?? "");
+	test.skip(() => !readTestMember(), "The setup project signs up the test Member");
+	test.use({ storageState: async ({}, provide) => provide(existsSync(MEMBER_STATE) ? MEMBER_STATE : undefined) });
+	// The browser logs the refused Posts as failed requests.
+	test.use({ expectedConsoleMessages: [/Failed to load resource: the server responded with a status of (422|503)/] });
+
+	/** Whether any Post in the feed contains this text. */
+	const stored = async (page: Page, text: string) => {
+		const { posts } = (await (await page.request.get(FEED)).json()) as { posts: FeedPost[] };
+
+		return posts.some((post) => post.content.includes(text));
+	};
+
+	for (const { name, marker, category, message } of [
+		{ name: "an unkind Post", marker: MARKER.insult, category: "insult", message: /unkind/ },
+		{ name: "an off-topic Post", marker: MARKER.offTopic, category: "off_topic", message: /Taylor/ },
+	]) {
+		test(`${name} is refused with 422, saying why, and nothing is stored`, async ({ page }) => {
+			await signIn(page);
+
+			const text = `${marker} ${Date.now()}`;
+			const response = await page.request.post(FEED, { headers: BOTID_HUMAN, data: { content: `<p>${text}</p>` } });
+
+			expect(response.status()).toBe(422);
+			const body = (await response.json()) as { category: string; message: string };
+
+			expect(body.category).toBe(category);
+			expect(body.message).toMatch(message);
+			expect(await stored(page, text)).toBe(false);
+		});
+	}
+
+	test("a refused Post stays in the composer with the reason written on the note", async ({ page }) => {
+		await signIn(page);
+
+		const text = `buy cheap sneakers ${MARKER.offTopic} ${Date.now()}`;
+		const editor = page.getByRole("textbox", { name: "Write a Post" });
+
+		await editor.click();
+		await editor.pressSequentially(text);
+		await page.getByRole("button", { name: "Post", exact: true }).click();
+
+		await expect(page.getByRole("form", { name: "Pass a note" }).getByRole("alert")).toContainText(/Taylor/);
+		await expect(editor).toHaveText(text);
+		expect(await stored(page, text)).toBe(false);
+	});
+
+	test("when moderation is unavailable, nothing is published and the Member is asked to try again", async ({ page }) => {
+		await signIn(page);
+
+		const text = `${MARKER.down} ${Date.now()}`;
+		const response = await page.request.post(FEED, { headers: BOTID_HUMAN, data: { content: `<p>${text}</p>` } });
+
+		expect(response.status()).toBe(503);
+
+		const editor = page.getByRole("textbox", { name: "Write a Post" });
+
+		await editor.click();
+		await editor.pressSequentially(text);
+		await page.getByRole("button", { name: "Post", exact: true }).click();
+
+		await expect(page.getByRole("form", { name: "Pass a note" }).getByRole("alert")).toContainText(/try again/i);
+		await expect(editor).toHaveText(text);
+		expect(await stored(page, text)).toBe(false);
+	});
+});
+
 // A Member may pass 5 notes in 10 minutes. Its own fresh Member, so the Posts
 // the other tests publish as the shared test Member don't count.
 test.describe("Swiftter, posting limit", () => {

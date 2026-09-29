@@ -31,3 +31,16 @@ export function sanitisePostHtml(html: string): string {
 export function postText(html: string): string {
 	return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} }).replace(/&nbsp;| /g, " ").trim();
 }
+
+const ENTITIES: Record<string, string> = { "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&amp;": "&" };
+
+/**
+ * A Post as someone would read it, for AI moderation: postText with each
+ * paragraph, list item and line break on a line of its own, and characters as
+ * typed rather than HTML entities.
+ */
+export function postPlainText(html: string): string {
+	const text = postText(html.replace(/<br\s*\/?>|<\/(p|li|h[1-6]|blockquote|pre)>/gi, "$&\n"));
+
+	return text.replace(/&(lt|gt|quot|#39|amp);/g, (entity) => ENTITIES[entity]).replace(/\n{3,}/g, "\n\n");
+}

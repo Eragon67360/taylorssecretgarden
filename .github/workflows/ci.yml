@@ -32,6 +32,9 @@ env:
   # Builds and serves the development styleguide (/styleguide) for its tests;
   # production (Vercel) leaves it unset and answers 404.
   ENABLE_STYLEGUIDE: 1
+  # AI moderation of Posts in its fake mode (service/moderation.ts): marker
+  # words decide, no AI Gateway call, so CI is fast, free and deterministic.
+  SWIFTTER_MODERATION: fake
 
 jobs:
   smoke:

@@ -88,10 +88,11 @@ export function SwiftterBoard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
       });
-      const data = (await response.json().catch(() => ({}))) as { post?: FeedPost; error?: string };
+      // `message` from moderation (422), `error` from every other refusal.
+      const data = (await response.json().catch(() => ({}))) as { post?: FeedPost; error?: string; message?: string };
 
-      // Refused (too many notes, not allowed…): the composer says why and keeps the text.
-      if (!response.ok || !data.post) return { published: false, message: data.error ?? PUBLISH_FAILED };
+      // Refused (too many notes, unkind, off-topic…): the composer says why and keeps the text.
+      if (!response.ok || !data.post) return { published: false, message: data.message ?? data.error ?? PUBLISH_FAILED };
 
       const post = data.post;
 
