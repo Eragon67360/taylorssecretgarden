@@ -3,7 +3,7 @@
 A Taylor Swift fan site and portfolio piece:
 
 - **Home**: the journal's opening spread: a taped Eras Tour photo, three ways in (Music, Tours, Swiftter), all twelve Eras pressed like flowers (each opens its Album on Music) and the Tour posters pinned to the wall.
-- **Music**: all 16 Albums (every studio Album and every Taylor's Version, each in its most complete edition, curated in `lib/catalogue.ts`), with cover, tracklist, durations and label fetched live from Deezer's public API.
+- **Music**: all 16 Albums (every studio Album and every Taylor's Version, each in its most complete edition, curated in `lib/catalogue.ts`), with cover, tracklist, durations and label fetched live from Deezer's public API. An open Album lists its other Versions on Deezer (standard and international editions, live and acoustic albums, "Chapter" compilations), each with its own tracklist and link (`?album=<id>`). Every Monday, [a workflow](.github/workflows/releases.yml) compares Deezer with the catalogue (`npm run releases:check`) and opens an issue labelled `new-release` for anything new: a new Album needs its Era added by hand (look, flower, fonts), a new Version one line in the catalogue.
 - **Tours**: a vertical journal of every Tour (ticket stub, poster, footage), each linking to its own page with that Tour's facts (from `public/json/tours.json`, typed in `lib/tours.ts`).
 - **Swiftter** (`/swiftter`, formerly `/forum`): a small feed where signed-in Members publish Posts. Anyone can read it; publishing needs signing the guestbook (email + password, or Google).
 

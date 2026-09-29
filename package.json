@@ -17,7 +17,8 @@
 		"db:seed": "tsx --env-file-if-exists=.env.local db/seed.ts",
 		"db:unseed": "tsx --env-file-if-exists=.env.local db/unseed.ts",
 		"lighthouse": "lhci autorun",
-		"moderation:check": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/check-moderation.ts"
+		"moderation:check": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/check-moderation.ts",
+		"releases:check": "tsx scripts/check-releases.ts"
 	},
 	"dependencies": {
 		"@neondatabase/auth": "0.5.0-beta",
