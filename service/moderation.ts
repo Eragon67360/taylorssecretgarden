@@ -13,8 +13,12 @@ import { z } from "zod";
 /** The model, through Vercel AI Gateway. */
 export const MODERATION_MODEL = "anthropic/claude-haiku-4.5";
 
-/** How long moderation may take before the Member is asked to try again. */
-const TIMEOUT_MS = 3000;
+/**
+ * How long moderation may take before the Member is asked to try again.
+ * Verdicts take 1–2.6 s; a cold first call through the Gateway can pass 3 s,
+ * so 8 s keeps real Posts from bouncing while an outage still fails fast.
+ */
+const TIMEOUT_MS = 8000;
 
 /** Swiftter's moderation policy, in plain language: edit it here. */
 export const MODERATION_POLICY = `
