@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 
 import { PHONE, expectNoAxeViolations, expectNoHorizontalOverflow, expectReducedMotion } from "./checks";
 import { expect, test } from "./fixtures";
-import { MEMBER_STATE, readTestMember, writeGuard } from "./member";
+import { BOTID_HUMAN, MEMBER_STATE, newTestMember, readTestMember, writeGuard } from "./member";
 
 // Swiftter against a real (throwaway) Neon branch: CI creates one per run,
 // migrates and seeds it before the suite runs (`npm run db:migrate && npm run db:seed`).
@@ -219,6 +219,7 @@ test.describe("Swiftter, signed in", () => {
 
 		const marker = `scripted ${Date.now()}`;
 		const response = await page.request.post(FEED, {
+			headers: BOTID_HUMAN,
 			data: {
 				content: `<p>${marker}</p><script>window.__swiftterPwned = true</script><svg onload="window.__swiftterPwned = true"></svg>`,
 			},
@@ -241,9 +242,22 @@ test.describe("Swiftter, signed in", () => {
 	test("a Post with nothing left after sanitising is rejected with 400", async ({ page }) => {
 		await signIn(page);
 
-		const response = await page.request.post(FEED, { data: { content: "<script>alert(1)</script><p><br></p>" } });
+		const response = await page.request.post(FEED, { headers: BOTID_HUMAN, data: { content: "<script>alert(1)</script><p><br></p>" } });
 
 		expect(response.status()).toBe(400);
+	});
+
+	test("a publish request without BotID's token is refused with 403 and nothing is stored", async ({ page }) => {
+		await signIn(page);
+
+		const content = `<p>scripted bot ${Date.now()}</p>`;
+		const response = await page.request.post(FEED, { data: { content } });
+
+		expect(response.status()).toBe(403);
+
+		const { posts } = (await (await page.request.get(FEED)).json()) as { posts: FeedPost[] };
+
+		expect(posts.some((post) => post.content.includes(content))).toBe(false);
 	});
 
 	test("the composer's formatting (bold, italic, lists, link) is published as HTML", async ({ page }) => {
@@ -305,6 +319,60 @@ test.describe("Swiftter, signed in", () => {
 		await expectNoHorizontalOverflow(page);
 
 		await expectReducedMotion(page);
+	});
+});
+
+// A Member may pass 5 notes in 10 minutes. Its own fresh Member, so the Posts
+// the other tests publish as the shared test Member don't count.
+test.describe("Swiftter, posting limit", () => {
+	test.skip(!!writeGuard(), writeGuard() ?? "");
+	// The browser logs the refused 6th Post as a failed request.
+	test.use({ expectedConsoleMessages: [/Failed to load resource: the server responded with a status of 429/] });
+
+	test("the 6th Post within 10 minutes is refused with 429, and the composer keeps it", async ({ page }) => {
+		const member = newTestMember();
+
+		await page.goto("/sign-up");
+		await page.getByRole("textbox", { name: "Name" }).fill("Prolific Swiftie");
+		await page.getByRole("textbox", { name: "Email" }).fill(member.email);
+		await page.getByLabel("Password").fill(member.password);
+		await page.getByRole("button", { name: "Sign the guestbook" }).click();
+		await expect(page.getByText("writing as Prolific Swiftie")).toBeVisible();
+
+		const stamp = Date.now();
+
+		for (let count = 1; count <= 5; count++) {
+			const response = await page.request.post(FEED, { headers: BOTID_HUMAN, data: { content: `<p>note ${count} of 5, ${stamp}</p>` } });
+
+			expect(response.status(), `Post ${count}`).toBe(201);
+		}
+
+		const refused = await page.request.post(FEED, { headers: BOTID_HUMAN, data: { content: `<p>one too many, ${stamp}</p>` } });
+
+		expect(refused.status()).toBe(429);
+		const retryAfter = Number(refused.headers()["retry-after"]);
+
+		expect(retryAfter).toBeGreaterThan(0);
+		expect(retryAfter).toBeLessThanOrEqual(600);
+		expect(((await refused.json()) as { error: string }).error).toMatch(/10 minutes/);
+
+		// The same refusal from the composer: written on the note, and the text stays.
+		const text = `still one too many, ${stamp}`;
+		const editor = page.getByRole("textbox", { name: "Write a Post" });
+
+		await editor.click();
+		await editor.pressSequentially(text);
+		await page.getByRole("button", { name: "Post", exact: true }).click();
+
+		await expect(page.getByRole("form", { name: "Pass a note" }).getByRole("alert")).toContainText(/10 minutes/);
+		await expect(editor).toHaveText(text);
+		await expect(feedPosts(page).filter({ hasText: text })).toHaveCount(0);
+		await expectNoAxeViolations(page);
+
+		// Nothing more was stored.
+		const { posts } = (await (await page.request.get(FEED)).json()) as { posts: FeedPost[] };
+
+		expect(posts.filter((post) => post.content.includes(String(stamp)))).toHaveLength(5);
 	});
 });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import type { FeedPost } from "@/service/swiftter";
+import type { PublishResult } from "./composer";
 import type { SessionState } from "./session-probe";
 
 import dynamic from "next/dynamic";
@@ -18,6 +19,7 @@ import { paperFor, PostNote } from "./post-note";
 
 const FEED_URL = "/api/swiftter/posts";
 const SIGN_IN_URL = "/sign-in?redirect_url=%2Fswiftter";
+const PUBLISH_FAILED = "Your note couldn't be passed just now. Check your connection and try again.";
 
 // Only Members write, so visitors never download the editor, nor Neon Auth's
 // client: the session is asked for with one small request first (lib/auth/member-hint.ts).
@@ -79,7 +81,7 @@ export function SwiftterBoard() {
     setFeedRequest((count) => count + 1);
   };
 
-  const publish = async (content: string) => {
+  const publish = async (content: string): Promise<PublishResult> => {
     try {
       const response = await fetch(FEED_URL, {
         method: "POST",
@@ -88,22 +90,17 @@ export function SwiftterBoard() {
       });
       const data = (await response.json().catch(() => ({}))) as { post?: FeedPost; error?: string };
 
-      if (!response.ok || !data.post) {
-        toast.error(data.error ?? "Your Post could not be published.");
-
-        return false;
-      }
+      // Refused (too many notes, not allowed…): the composer says why and keeps the text.
+      if (!response.ok || !data.post) return { published: false, message: data.error ?? PUBLISH_FAILED };
 
       const post = data.post;
 
       toast.success("Note passed!");
       setFeed((previous) => ({ status: "ready", posts: [post, ...(previous.status === "ready" ? previous.posts : [])] }));
 
-      return true;
+      return { published: true };
     } catch {
-      toast.error("Your Post could not be published.");
-
-      return false;
+      return { published: false, message: PUBLISH_FAILED };
     }
   };
 

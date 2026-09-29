@@ -1,6 +1,6 @@
 import "server-only";
 
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 
 import { getDb } from "@/db/client";
 import { displayNameOf } from "@/lib/display-name";
@@ -88,6 +88,29 @@ export function memberFromAuthUser(user: AuthUser): MemberDetails {
 		username: null,
 		avatarUrl: user.image || null,
 	};
+}
+
+/** How many Posts a Member may publish within a window of time. */
+export const POSTING_LIMIT = { posts: 5, minutes: 10 } as const;
+
+/**
+ * When the Member may publish their next Post: null if now, otherwise the
+ * moment the oldest of their last POSTING_LIMIT.posts Posts leaves the window.
+ * Counted in Postgres; two Posts sent at the same instant may both slip
+ * through, which is fine for a flood limit.
+ */
+export async function nextPostAllowedAt(memberId: string, now = new Date()): Promise<Date | null> {
+	const windowMs = POSTING_LIMIT.minutes * 60_000;
+	const recent = await getDb()
+		.select({ createdAt: posts.createdAt })
+		.from(posts)
+		.where(and(eq(posts.memberId, memberId), gt(posts.createdAt, new Date(now.getTime() - windowMs))))
+		.orderBy(desc(posts.createdAt))
+		.limit(POSTING_LIMIT.posts);
+
+	if (recent.length < POSTING_LIMIT.posts) return null;
+
+	return new Date(recent[recent.length - 1].createdAt.getTime() + windowMs);
 }
 
 /** Publishes a Post as the given Member; throws InvalidPostError if there is nothing to publish. */

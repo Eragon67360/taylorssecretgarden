@@ -14,10 +14,13 @@ import { NoteSheet, PAPERS, PinnedPhoto, ruling, TEXT_INSET } from "./note-paper
 /** Blank lines left at the end of a Post (pressing Enter once too often). */
 const withoutTrailingBlankLines = (html: string) => html.replace(/(<p><\/p>)+$/, "");
 
+/** A Post published, or refused with a message for the Member. */
+export type PublishResult = { published: true } | { published: false; message: string };
+
 type ComposerProps = {
   member: { name: string; avatarUrl: string | null };
-  /** Publishes the Post's HTML; resolves true once it is published. */
-  onPublish: (html: string) => Promise<boolean>;
+  /** Publishes the Post's HTML. */
+  onPublish: (html: string) => Promise<PublishResult>;
 };
 
 /**
@@ -29,6 +32,8 @@ type ComposerProps = {
 export default function Composer({ member, onPublish }: ComposerProps) {
   const headingId = useId();
   const [publishing, setPublishing] = useState(false);
+  // Why the last Post was refused; the text stays for the Member to rework.
+  const [refusal, setRefusal] = useState<string | null>(null);
 
   const editor = useEditor({
     // Rendered in the browser only, after hydration: no server/client mismatch.
@@ -69,8 +74,12 @@ export default function Composer({ member, onPublish }: ComposerProps) {
     if (!editor || editor.isEmpty) return;
 
     setPublishing(true);
+    setRefusal(null);
     try {
-      if (await onPublish(withoutTrailingBlankLines(editor.getHTML()))) editor.commands.clearContent(true);
+      const result = await onPublish(withoutTrailingBlankLines(editor.getHTML()));
+
+      if (result.published) editor.commands.clearContent(true);
+      else setRefusal(result.message);
     } finally {
       setPublishing(false);
     }
@@ -103,6 +112,18 @@ export default function Composer({ member, onPublish }: ComposerProps) {
       <div className="relative cursor-text" style={ruling("lined")}>
         {editor ? <EditorContent editor={editor} /> : <div aria-hidden="true" className="min-h-[168px]" />}
       </div>
+
+      {/* Written on the note in red pen, like the guestbook's errors; read out as it appears. */}
+      {refusal && (
+        <div className={cn("relative pt-1 pr-4 pb-3 sm:pr-6", TEXT_INSET)}>
+          <p
+            className="border-pen text-pen rounded-[0.25rem] border-l-4 bg-[color-mix(in_srgb,var(--pen)_8%,#fffefa)] px-3 py-2 text-[0.95rem] font-semibold"
+            role="alert"
+          >
+            {refusal}
+          </p>
+        </div>
+      )}
 
       <footer className={cn("relative flex items-center justify-between gap-3 pr-4 pb-6 sm:pr-6", TEXT_INSET)}>
         <p aria-hidden="true" className="font-hand text-[19px] font-bold whitespace-nowrap" style={{ color: PAPERS.lined.soft }}>

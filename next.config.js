@@ -1,3 +1,7 @@
+// CommonJS, like the rest of this file.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { withBotId } = require("botid/next/config");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	images: {
@@ -42,4 +46,5 @@ const nextConfig = {
 	},
 };
 
-module.exports = nextConfig;
+// BotID: proxies its challenge script and API through this origin (lib/botid-routes.ts).
+module.exports = withBotId(nextConfig);
