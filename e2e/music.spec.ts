@@ -150,7 +150,9 @@ test.describe("Music", () => {
 		await expect(eraPage(page)).toHaveAttribute("data-era", "showgirl");
 		await expect(eraBracelet(page, "Showgirl")).toBeVisible();
 		await expect(page.getByText(/Era No\. 12 · 2025/)).toBeVisible();
-		await expect(page.getByText("The Encore", { exact: true })).toBeVisible();
+		// Named under the title (first), and current among the Album's versions.
+		await expect(page.getByText("The Encore", { exact: true }).first()).toBeVisible();
+		await expect(versions(page, "The Life of a Showgirl").getByRole("link", { name: /The Encore/ })).toHaveAttribute("aria-current", "true");
 		// Mint-water paper (lib/eras.ts).
 		await expect.poll(() => background(eraPage(page))).toBe("rgb(221, 241, 234)");
 		await expect(page.getByRole("definition").nth(1)).toHaveText("16");
@@ -160,7 +162,9 @@ test.describe("Music", () => {
 		await page.goto(`/music?album=${IDS.midnights}`);
 
 		await expectAlbumShown(page, "Midnights");
-		await expect(page.getByText("The Til Dawn Edition", { exact: true })).toBeVisible();
+		// Named under the title (first), and current among the Album's versions.
+		await expect(page.getByText("The Til Dawn Edition", { exact: true }).first()).toBeVisible();
+		await expect(versions(page, "Midnights").getByRole("link", { name: /The Til Dawn Edition/ })).toHaveAttribute("aria-current", "true");
 		await expect(page.getByRole("definition").nth(1)).toHaveText("23");
 	});
 
