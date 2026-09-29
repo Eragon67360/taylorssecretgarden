@@ -6,6 +6,7 @@ import { useId } from "react";
 
 import { cn } from "@/lib/utils";
 
+import { DeletePost } from "./delete-post";
 import { NoteSheet, type NotePaper, PAPERS, PinnedPhoto, ruling, TEXT_INSET } from "./note-paper";
 import { PostContent } from "./post-content";
 import { relativeDate } from "./relative-date";
@@ -19,9 +20,9 @@ export const paperFor = (index: number, count: number): NotePaper => ((count - 1
 /**
  * One Post, passed like a note in class: the Member's avatar pinned in the
  * corner, their name in handwriting, when they wrote it, then the Post on the
- * lines.
+ * lines. `onDelete` only on the signed-in Member's own Posts.
  */
-export function PostNote({ post, paper }: { post: FeedPost; paper: NotePaper }) {
+export function PostNote({ post, paper, onDelete }: { post: FeedPost; paper: NotePaper; onDelete?: () => Promise<void> }) {
   const { author } = post;
   const nameId = useId();
   const look = PAPERS[paper];
@@ -44,6 +45,11 @@ export function PostNote({ post, paper }: { post: FeedPost; paper: NotePaper }) 
           {post.isDemo && (
             <span className="border-pen text-pen ml-auto shrink-0 -rotate-6 rounded-[3px] border-2 px-1.5 text-[11px] leading-[16px] font-extrabold tracking-[.14em] uppercase">
               Demo
+            </span>
+          )}
+          {onDelete && (
+            <span className="ml-auto">
+              <DeletePost onDelete={onDelete} />
             </span>
           )}
         </div>
