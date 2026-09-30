@@ -22,7 +22,7 @@ import {
 	type ThreadNote,
 } from "@/lib/swiftter";
 import { moderatePost, moderationModelName, type ModerationResult } from "@/service/moderation";
-import { postPlainText, postText, sanitisePostHtml } from "@/service/post-html";
+import { postModerationText, postPlainText, postText, sanitisePostHtml } from "@/service/post-html";
 
 /**
  * Swiftter's data: the feed, threads, reshares and the moderation of every
@@ -252,7 +252,8 @@ async function judge(id: string, content: string, moderate: Moderate): Promise<W
 	let result: ModerationResult | null = null;
 
 	try {
-		result = await moderate(postPlainText(content));
+		// The text with every link's destination spelled out, so a masked link is judged by where it leads.
+		result = await moderate(postModerationText(content));
 	} catch (error) {
 		// Any failure means no verdict: the note stays pending, nothing is lost.
 		// eslint-disable-next-line no-console
