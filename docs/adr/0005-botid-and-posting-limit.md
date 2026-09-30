@@ -1,0 +1,10 @@
+# Vercel BotID and a Postgres-counted posting limit guard Swiftter
+
+Anyone, including a script, could sign up (no bot check, email verification off) and a Member could publish without limit. We chose Vercel BotID over a CAPTCHA (invisible to Members, free in Basic mode, no extra vendor since the site is on Vercel) on signing up, signing in and publishing, and a limit of 5 Posts per Member per 10 minutes counted in Postgres rather than in a new rate-limiting service (Upstash, Vercel WAF rules).
+
+- The guarded routes are listed once (`lib/botid-routes.ts`); the browser attaches BotID's token only to those requests, and its challenge script loads only when one is made, so pages that never sign in or publish pay nothing.
+- Sign-up and sign-in are checked in our `app/api/auth/[...path]` in front of Neon Auth's proxy, on the decoded path Neon Auth itself proxies.
+- A BotID check that cannot be made (no OIDC token, BotID unreachable) fails closed: 403, "reload and try again".
+- Off Vercel BotID cannot verify anything (no OIDC token), and its own development mode only ever answers "human" and cannot see request headers under `next start`. So a stand-in treats a request carrying a token as human and one without as a bot. That keeps CI deterministic and lets it test the refusal, at the cost that a non-Vercel host would trust any token: the site is only deployed on Vercel.
+- The limit is checked before any work (and, from #55, before AI moderation) and again inside the insert's transaction under a per-Member advisory lock, so Posts sent all at once cannot slip past it. It uses the database's clock, like `created_at`. No new index: the `created_at` index already narrows the scan to the last 10 minutes.
+- Deleting a Post (#60) does not give its place back: a Post deleted inside the window keeps an empty row (`deleted_at` set, content erased) that still counts, removed on a later delete once the window has passed. Otherwise publish-and-delete would bypass the limit and run moderation without bound.

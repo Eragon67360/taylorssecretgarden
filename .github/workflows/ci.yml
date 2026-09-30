@@ -32,15 +32,18 @@ env:
   # Builds and serves the development styleguide (/styleguide) for its tests;
   # production (Vercel) leaves it unset and answers 404.
   ENABLE_STYLEGUIDE: 1
+  # AI moderation of Posts in its fake mode (service/moderation.ts): marker
+  # words decide, no AI Gateway call, so CI is fast, free and deterministic.
+  SWIFTTER_MODERATION: fake
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: package.json # reads `engines.node`
           cache: npm
@@ -71,13 +74,21 @@ jobs:
           echo "NEON_AUTH_BASE_URL=$AUTH_URL" >> "$GITHUB_ENV"
 
       - name: Migrate and seed the branch
-        run: npm run db:migrate && npm run db:seed
+        # The demo content, then the development fixtures (scripts/seed.ts: accounts,
+        # three feed pages, threads, reshares, every moderation state).
+        run: npm run db:migrate && npm run db:seed && npm run seed
 
       - name: Lint
         run: npm run lint
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test # hermetic: moderation runs against the AI SDK's mock model
+
+      - name: Integration tests
+        run: npm run test:integration # the Swiftter service against this run's Neon branch
 
       - name: Build
         run: npm run build
@@ -90,7 +101,7 @@ jobs:
 
       - name: Upload Playwright report and traces
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: |
@@ -100,19 +111,22 @@ jobs:
 
       - name: Delete the Neon branch
         if: always() && steps.branch.outputs.branch_id != ''
-        uses: neondatabase/delete-branch-action@v3
-        with:
-          api_key: ${{ secrets.NEON_API_KEY }}
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          branch: ${{ steps.branch.outputs.branch_id }}
+        # One API call; Neon's delete-branch-action still runs setup-node on Node 20.
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          BRANCH_ID: ${{ steps.branch.outputs.branch_id }}
+        run: >-
+          curl --fail-with-body -sS -o /dev/null -X DELETE -H "Authorization: Bearer $NEON_API_KEY"
+          "https://console.neon.tech/api/v2/projects/$PROJECT_ID/branches/$BRANCH_ID"
 
   lighthouse:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: package.json
           cache: npm
@@ -143,7 +157,9 @@ jobs:
           echo "NEON_AUTH_BASE_URL=$AUTH_URL" >> "$GITHUB_ENV"
 
       - name: Migrate and seed the branch
-        run: npm run db:migrate && npm run db:seed
+        # The demo content, then the development fixtures (scripts/seed.ts: accounts,
+        # three feed pages, threads, reshares, every moderation state).
+        run: npm run db:migrate && npm run db:seed && npm run seed
 
       - name: Build
         run: npm run build
@@ -157,7 +173,7 @@ jobs:
 
       - name: Upload Lighthouse reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lighthouse-reports
           path: .lighthouseci/reports/
@@ -165,8 +181,11 @@ jobs:
 
       - name: Delete the Neon branch
         if: always() && steps.branch.outputs.branch_id != ''
-        uses: neondatabase/delete-branch-action@v3
-        with:
-          api_key: ${{ secrets.NEON_API_KEY }}
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          branch: ${{ steps.branch.outputs.branch_id }}
+        # One API call; Neon's delete-branch-action still runs setup-node on Node 20.
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          BRANCH_ID: ${{ steps.branch.outputs.branch_id }}
+        run: >-
+          curl --fail-with-body -sS -o /dev/null -X DELETE -H "Authorization: Bearer $NEON_API_KEY"
+          "https://console.neon.tech/api/v2/projects/$PROJECT_ID/branches/$BRANCH_ID"

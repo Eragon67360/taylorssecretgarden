@@ -1,0 +1,69 @@
+# Applies the SQL migrations in drizzle/, from the branch it is run on, to the
+# production database. Run by hand, before merging a release that needs them:
+# Actions → Migrate production → Run workflow → pick the branch (usually dev)
+# and type "production" to confirm.
+#
+# No database password is stored for it: the connection string is fetched
+# from Neon's API at run time (secrets.NEON_API_KEY, vars.NEON_PROJECT_ID, the
+# same as CI), masked in the log, and gone when the run ends. Production's
+# password lives only in Neon and, as a Sensitive variable, in Vercel; no
+# laptop needs it.
+#
+# Migrations are additive (docs/adr/0007); each one's reverse is in drizzle/down/.
+name: Migrate production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "production" to apply the migrations to the production database'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: inputs.confirm == 'production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json # reads `engines.node`
+          cache: npm
+
+      - run: npm ci
+
+      - name: Production's connection string, from Neon (masked)
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          api() { curl --fail-with-body -sS -H "Authorization: Bearer $NEON_API_KEY" "https://console.neon.tech/api/v2/projects/$PROJECT_ID/$1"; }
+          json() { node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(($1)(JSON.parse(s))))"; }
+          branch=$(api branches | json 'd => d.branches.find((b) => b.default)?.id ?? ""')
+          test -n "$branch" || { echo "::error::No default (production) branch found"; exit 1; }
+          uri=$(api "connection_uri?branch_id=$branch&database_name=neondb&role_name=neondb_owner" | json 'd => d.uri')
+          password=$(node -e 'console.log(decodeURIComponent(new URL(process.argv[1]).password))' "$uri")
+          echo "::add-mask::$uri"
+          echo "::add-mask::$password"
+          echo "DATABASE_URL=$uri" >> "$GITHUB_ENV"
+          echo "Production branch: $branch"
+
+      - name: Migrations recorded before
+        run: |
+          node --input-type=module -e 'import pg from "pg"; const c = new pg.Client({ connectionString: process.env.DATABASE_URL }); await c.connect(); const { rows } = await c.query("select count(*)::int as n from drizzle.__drizzle_migrations"); console.log(`${rows[0].n} migrations applied so far`); await c.end();'
+
+      - name: Apply the migrations
+        run: npm run db:migrate
+
+      - name: Migrations recorded after
+        run: |
+          node --input-type=module -e 'import pg from "pg"; const c = new pg.Client({ connectionString: process.env.DATABASE_URL }); await c.connect(); const { rows } = await c.query("select count(*)::int as n from drizzle.__drizzle_migrations"); console.log(`${rows[0].n} migrations applied now`); await c.end();'

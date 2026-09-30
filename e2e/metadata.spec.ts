@@ -1,4 +1,6 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
+
+import tours from "../public/json/tours.json";
 
 import { expect, test } from "./fixtures";
 
@@ -51,5 +53,81 @@ test.describe("site metadata", () => {
 		expect(card.status()).toBe(200);
 		expect(card.headers()["content-type"]).toBe("image/png");
 		expect((await card.body()).length).toBeGreaterThan(10_000);
+	});
+});
+
+// Every route names its canonical address on www.taylorssecretgarden.com, and
+// has its own title, description, Open Graph card and X card. Read from the
+// HTML the server sends, as a crawler reads it, without loading the page in the
+// browser: no page scripts run, so these checks add no session requests to
+// Neon Auth (which rate-limits CI's branch).
+const SITE = "https://www.taylorssecretgarden.com";
+
+/** A page's metadata as the server sends it, parsed by the browser's own HTML parser. */
+async function metadataOf(page: Page, request: APIRequestContext, path: string) {
+	const response = await request.get(path);
+
+	expect(response.status(), path).toBe(200);
+
+	return page.evaluate((html) => {
+		const doc = new DOMParser().parseFromString(html, "text/html");
+		const meta = (key: string) => doc.querySelector(`meta[name="${key}"], meta[property="${key}"]`)?.getAttribute("content") ?? null;
+
+		return {
+			title: doc.title,
+			canonical: doc.querySelector('link[rel="canonical"]')?.getAttribute("href") ?? null,
+			description: meta("description"),
+			robots: meta("robots"),
+			ogUrl: meta("og:url"),
+			ogTitle: meta("og:title"),
+			ogDescription: meta("og:description"),
+			ogSiteName: meta("og:site_name"),
+			ogImage: meta("og:image"),
+			twitterCard: meta("twitter:card"),
+			twitterImage: meta("twitter:image"),
+		};
+	}, await response.text());
+}
+
+const canonicalPages = [
+	{ path: "/", canonical: "/", title: "Taylor's Secret Garden: a Swiftie's scrapbook" },
+	{ path: "/music", canonical: "/music", title: "Music · Taylor's Secret Garden" },
+	// An Album's own page; a regional twin or another ID of it points there.
+	{ path: "/music?album=221543452", canonical: "/music?album=221543452", title: "Fearless (Taylor's Version) tracklist · Taylor's Secret Garden" },
+	{ path: "/music?album=272284", canonical: "/music?album=426350", title: "Fearless tracklist · Taylor's Secret Garden" },
+	// The first Album is the one /music opens on.
+	{ path: "/music?album=81389452", canonical: "/music", title: "Music · Taylor's Secret Garden" },
+	// A Version (its own tracklist) is its own page.
+	{ path: "/music?album=188803732", canonical: "/music?album=188803732", title: "folklore, The Long Pond Studio Sessions tracklist · Taylor's Secret Garden" },
+	{ path: "/tours", canonical: "/tours", title: "Tours · Taylor's Secret Garden" },
+	...tours.map(({ slug, tour }) => ({ path: `/tours/${slug}`, canonical: `/tours/${slug}`, title: `${tour} · Taylor's Secret Garden` })),
+	{ path: "/swiftter", canonical: "/swiftter", title: "Swiftter · Taylor's Secret Garden" },
+	{ path: "/sign-in?redirect_url=%2Fswiftter", canonical: "/sign-in", title: "Sign in · Taylor's Secret Garden" },
+	{ path: "/sign-up", canonical: "/sign-up", title: "Sign up · Taylor's Secret Garden" },
+];
+
+test.describe("per-route metadata", () => {
+	for (const { path, canonical, title } of canonicalPages) {
+		test(`${path}: canonical ${canonical}, title, description, Open Graph and X cards`, async ({ page, request }) => {
+			const metadata = await metadataOf(page, request, path);
+			const url = new URL(canonical, SITE).href;
+
+			expect(metadata.title).toBe(title);
+			expect(metadata.canonical && new URL(metadata.canonical).href, "canonical link").toBe(url);
+			expect(metadata.ogUrl && new URL(metadata.ogUrl).href, "og:url").toBe(url);
+			expect(metadata.description).toBeTruthy();
+			expect(metadata.ogTitle).toBe(metadata.title);
+			expect(metadata.ogDescription).toBe(metadata.description);
+			expect(metadata.ogSiteName).toBe("Taylor's Secret Garden");
+			expect(metadata.ogImage && new URL(metadata.ogImage).origin, "og:image").toBe(SITE);
+			expect(metadata.twitterCard).toBe("summary_large_image");
+			expect(metadata.twitterImage).toBe(metadata.ogImage);
+		});
+	}
+
+	test("the guestbook pages are noindex", async ({ page, request }) => {
+		for (const path of ["/sign-in", "/sign-up"]) {
+			expect((await metadataOf(page, request, path)).robots, path).toMatch(/noindex/);
+		}
 	});
 });

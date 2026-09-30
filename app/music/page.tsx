@@ -1,26 +1,80 @@
 import type { Metadata } from "next";
 
-import { getShelf, pickAlbum } from "@/components/music/catalogue";
+import { getShelf, getVersions, pickAlbum, pickVersion } from "@/components/music/catalogue";
+import { formatReleaseDate } from "@/components/music/format";
 import { MusicJournal } from "@/components/music/music-journal";
+import { JsonLd, TAYLOR_SWIFT } from "@/components/json-ld";
+import { CATALOGUE, albumName, findAlbum } from "@/lib/catalogue";
+import { absoluteUrl, albumPath, musicPath, pageMetadata } from "@/lib/metadata";
 import { getAlbumDetails } from "@/service/deezer";
-
-export const metadata: Metadata = {
-  title: "Music",
-  description: "Every Taylor Swift Era as a polaroid on a shelf: pick an Album, read its tracklist, hear 30-second previews.",
-};
 
 type MusicProps = { searchParams: Promise<{ album?: string | string[] }> };
 
+const albumParam = (value: string | string[] | undefined) => (typeof value === "string" ? value : undefined);
+
+/**
+ * /music on its own opens on the first Album; `?album=<id>` is that Album's
+ * page (or its Version's), with its own title, description and canonical link
+ * (lib/metadata.ts). Worked out from the catalogue alone: no Deezer call.
+ */
+export async function generateMetadata({ searchParams }: MusicProps): Promise<Metadata> {
+  const wanted = albumParam((await searchParams).album);
+  const path = musicPath(wanted);
+  const album = findAlbum(wanted);
+
+  if (!album || path === "/music") {
+    return pageMetadata({
+      title: "Music",
+      description: "Every Taylor Swift Era as a polaroid on a shelf: pick an Album, read its tracklist, hear 30-second previews.",
+      path: "/music",
+    });
+  }
+  const version = album.versions?.find(({ id }) => id === wanted);
+  const original = album.reRecords ? CATALOGUE.find(({ id }) => id === album.reRecords) : undefined;
+  const name = version ? `${albumName(album)}, ${version.name}` : albumName(album);
+  let about = `${name} by Taylor Swift, released ${formatReleaseDate(album.released)}${album.edition ? ` (${album.edition})` : ""}`;
+
+  if (version) about = `${name}, by Taylor Swift, released ${formatReleaseDate(version.released)}`;
+  else if (original) about = `${name}, Taylor Swift's re-recording of ${albumName(original)}, released ${formatReleaseDate(album.released)}`;
+
+  return pageMetadata({
+    title: `${name} tracklist`,
+    description: `${about}: the tracklist with running times and 30-second previews.`,
+    path,
+  });
+}
+
 /**
  * The music journal. The selected Album lives in the URL (`?album=<id>`), so
- * a link to an Album is shareable; the shelf and the Album's details are
+ * a link to an Album (or to one of its versions, `?album=<version id>`) is
+ * shareable; the shelf, the Album's versions and the version's details are
  * fetched here, on the server (Deezer responses are cached, see service/deezer.ts).
  */
 export default async function Music({ searchParams }: MusicProps) {
-  const { album: wanted } = await searchParams;
+  const wanted = albumParam((await searchParams).album);
   const shelf = await getShelf();
-  const selected = pickAlbum(shelf, typeof wanted === "string" ? wanted : undefined);
-  const details = selected && (await getAlbumDetails(selected.id));
+  const selected = pickAlbum(shelf, wanted);
+  const versionId = selected && pickVersion(selected, wanted);
+  const [details, versions] = selected && versionId ? await Promise.all([getAlbumDetails(versionId), getVersions(selected)]) : [undefined, []];
+  const album = findAlbum(selected?.catalogueId);
 
-  return <MusicJournal albumId={selected?.id} details={details} shelf={shelf} />;
+  return (
+    <>
+      {album && (
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "MusicAlbum",
+            name: albumName(album),
+            byArtist: TAYLOR_SWIFT,
+            datePublished: album.released,
+            // Every catalogue Album is a studio Album or a Taylor's Version (lib/catalogue.ts).
+            albumProductionType: "https://schema.org/StudioAlbum",
+            url: absoluteUrl(albumPath(album)),
+          }}
+        />
+      )}
+      <MusicJournal albumId={selected?.id} details={details} shelf={shelf} versionId={versionId} versions={versions} />
+    </>
+  );
 }

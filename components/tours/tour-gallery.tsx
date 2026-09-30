@@ -1,5 +1,6 @@
-import { Polaroid } from "@/components/scrapbook";
 import Image from "next/image";
+
+import { Polaroid } from "@/components/scrapbook";
 import { type GalleryPhoto } from "@/lib/tours";
 
 const TILTS = [-3, 2, -1.5, 3];

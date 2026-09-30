@@ -1,11 +1,12 @@
 "use client";
 
-import type { FeedPost } from "@/service/swiftter";
+import type { Author } from "@/lib/swiftter";
 
-import { useId } from "react";
+import { type ReactNode, useId } from "react";
 
 import { cn } from "@/lib/utils";
 
+import { DeletePost } from "./delete-post";
 import { NoteSheet, type NotePaper, PAPERS, PinnedPhoto, ruling, TEXT_INSET } from "./note-paper";
 import { PostContent } from "./post-content";
 import { relativeDate } from "./relative-date";
@@ -16,16 +17,31 @@ import { relativeDate } from "./relative-date";
  */
 export const paperFor = (index: number, count: number): NotePaper => ((count - 1 - index) % 2 === 0 ? "lined" : "sticky");
 
+/** What a note shows: a feed Post, or a note in a thread. */
+export type NoteLike = { id: string; content: string; isDemo: boolean; createdAt: string; publishedAt?: string; author: Author };
+
+type PostNoteProps = {
+  post: NoteLike;
+  paper: NotePaper;
+  /** Only on the signed-in Member's own notes. */
+  onDelete?: () => Promise<void>;
+  /** Under the text: replies, reshares. */
+  footer?: ReactNode;
+  /** Above the Member's name: who reshared it. */
+  banner?: ReactNode;
+};
+
 /**
- * One Post, passed like a note in class: the Member's avatar pinned in the
- * corner, their name in handwriting, when they wrote it, then the Post on the
- * lines.
+ * One note, passed like a note in class: the Member's avatar pinned in the
+ * corner, their name in handwriting, when it was published, then the text on
+ * the lines, and what can be done with it underneath.
  */
-export function PostNote({ post, paper }: { post: FeedPost; paper: NotePaper }) {
+export function PostNote({ post, paper, onDelete, footer, banner }: PostNoteProps) {
   const { author } = post;
   const nameId = useId();
   const look = PAPERS[paper];
-  const published = new Date(post.createdAt);
+  const when = post.publishedAt ?? post.createdAt;
+  const published = new Date(when);
 
   return (
     <article
@@ -35,6 +51,7 @@ export function PostNote({ post, paper }: { post: FeedPost; paper: NotePaper }) 
     >
       <NoteSheet paper={paper} />
       <PinnedPhoto name={author.displayName} src={author.avatarUrl} />
+      {banner}
 
       <header className={cn("relative min-h-[76px] pt-4 pr-4 sm:pr-6", TEXT_INSET)}>
         <div className="flex items-center gap-3">
@@ -46,12 +63,17 @@ export function PostNote({ post, paper }: { post: FeedPost; paper: NotePaper }) 
               Demo
             </span>
           )}
+          {onDelete && (
+            <span className="ml-auto">
+              <DeletePost onDelete={onDelete} />
+            </span>
+          )}
         </div>
         <div className="flex items-baseline justify-between gap-3" style={{ color: look.soft }}>
           {author.username && <p className="min-w-0 truncate text-[13px] font-semibold">@{author.username}</p>}
           <time
             className="font-hand ml-auto shrink-0 text-[20px] leading-none font-bold whitespace-nowrap"
-            dateTime={post.createdAt}
+            dateTime={when}
             title={published.toLocaleString("en")}
           >
             {relativeDate(published)}
@@ -60,6 +82,7 @@ export function PostNote({ post, paper }: { post: FeedPost; paper: NotePaper }) 
       </header>
 
       <PostContent className={cn("relative pr-5 pb-7 text-[16.5px] break-words sm:pr-8", TEXT_INSET)} content={post.content} style={ruling(paper)} />
+      {footer && <div className={cn("relative -mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 pr-4 pb-5 sm:pr-6", TEXT_INSET)}>{footer}</div>}
     </article>
   );
 }

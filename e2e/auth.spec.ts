@@ -78,7 +78,7 @@ for (const { path, title, submit, fields } of pages) {
 			expect(gradients, "gradient backgrounds on the page").toEqual([]);
 		});
 
-		test("passes axe (WCAG 2.1 AA)", async ({ page }) => {
+		test("passes axe (WCAG 2.2 AA)", async ({ page }) => {
 			await page.goto(path);
 			await expectNoAxeViolations(page);
 		});
@@ -116,6 +116,41 @@ test("a Google sign-in that went wrong comes back with an explanation", async ({
 	await expect(formError(page)).toContainText("Google");
 	// It is not about the email or password, so those are not marked.
 	await expect(page.getByRole("textbox", { name: "Email" })).not.toHaveAttribute("aria-invalid");
+});
+
+// BotID guards signing up and signing in (lib/bot-protection.ts). These
+// requests are refused before they reach Neon Auth, and would be invalid there
+// anyway (no email, no password), so they are safe on any database.
+// (The encoded spelling reaches the same Neon Auth endpoint, so it is guarded too.)
+for (const path of ["/api/auth/sign-up/email", "/api/auth/sign-in/email", "/api/auth/sign%2Dup/email"]) {
+	test(`a request to ${path} without BotID's token is refused with 403`, async ({ request }) => {
+		const response = await request.post(path, { data: {} });
+
+		expect(response.status()).toBe(403);
+	});
+}
+
+test.describe("BotID in the browser", () => {
+	// The stubbed refusal below is logged by the browser as a failed request.
+	test.use({ expectedConsoleMessages: [/Failed to load resource: the server responded with a status of 401/] });
+
+	test("the sign-in form sends BotID's token with the request", async ({ page }) => {
+		let token: string | undefined;
+
+		// Neon Auth itself is not part of the test: the request is caught here.
+		await page.route("**/api/auth/sign-in/email", (route) => {
+			token = route.request().headers()["x-is-human"];
+
+			return route.fulfill({ status: 401, contentType: "application/json", body: JSON.stringify({ code: "INVALID_EMAIL_OR_PASSWORD" }) });
+		});
+		await page.goto("/sign-in");
+		await field(page, "Email").fill("nobody@example.com");
+		await field(page, "Password").fill("not-a-real-password");
+		await page.getByRole("button", { name: "Sign in", exact: true }).click();
+
+		await expect(formError(page)).toBeVisible();
+		expect(token, "x-is-human header").toBeTruthy();
+	});
 });
 
 // Everything below talks to Neon Auth, so it only runs on a disposable branch.

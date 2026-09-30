@@ -1,9 +1,13 @@
-const PRODUCTION_URL = "https://taylorssecretgarden.vercel.app";
+/** The canonical address (the apex redirects here). */
+const PRODUCTION_URL = "https://www.taylorssecretgarden.com";
 const previewUrl = process.env.VERCEL_ENV === "preview" && process.env.VERCEL_BRANCH_URL;
 
 export const siteConfig = {
   name: "Taylor's Secret Garden",
-  /** Where absolute metadata URLs (the Open Graph card) point: the site itself, or a preview its own. */
+  /**
+   * Where absolute URLs point (canonical links, the Open Graph card, the
+   * sitemap, llms.txt, JSON-LD): the site itself, or a preview its own.
+   */
   url: previewUrl ? `https://${previewUrl}` : PRODUCTION_URL,
   description:
     "A fan's scrapbook of every Taylor Swift Era: the Albums and their tracklists, the Tours, and Swiftter, where Swifties pass notes.",

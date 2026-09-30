@@ -11,12 +11,19 @@
 		"start": "next start",
 		"lint": "eslint .",
 		"typecheck": "tsc --noEmit",
+		"test": "vitest run --project unit",
+		"test:integration": "vitest run --project integration",
+		"test:coverage": "vitest run --project unit --coverage",
 		"test:e2e": "playwright test",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "tsx --env-file-if-exists=.env.local db/migrate.ts",
 		"db:seed": "tsx --env-file-if-exists=.env.local db/seed.ts",
 		"db:unseed": "tsx --env-file-if-exists=.env.local db/unseed.ts",
-		"lighthouse": "lhci autorun"
+		"lighthouse": "lhci autorun",
+		"moderation:check": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/check-moderation.ts",
+		"releases:check": "tsx scripts/check-releases.ts",
+		"seed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/seed.ts",
+		"unseed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/unseed.ts"
 	},
 	"dependencies": {
 		"@neondatabase/auth": "0.5.0-beta",
@@ -24,6 +31,8 @@
 		"@tiptap/pm": "^3.31.3",
 		"@tiptap/react": "^3.31.3",
 		"@tiptap/starter-kit": "^3.31.3",
+		"ai": "^7.0.122",
+		"botid": "^1.5.11",
 		"cn": "^0.4.0",
 		"drizzle-orm": "^0.45.3",
 		"motion": "^13.4.4",
@@ -33,7 +42,8 @@
 		"react-dom": "19.3.0",
 		"sanitize-html": "^2.17.7",
 		"server-only": "^0.0.1",
-		"sonner": "^2.0.8"
+		"sonner": "^2.0.8",
+		"zod": "^4.6.5"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.13.0",
@@ -45,6 +55,7 @@
 		"@types/react": "19.3.0",
 		"@types/react-dom": "19.3.0",
 		"@types/sanitize-html": "^2.16.1",
+		"@vitest/coverage-v8": "^5.0.2",
 		"drizzle-kit": "^0.31.11",
 		"eslint": "9.39.5",
 		"eslint-config-next": "16.3.6",
@@ -58,6 +69,7 @@
 		"tailwindcss": "^4.3.3",
 		"tsx": "^4.23.15",
 		"typescript": "6.0.3",
-		"typescript-eslint": "^8.70.1"
+		"typescript-eslint": "^8.70.1",
+		"vitest": "^5.0.2"
 	}
 }

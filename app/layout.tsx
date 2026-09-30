@@ -10,6 +10,8 @@ import "@/config/era-fonts";
 import { fontBody, fontHand, fontSerif, fontSerifItalic } from "@/config/fonts";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { isIndexable } from "@/lib/indexing";
+import { OPEN_GRAPH } from "@/lib/metadata";
 import { cn } from "@/lib/utils";
 
 import { Providers } from "./providers";
@@ -26,8 +28,11 @@ export const metadata: Metadata = {
   applicationName: siteConfig.name,
   // No og:title/og:description here: a page's own <title> and description
   // (which link previews fall back to) beat one shared title on every page.
-  openGraph: { type: "website", siteName: siteConfig.name, locale: "en" },
+  // Each page adds its canonical link and og:url (pageMetadata, lib/metadata.ts).
+  openGraph: OPEN_GRAPH,
   twitter: { card: "summary_large_image" },
+  // Previews, local builds and CI stay out of search results (lib/indexing.ts).
+  ...(!isIndexable() && { robots: { index: false, follow: false } }),
 };
 
 export const viewport: Viewport = {

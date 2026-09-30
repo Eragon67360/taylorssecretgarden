@@ -1,19 +1,20 @@
-import type { Metadata } from "next";
-
 import { notFound } from "next/navigation";
 
 import { EraScope } from "@/components/era-scope";
 import { CATALOGUE, albumName } from "@/lib/catalogue";
 import { ERAS, ERA_LOOKS, type EraSlug, paperTexture } from "@/lib/eras";
+import { pageMetadata } from "@/lib/metadata";
 
 import { EraSandbox } from "./era-sandbox";
 import { EraTitle } from "./era-title";
 import { KitSpread } from "./kit-spread";
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Styleguide",
-  robots: { index: false, follow: false },
-};
+  description: "The scrapbook kit and every Era's look, for development.",
+  path: "/styleguide",
+  noindex: true,
+});
 
 /** Eras shown side by side: the plain journal, dark paper, plaid, and a gold one. */
 const SPREADS: (EraSlug | undefined)[] = [undefined, "reputation", "evermore", "fearless"];

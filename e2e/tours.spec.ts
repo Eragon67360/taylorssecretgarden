@@ -89,7 +89,7 @@ test.describe("Tours journal", () => {
 		await expect(section.getByRole("button", { name: /^Play/ })).toBeVisible();
 	});
 
-	test("passes axe (WCAG 2.1 AA)", async ({ page }) => {
+	test("passes axe (WCAG 2.2 AA)", async ({ page }) => {
 		await page.goto("/tours");
 		await expectNoAxeViolations(page);
 	});
@@ -161,7 +161,7 @@ for (const tour of tours) {
 			await expect(page).toHaveURL(/\/tours$/);
 		});
 
-		test("passes axe (WCAG 2.1 AA)", async ({ page }) => {
+		test("passes axe (WCAG 2.2 AA)", async ({ page }) => {
 			await page.goto(path);
 			await expectNoAxeViolations(page);
 		});

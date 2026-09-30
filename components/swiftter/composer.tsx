@@ -7,6 +7,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
 import { type FormEvent, type ReactNode, useId, useState } from "react";
 
+import { characterCount, MAX_NOTE_CHARACTERS } from "@/lib/swiftter";
 import { cn } from "@/lib/utils";
 
 import { NoteSheet, PAPERS, PinnedPhoto, ruling, TEXT_INSET } from "./note-paper";
@@ -14,11 +15,22 @@ import { NoteSheet, PAPERS, PinnedPhoto, ruling, TEXT_INSET } from "./note-paper
 /** Blank lines left at the end of a Post (pressing Enter once too often). */
 const withoutTrailingBlankLines = (html: string) => html.replace(/(<p><\/p>)+$/, "");
 
+/** A Post published, or refused with a message for the Member. */
+export type PublishResult = { published: true } | { published: false; message: string };
+
 type ComposerProps = {
   member: { name: string; avatarUrl: string | null };
-  /** Publishes the Post's HTML; resolves true once it is published. */
-  onPublish: (html: string) => Promise<boolean>;
+  /** Publishes the Post's HTML. */
+  onPublish: (html: string) => Promise<PublishResult>;
+  /** The form's heading: "Pass a note", or "Reply to …". */
+  title?: string;
+  placeholder?: string;
+  /** The submit button's label. */
+  submitLabel?: string;
 };
+
+/** From how many characters the counter shows, before the limit. */
+const COUNT_FROM = MAX_NOTE_CHARACTERS - 200;
 
 /**
  * Writing a Post: a blank page from the exercise book, the same paper the
@@ -26,9 +38,17 @@ type ComposerProps = {
  * Tiptap with bold, italic, bullet and numbered lists and links; it writes
  * HTML, which the server sanitises when the Post is published.
  */
-export default function Composer({ member, onPublish }: ComposerProps) {
+export default function Composer({
+  member,
+  onPublish,
+  title = "Pass a note",
+  placeholder = "ok but did you hear the bridge on track 5??",
+  submitLabel = "Post",
+}: ComposerProps) {
   const headingId = useId();
   const [publishing, setPublishing] = useState(false);
+  // Why the last Post was refused; the text stays for the Member to rework.
+  const [refusal, setRefusal] = useState<string | null>(null);
 
   const editor = useEditor({
     // Rendered in the browser only, after hydration: no server/client mismatch.
@@ -50,27 +70,35 @@ export default function Composer({ member, onPublish }: ComposerProps) {
           protocols: ["http", "https", "mailto"],
         },
       }),
-      Placeholder.configure({ placeholder: "ok but did you hear the bridge on track 5??" }),
+      Placeholder.configure({ placeholder }),
     ],
     editorProps: {
       attributes: {
         role: "textbox",
         "aria-multiline": "true",
-        "aria-label": "Write a Post",
+        "aria-label": title === "Pass a note" ? "Write a Post" : title,
         class: cn("post-content min-h-[140px] pr-5 pb-7 text-[16.5px] break-words outline-none sm:pr-8", TEXT_INSET),
       },
     },
   });
 
   const isEmpty = useEditorState({ editor, selector: ({ editor }) => editor?.isEmpty ?? true });
+  // Counted like the server counts (lib/swiftter.ts): visible characters, an emoji is one.
+  const characters = useEditorState({ editor, selector: ({ editor }) => (editor ? characterCount(editor.getText().replace(/\n/g, "")) : 0) }) ?? 0;
+  const tooLong = characters > MAX_NOTE_CHARACTERS;
+  const counterId = useId();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!editor || editor.isEmpty) return;
+    if (!editor || editor.isEmpty || tooLong) return;
 
     setPublishing(true);
+    setRefusal(null);
     try {
-      if (await onPublish(withoutTrailingBlankLines(editor.getHTML()))) editor.commands.clearContent(true);
+      const result = await onPublish(withoutTrailingBlankLines(editor.getHTML()));
+
+      if (result.published) editor.commands.clearContent(true);
+      else setRefusal(result.message);
     } finally {
       setPublishing(false);
     }
@@ -89,7 +117,7 @@ export default function Composer({ member, onPublish }: ComposerProps) {
       <header className={cn("relative flex min-h-[76px] flex-wrap items-start justify-between gap-x-3 gap-y-1 pt-4 pr-4 sm:pr-6", TEXT_INSET)}>
         <div className="min-w-0">
           <h2 className="font-hand text-[26px] leading-[1.05] font-bold" id={headingId}>
-            Pass a note
+            {title}
           </h2>
           <p className="truncate text-[13px] font-semibold" style={{ color: PAPERS.lined.soft }}>
             writing as {member.name}
@@ -104,16 +132,43 @@ export default function Composer({ member, onPublish }: ComposerProps) {
         {editor ? <EditorContent editor={editor} /> : <div aria-hidden="true" className="min-h-[168px]" />}
       </div>
 
+      {/* Written on the note in red pen, like the guestbook's errors; read out as it appears. */}
+      {refusal && (
+        <div className={cn("relative pt-1 pr-4 pb-3 sm:pr-6", TEXT_INSET)}>
+          <p
+            className="border-pen text-pen rounded-[0.25rem] border-l-4 bg-[color-mix(in_srgb,var(--pen)_8%,#fffefa)] px-3 py-2 text-[0.95rem] font-semibold"
+            role="alert"
+          >
+            {refusal}
+          </p>
+        </div>
+      )}
+
       <footer className={cn("relative flex items-center justify-between gap-3 pr-4 pb-6 sm:pr-6", TEXT_INSET)}>
         <p aria-hidden="true" className="font-hand text-[19px] font-bold whitespace-nowrap" style={{ color: PAPERS.lined.soft }}>
           (pass it on ♡)
         </p>
+        {/* Near the limit, how many characters are left, read out politely as it changes. */}
+        <p
+          aria-live="polite"
+          className={cn("ml-auto text-[13px] font-bold tabular-nums", tooLong ? "text-pen" : "")}
+          id={counterId}
+          style={tooLong ? undefined : { color: PAPERS.lined.soft }}
+        >
+          {characters >= COUNT_FROM && (
+            <>
+              {characters}/{MAX_NOTE_CHARACTERS}
+              {tooLong && <span> : too long</span>}
+            </>
+          )}
+        </p>
         <button
+          aria-describedby={characters >= COUNT_FROM ? counterId : undefined}
           className="bg-accent text-on-accent focus-ring inline-flex min-h-11 items-center gap-2 rounded-[4px] px-5 text-[15px] font-bold tracking-wide shadow-[0_2px_0_rgba(0,0,0,.15),0_8px_18px_-8px_rgba(60,20,20,.5)] transition-transform duration-200 disabled:opacity-60 motion-safe:active:scale-[.97] motion-safe:enabled:hover:-translate-y-0.5"
-          disabled={!editor || isEmpty || publishing}
+          disabled={!editor || isEmpty || publishing || tooLong}
           type="submit"
         >
-          Post
+          {submitLabel}
           <span aria-hidden="true">→</span>
         </button>
       </footer>

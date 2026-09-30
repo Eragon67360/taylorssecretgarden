@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Paper, PressedFlower, Scribble, WashiTape } from "@/components/scrapbook";
+import { safeRedirect } from "@/lib/safe-redirect";
 
 type GuestbookProps = {
   /** A handwritten line under the heading. */
@@ -21,9 +22,7 @@ export const GOOGLE_ERROR = "Google sign-in didn't go through. Try again, or use
  * (never another origin), else Swiftter.
  */
 export function guestbookRedirect(params: SearchParams): string {
-  const target = firstParam(params.redirect_url);
-
-  return target && target.startsWith("/") && !target.startsWith("//") && !target.startsWith("/\\") ? target : "/swiftter";
+  return safeRedirect(firstParam(params.redirect_url), "/swiftter");
 }
 
 /** The explanation to show when Google sent the visitor back with `?error=…`. */
