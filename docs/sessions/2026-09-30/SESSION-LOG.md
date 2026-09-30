@@ -1,5 +1,7 @@
 # Session log: overnight session 2026-09-30
 
+> **Session record, 2026-09-30** (the overnight session; moved here from the repository root on 2026-09-30). It describes the project as it was that night and is not kept up to date. Since then, release PR [#59](https://github.com/Eragon67360/taylorssecretgarden/pull/59) was merged into `main` and tagged [v0.1.0](https://github.com/Eragon67360/taylorssecretgarden/releases/tag/v0.1.0) (2026-09-30), followed by release PR [#73](https://github.com/Eragon67360/taylorssecretgarden/pull/73). The current state is in the [README](../../../README.md).
+
 One line per roadmap item (timestamp UTC, item, outcome, commit), plus the design debates the brief requires. See `ROADMAP.md` for the items and `WAKE-UP-REPORT.md` for the summary.
 
 ## Setup
