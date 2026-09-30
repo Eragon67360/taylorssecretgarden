@@ -227,6 +227,28 @@ export function findAlbum(id: string | undefined): CatalogueAlbum | undefined {
   return id ? CATALOGUE.find((album) => albumIds(album).includes(id)) : undefined;
 }
 
+/**
+ * An Album's page on Music, by its catalogue ID: its canonical URL, whichever
+ * ID Deezer answered with (Deezer serves regional twins to some countries,
+ * the US among them). The first Album is the one /music opens on, so its page
+ * is /music.
+ */
+export function albumPath(album: CatalogueAlbum): string {
+  return album === CATALOGUE[0] ? "/music" : `/music?album=${album.id}`;
+}
+
+/** A Version's page on Music: its own ID, since it has a tracklist of its own. */
+export const versionPath = (version: AlbumVersion) => `/music?album=${version.id}`;
+
+/** For a Taylor's Version, the Album it re-records. */
+export const originalOf = (album: CatalogueAlbum) => (album.reRecords ? CATALOGUE.find(({ id }) => id === album.reRecords) : undefined);
+
+/** For an Album Taylor re-recorded, its Taylor's Version. */
+export const taylorsVersionOf = (album: CatalogueAlbum) => CATALOGUE.find(({ reRecords }) => reRecords === album.id);
+
+/** The Albums of an Era, in catalogue order (each Taylor's Version after its original). */
+export const eraAlbums = (era: EraSlug) => CATALOGUE.filter((album) => album.era === era);
+
 /** The Album that stands for an Era: its Taylor's Version when there is one (the one we stream). */
 export function eraAlbum(era: EraSlug): CatalogueAlbum {
   return CATALOGUE.findLast((album) => album.era === era)!;

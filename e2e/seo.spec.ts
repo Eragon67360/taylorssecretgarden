@@ -3,6 +3,7 @@ import type { APIRequestContext, Page } from "@playwright/test";
 import { request as httpRequest } from "node:http";
 
 import tours from "../public/json/tours.json";
+import { CATALOGUE } from "../lib/catalogue";
 
 import { expect, test } from "./fixtures";
 
@@ -121,6 +122,26 @@ test.describe("sitemap.xml", () => {
 		for (const id of threads) expect(id, "a thread's id").toMatch(/^[0-9a-f-]{36}$/);
 		// Development fixtures (scripts/seed-data.ts) and the demo Posts (db/seed.ts) are never listed.
 		expect(threads.filter((id) => id.startsWith("5eed0000-") || id.startsWith("5d1c0a3e-"))).toEqual([]);
+	});
+
+	test("every link to Music on Home, Music and the Tour pages is a sitemap URL or a Version's own page", async ({ page, request }) => {
+		const sitemap = await (await request.get("/sitemap.xml")).text();
+		const listed = new Set([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) => pathOf(loc.trim())));
+		const versionPages = new Set(CATALOGUE.flatMap((album) => album.versions ?? []).map(({ id }) => `/music?album=${id}`));
+		const pages = ["/", ...[...listed].filter((path) => path.startsWith("/music") || path.startsWith("/tours/"))];
+		let checked = 0;
+
+		for (const path of pages) {
+			const hrefs = await page.evaluate(
+				(html) => [...new DOMParser().parseFromString(html, "text/html").querySelectorAll("a[href^='/music']")].map((link) => link.getAttribute("href")!),
+				await htmlOf(request, path),
+			);
+
+			for (const href of hrefs) expect(listed.has(href) || versionPages.has(href), `${href}, linked from ${path}`).toBe(true);
+			checked += hrefs.length;
+		}
+		// The shelf alone links all 16 Albums, on each of Music's pages.
+		expect(checked).toBeGreaterThan(16 * 16);
 	});
 
 	test("lists each page at the address the page itself calls canonical", async ({ page, request }) => {

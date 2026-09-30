@@ -59,15 +59,16 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details }: M
   // Another Album or version: whatever was playing stops.
   useEffect(() => stop(), [selectedVersionId, stop]);
 
-  const open = (next: { albumId: string; versionId: string }) => {
+  // The URL is the page's canonical one (from the catalogue), never the ID Deezer answered with.
+  const open = ({ path, ...next }: { albumId: string; versionId: string; path: string }) => {
     if (next.versionId === selectedVersionId) return;
     startTransition(() => {
       setSelection(next);
-      router.push(`/music?album=${next.versionId}`, { scroll: false });
+      router.push(path, { scroll: false });
     });
   };
-  const select = (next: ShelfAlbum) => open({ albumId: next.id, versionId: next.id });
-  const selectVersion = (next: AlbumVersionCard) => album && open({ albumId: album.id, versionId: next.id });
+  const select = (next: ShelfAlbum) => open({ albumId: next.id, versionId: next.id, path: next.path });
+  const selectVersion = (next: AlbumVersionCard) => album && open({ albumId: album.id, versionId: next.id, path: next.path });
 
   const title = album?.title ?? look.name;
   const eraNumber = String(ERA_SLUGS.indexOf(era) + 1).padStart(2, "0");

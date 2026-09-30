@@ -3,7 +3,10 @@ import type { Metadata } from "next";
 import { alt as cardAlt, contentType as cardType, size as cardSize } from "@/app/opengraph-image";
 import { siteConfig } from "@/config/site";
 
-import { CATALOGUE, type CatalogueAlbum, findAlbum } from "./catalogue";
+import { albumPath, findAlbum, versionPath } from "./catalogue";
+
+// Album and Version paths live with the catalogue, so client components can build links without this module.
+export { albumPath, versionPath };
 
 /*
   Every page's metadata: its canonical URL and the Open Graph card link
@@ -52,11 +55,6 @@ export function absoluteUrl(path: string): string {
   return new URL(path, siteConfig.url).href;
 }
 
-/** An Album's page on Music. The first Album is the one /music opens on, so its page is /music. */
-export function albumPath(album: CatalogueAlbum): string {
-  return album === CATALOGUE[0] ? "/music" : `/music?album=${album.id}`;
-}
-
 /**
  * Music's canonical path for `?album=<id>`: the Album's page, whichever of its
  * Deezer IDs asked for it (a regional twin, an old link), or the Version's own
@@ -69,5 +67,5 @@ export function musicPath(wanted: string | undefined): string {
   if (!album) return "/music";
   const version = album.versions?.find(({ id }) => id === wanted);
 
-  return version ? `/music?album=${version.id}` : albumPath(album);
+  return version ? versionPath(version) : albumPath(album);
 }

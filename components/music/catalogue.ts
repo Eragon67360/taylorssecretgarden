@@ -3,7 +3,7 @@ import "server-only";
 import type { Album } from "@/types";
 import type { EraSlug } from "@/lib/eras";
 
-import { CATALOGUE, albumName, albumYear, findAlbum, isTaylorsVersion } from "@/lib/catalogue";
+import { CATALOGUE, albumName, albumPath, albumYear, findAlbum, isTaylorsVersion, versionPath } from "@/lib/catalogue";
 import { getAlbums, toAlbum } from "@/service/deezer";
 
 /** An Album on the Music page's shelf: its Deezer cover and ID, named and placed by the catalogue. */
@@ -11,6 +11,8 @@ export type ShelfAlbum = Album & {
   era: EraSlug;
   /** The catalogue's ID for it (`id` is the one Deezer answered with, maybe a regional twin). */
   catalogueId: string;
+  /** Its page, from the catalogue ID (lib/catalogue.ts): every link to the Album uses it, never `id`. */
+  path: string;
   /** Its title without edition or "(Taylor's Version)": "Fearless". */
   title: string;
   edition: string | null;
@@ -24,8 +26,10 @@ export type ShelfAlbum = Album & {
 
 /** One version of the open Album, for the row of versions under its title. */
 export type AlbumVersionCard = {
-  /** The Deezer ID its link and tracklist use. */
+  /** The Deezer ID its tracklist uses. */
   id: string;
+  /** Its page: the Album's own for the shelf's edition, the Version's otherwise. */
+  path: string;
   /** "Standard Edition", "3am Edition"; the shelf's own edition first. */
   name: string;
   released: string;
@@ -47,6 +51,7 @@ export async function getShelf(): Promise<ShelfAlbum[]> {
     name: albumName(entry),
     era: entry.era,
     catalogueId: entry.id,
+    path: albumPath(entry),
     title: entry.title,
     edition: entry.edition ?? null,
     year: albumYear(entry),
@@ -88,7 +93,7 @@ export async function getVersions(album: ShelfAlbum): Promise<AlbumVersionCard[]
   const covers = await getAlbums(versions.map(({ id }) => id));
 
   return [
-    { id: album.id, name: album.edition ?? "The Album", released: album.released, cover: album.images[0].url },
-    ...versions.map((version, index) => ({ ...version, cover: toAlbum(covers[index]).images[0].url })),
+    { id: album.id, path: album.path, name: album.edition ?? "The Album", released: album.released, cover: album.images[0].url },
+    ...versions.map((version, index) => ({ ...version, path: versionPath(version), cover: toAlbum(covers[index]).images[0].url })),
   ];
 }

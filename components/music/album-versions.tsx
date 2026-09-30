@@ -18,7 +18,7 @@ type AlbumVersionsProps = {
 /**
  * Every version of the open Album (its editions, live and acoustic albums,
  * "Chapter" compilations) as small cover clippings. Each links to its own
- * page (`?album=<version id>`); followed in the same tab, it switches the
+ * page (the Album's own for its shelf edition); followed in the same tab, it switches the
  * tracklist in place, like the shelf.
  */
 export function AlbumVersions({ title, versions, selectedId, onSelect }: AlbumVersionsProps) {
@@ -41,7 +41,7 @@ export function AlbumVersions({ title, versions, selectedId, onSelect }: AlbumVe
                   // The open one: an ink outline (the Era accent is too faint on some papers) and a tick, not colour alone.
                   active ? "outline-ink outline-2 outline-offset-1" : "motion-safe:hover:-translate-y-0.5",
                 )}
-                href={`/music?album=${version.id}`}
+                href={version.path}
                 scroll={false}
                 onNavigate={(event) => {
                   event.preventDefault();
