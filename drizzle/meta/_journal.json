@@ -15,6 +15,13 @@
       "when": 1790721356376,
       "tag": "0001_post_deleted_at",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790727282876,
+      "tag": "0002_swiftter_social",
+      "breakpoints": true
     }
   ]
 }
