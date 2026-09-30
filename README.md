@@ -53,7 +53,7 @@ npm run test:e2e    # Playwright smoke suite
 npm run lighthouse  # Lighthouse CI on a production build (run `npm run build` first)
 ```
 
-`npm run test:e2e` builds the app and starts it on port 3100 (or reuses a server already listening there), then drives it as a black box: every route renders with no page errors and no console errors or warnings, the nav highlights the current page, the site chrome (and the styleguide) pass axe at WCAG 2.1 AA, fit a 390px phone and stay still under reduced motion (helpers in `e2e/checks.ts`, which each redesigned page enables for its whole route), Music loads Albums and tracklists, Tours lists every Tour and each Tour page shows its own facts, and Swiftter reads, publishes, sanitises and deletes Posts. The guestbook pages are checked the same way, plus their keyboard order, validation and error states.
+`npm run test:e2e` builds the app and starts it on port 3100 (or reuses a server already listening there), then drives it as a black box: every route renders with no page errors and no console errors or warnings, the nav highlights the current page, the site chrome (and the styleguide) pass axe at WCAG 2.2 AA, fit a 390px phone and stay still under reduced motion (helpers in `e2e/checks.ts`, which each redesigned page enables for its whole route), Music loads Albums and tracklists, Tours lists every Tour and each Tour page shows its own facts, and Swiftter reads, publishes, sanitises and deletes Posts. Every page has one h1, its canonical link and link-preview cards, and `e2e/seo.spec.ts` checks what crawlers get (see [Search engines and AI assistants](#search-engines-and-ai-assistants)). The guestbook pages are checked the same way, plus their keyboard order, validation and error states.
 
 The tests read `.env.local` like the app does. Everything that writes (signing up, signing in, publishing Posts) needs a disposable Neon branch: `DATABASE_URL` and `NEON_AUTH_BASE_URL` of the same branch, which must not be production (the guard in [`e2e/member.ts`](e2e/member.ts) compares against a hash of the production endpoint), plus `NEON_AUTH_COOKIE_SECRET`; otherwise those tests are skipped. With a branch, the `setup` project ([`e2e/member.setup.ts`](e2e/member.setup.ts)) first signs up a fresh test Member ("Swiftter Tester", a unique `@example.com` address) through the sign-up form, and the signed-in tests reuse its session (`e2e/.auth/`, git-ignored). To get a branch locally, create one from production in the Neon console (or the API), with an expiry, and put its connection string and Auth URL in `.env.local`; migrate and seed it (see [Database](#database)). The first run needs a browser: `npx playwright install chromium`.
 
@@ -62,11 +62,22 @@ The tests read `.env.local` like the app does. Everything that writes (signing u
 [GitHub Actions](.github/workflows/ci.yml) runs two jobs on every pull request and on pushes to `dev`, each on a production build under `next start`:
 
 - **smoke**: lint, typecheck, build and the Playwright suite. On failure the Playwright report and traces are uploaded as an artifact.
-- **lighthouse**: [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) ([`lighthouserc.js`](lighthouserc.js)) audits Home, Music, Tours, the Eras Tour page and Swiftter with Lighthouse's mobile emulation, three runs each: the median run must score at least 0.9 for Accessibility (an error) and should for Performance (a warning, since shared runners swing it by up to 0.3 between runs; check it on the Vercel preview). The scores table lands in the run summary and the full reports are uploaded as an artifact.
+- **lighthouse**: [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) ([`lighthouserc.js`](lighthouserc.js)) audits Home, Music, Tours, the Eras Tour page, Swiftter and the sign-in page with Lighthouse's mobile emulation, three runs each: the median run must score at least 0.9 for Accessibility (an error) and should for Performance (a warning, since shared runners swing it by up to 0.3 between runs; check it on the Vercel preview). The scores table lands in the run summary and the full reports are uploaded as an artifact.
 
 Each job creates its own Neon branch from production with [`create-branch-action`](https://github.com/neondatabase/create-branch-action) (database and Neon Auth URL), migrates and seeds it (so Lighthouse audits a real feed), and deletes it at the end, even when a step fails (it also expires after two hours). They need the `NEON_API_KEY` and `NEON_AUTH_COOKIE_SECRET` repository secrets and the `NEON_PROJECT_ID` variable.
 
 To run Lighthouse locally, build first, then `npm run lighthouse` (it starts `next start` on port 3180; set `LHCI_PORT` to change it, and `CHROME_PATH` if Chrome is not found, e.g. Playwright's Chromium).
+
+## Search engines and AI assistants
+
+The site's address is `https://www.taylorssecretgarden.com` (`config/site.ts`; a preview uses its own URL). The plan and the pre-launch checklist are in [`SEO-STRATEGY.md`](SEO-STRATEGY.md).
+
+- **Only production is indexed** ([`lib/indexing.ts`](lib/indexing.ts), decided at build time from `VERCEL_ENV`). Everywhere else (previews, `next start`, CI), `/robots.txt` disallows everything, pages say `noindex, nofollow`, and every response carries `X-Robots-Tag: noindex, nofollow` (`next.config.ts`).
+- **Every page's metadata** comes from `pageMetadata` ([`lib/metadata.ts`](lib/metadata.ts)): title, description, canonical link, `og:url` and the link-preview card. An Album's page on Music is `/music?album=<catalogue ID>`; a Version's is its own ID. `noindex: true` keeps a page out of search results (the guestbook, the styleguide). A page under `/swiftter` must set its own canonical link, or it inherits the feed's.
+- **Generated files:** `/sitemap.xml` ([`app/sitemap.ts`](app/sitemap.ts); Swiftter's Post pages go at its marked extension point) and `/llms.txt` ([`app/llms.txt/route.ts`](app/llms.txt/route.ts)), both built from the catalogue and the Tours data. A new Album or Tour appears in both without touching them.
+- **JSON-LD** through `<JsonLd>` ([`components/json-ld.tsx`](components/json-ld.tsx)), which escapes `<`: `WebSite` on Home, `MusicAlbum` on Music, `ItemList` on Tours, and `EventSeries` on each Tour page.
+
+Neither a metadata route nor a route handler can load next/font faces, and `lib/eras.ts` and `lib/tours.ts` bring them in with the Era looks. So `app/sitemap.ts` and `/llms.txt` read the Tours from `public/json/tours.json`, and the Eras from the catalogue.
 
 ## Swiftter's protections
 
