@@ -188,7 +188,7 @@ test.describe("llms.txt", () => {
 	test("gives each Album's song count, running time and label, as its page does", async ({ request }) => {
 		const text = await (await request.get("/llms.txt")).text();
 
-		expect(text).toMatch(new RegExp(`^- \\[reputation\\]\\(${SITE}/music\\?album=52612062\\): released November 10, 2017; 15 songs, \\d+ min, label .+\\.$`, "m"));
+		expect(text).toMatch(new RegExp(`^- \\[reputation\\]\\(${RegExp.escape(SITE)}/music\\?album=52612062\\): released November 10, 2017; 15 songs, \\d+ min, label .+\\.$`, "m"));
 		expect(text).toMatch(/^- \[Midnights\]\(.+\): released October 21, 2022; 23 songs, 1 h \d{2} min, label /m);
 	});
 

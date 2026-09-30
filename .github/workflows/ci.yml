@@ -25,6 +25,11 @@ on:
   push:
     branches: [dev]
 
+# The GITHUB_TOKEN only reads the repository: the jobs talk to Neon with their
+# own key and upload artifacts, neither of which needs a write permission.
+permissions:
+  contents: read
+
 # One run at a time per branch of this repository, the newest winning. A push
 # to dev and the open release pull request (dev → main) test the same commit,
 # so they share a group: before, both ran, and four Neon branches at once hit
