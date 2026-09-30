@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { feedChanged } from "@/service/feed-cache";
 import { purgeExpired, recheckPending } from "@/service/swiftter";
 
 /** The hour (UTC) of the run that also purges what Swiftter no longer keeps: once a day, at night in Europe. */
@@ -23,12 +24,18 @@ export async function GET(request: Request) {
 
 	const result = await recheckPending();
 
+	// Notes it passed are public now: the cached first page of the feed is out of date.
+	if (result.approved > 0) feedChanged();
+
 	if (result.gaveUp > 0) {
 		// eslint-disable-next-line no-console
 		console.error(`ALERT: ${result.gaveUp} Swiftter note(s) given up on: moderation gave no verdict for a week`);
 	}
 
 	const purged = new Date().getUTCHours() === PURGE_HOUR_UTC ? await purgeExpired() : null;
+
+	// Anything removed may have been on the cached first page (a reshare, a torn-up note).
+	if (purged && Object.values(purged).some((count) => count > 0)) feedChanged();
 
 	return NextResponse.json({ ...result, purged });
 }

@@ -2,7 +2,7 @@
 
 import type { Author } from "@/lib/swiftter";
 
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useId, useSyncExternalStore } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,27 @@ import { relativeDate } from "./relative-date";
  * newly published Post never changes the paper of the ones already shown.
  */
 export const paperFor = (index: number, count: number): NotePaper => ((count - 1 - index) % 2 === 0 ? "lined" : "sticky");
+
+/**
+ * "3 minutes ago", said again by the browser: the server wrote it a moment
+ * earlier, and a note can turn from "just now" to "1 minute ago" in between.
+ * The server's words stand through hydration (no mismatch), then the
+ * browser's own clock takes over.
+ */
+const noSubscription = () => () => {};
+const onClient = () => true;
+const onServer = () => false;
+
+function RelativeTime({ date, dateTime, className }: { date: Date; dateTime: string; className?: string }) {
+  // False while hydrating, true after: the change re-renders the date with the browser's clock.
+  useSyncExternalStore(noSubscription, onClient, onServer);
+
+  return (
+    <time suppressHydrationWarning className={className} dateTime={dateTime} title={date.toLocaleString("en")}>
+      {relativeDate(date)}
+    </time>
+  );
+}
 
 /** What a note shows: a feed Post, or a note in a thread. */
 export type NoteLike = { id: string; content: string; isDemo: boolean; createdAt: string; publishedAt?: string; author: Author };
@@ -71,13 +92,7 @@ export function PostNote({ post, paper, onDelete, footer, banner }: PostNoteProp
         </div>
         <div className="flex items-baseline justify-between gap-3" style={{ color: look.soft }}>
           {author.username && <p className="min-w-0 truncate text-[13px] font-semibold">@{author.username}</p>}
-          <time
-            className="font-hand ml-auto shrink-0 text-[20px] leading-none font-bold whitespace-nowrap"
-            dateTime={when}
-            title={published.toLocaleString("en")}
-          >
-            {relativeDate(published)}
-          </time>
+          <RelativeTime className="font-hand ml-auto shrink-0 text-[20px] leading-none font-bold whitespace-nowrap" date={published} dateTime={when} />
         </div>
       </header>
 

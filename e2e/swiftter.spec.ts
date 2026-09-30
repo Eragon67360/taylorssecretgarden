@@ -127,9 +127,15 @@ async function openAs(browser: Browser, state: string) {
 
 const feedPosts = (page: Page) => page.getByRole("feed", { name: "Posts" }).getByRole("article");
 
-/** Serves the feed from a stub instead of the database, for this page only. */
-async function stubFeed(page: Page, body: string) {
-	await page.route(FEED, (route) =>
+/** A request for a page of the feed after the first. */
+const OLDER_PAGE = (url: URL) => url.pathname === FEED && url.searchParams.has("cursor");
+
+/**
+ * Serves the feed's older pages ("older notes") from a stub instead of the
+ * database, for this page only. The first page is rendered by the server.
+ */
+async function stubOlderNotes(page: Page, body: string) {
+	await page.route(OLDER_PAGE, (route) =>
 		route.request().method() === "GET" ? route.fulfill({ status: 200, contentType: "application/json", body }) : route.fallback(),
 	);
 }
@@ -233,8 +239,31 @@ test.describe("Swiftter, signed out", () => {
 		}
 	});
 
+	test("the first page of notes, and links to their threads, are in the page's HTML (no JavaScript needed)", async ({ request }) => {
+		const feed = (await (await request.get(FEED)).json()) as FeedPage;
+		const html = await (await request.get("/swiftter")).text();
+		// Other runs may write to the same database meanwhile: most of the page is still the same notes.
+		const shown = feed.items.flatMap((item) =>
+			item.kind === "post" && html.includes(item.post.content) && html.includes(`href="/swiftter/p/${item.post.id}"`) ? [item.post.id] : [],
+		);
+
+		expect(shown.length).toBeGreaterThanOrEqual(5);
+		expect(html).not.toMatch(/Loading (Posts|notes)/);
+	});
+
+	test("the feed's first page may be cached by the CDN; older pages and the Member's own view may not", async ({ request }) => {
+		const first = await request.get(FEED);
+
+		expect(first.headers()["cache-control"]).toBe("public, s-maxage=15, stale-while-revalidate=60");
+		expect(Object.keys((await first.json()) as object).toSorted()).toEqual(["items", "nextCursor"]);
+		const { nextCursor } = (await first.json()) as FeedPage;
+
+		expect((await request.get(`${FEED}?cursor=${encodeURIComponent(nextCursor!)}`)).headers()["cache-control"] ?? "").not.toMatch(/public/);
+		expect((await request.get("/api/swiftter/me")).headers()["cache-control"]).toBe("private, no-store");
+	});
+
 	test("Posts render their formatting: Tiptap lists, old Quill bullet lists, links", async ({ page }) => {
-		await stubFeed(
+		await stubOlderNotes(
 			page,
 			JSON.stringify({
 				items: [
@@ -245,13 +274,14 @@ test.describe("Swiftter, signed out", () => {
 			}),
 		);
 		await page.goto("/swiftter");
+		await page.getByRole("button", { name: /older notes/ }).click();
 
 		const listStyle = (text: string) =>
 			feedPosts(page)
 				.locator("li", { hasText: text })
 				.evaluate((item) => getComputedStyle(item).listStyleType);
 
-		await expect(feedPosts(page)).toHaveCount(2);
+		await expect(feedPosts(page).filter({ hasText: "tiptap bullet" })).toHaveCount(1);
 		expect(await listStyle("tiptap bullet")).toBe("disc");
 		expect(await listStyle("tiptap number")).toBe("decimal");
 		expect(await listStyle("quill bullet")).toBe("disc");
@@ -261,25 +291,20 @@ test.describe("Swiftter, signed out", () => {
 		await expect(feedPosts(page).getByRole("link", { name: "a link" })).toHaveAttribute("href", "https://example.com");
 	});
 
-	test("an empty feed says so, in the journal's style", async ({ page }) => {
-		await stubFeed(page, JSON.stringify({ items: [], nextCursor: null }));
-		await page.goto("/swiftter");
-
-		await expect(page.getByText("No notes passed yet")).toBeVisible();
-		await expect(feedPosts(page)).toHaveCount(0);
-	});
-
-	test("a feed that cannot be read shows an error with a way to try again", async ({ page }) => {
+	test("older notes that cannot be read say so, with a way to try again", async ({ page }) => {
 		// A malformed answer rather than a 500: the browser logs failed requests
 		// as console errors, which the fixture rightly rejects.
-		await stubFeed(page, "{}");
+		await stubOlderNotes(page, "{}");
 		await page.goto("/swiftter");
+		const older = page.getByRole("button", { name: /older notes/ });
 
-		await expect(page.getByText("can't reach its Posts")).toBeVisible();
-		await page.unroute(FEED);
-		await stubFeed(page, JSON.stringify({ items: [stubItem("back", "<p>back again</p>")], nextCursor: null }));
-		await page.getByRole("button", { name: "Try again" }).click();
-		await expect(feedPosts(page).first()).toContainText("back again");
+		await older.click();
+		await expect(page.getByRole("alert").filter({ hasText: "The next notes couldn't be read just now." })).toBeVisible();
+		await page.unroute(OLDER_PAGE);
+		await stubOlderNotes(page, JSON.stringify({ items: [stubItem("back", "<p>back again</p>")], nextCursor: null }));
+		await page.getByRole("button", { name: /try again: older notes/ }).click();
+		await expect(feedPosts(page).last()).toContainText("back again");
+		await expect(page.getByRole("alert").filter({ hasText: "couldn't be read" })).toHaveCount(0);
 	});
 
 	test("publishing a Post while signed out is rejected with 401 and nothing is stored", async ({ request }) => {

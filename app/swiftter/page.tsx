@@ -1,8 +1,32 @@
+import type { FeedPage } from "@/lib/swiftter";
+
+import { connection } from "next/server";
+
 import { PressedFlower, Scribble } from "@/components/scrapbook";
 import { SwiftterBoard } from "@/components/swiftter/swiftter-board";
+import { getFirstFeedPage } from "@/service/feed-cache";
 
-/** Swiftter: the page's heading, rendered on the server, over the feed and the composer (client). */
-export default function SwiftterPage() {
+/**
+ * Swiftter: the page's heading and the feed's first page, rendered on the
+ * server (so the notes and the links to their threads read without
+ * JavaScript), with the composer and everything a Member does added by the
+ * client.
+ */
+export default async function SwiftterPage() {
+  // Rendered per request, from the cached first page: a page built once would
+  // carry its "3 minutes ago" dates, stale, into every visit.
+  await connection();
+
+  let firstPage: FeedPage | null = null;
+
+  try {
+    firstPage = await getFirstFeedPage();
+  } catch (error) {
+    // The board tries again from the browser, and offers "try again" if that fails too.
+    // eslint-disable-next-line no-console
+    console.error("Reading the feed for /swiftter failed", error instanceof Error ? error.message : error);
+  }
+
   return (
     <div className="relative mx-auto w-full max-w-[1120px] overflow-x-clip px-4 pt-10 pb-20 sm:px-8 sm:pt-14">
       <header className="relative mb-12 max-w-[40rem] sm:mb-16">
@@ -22,7 +46,7 @@ export default function SwiftterPage() {
         </p>
       </header>
 
-      <SwiftterBoard />
+      <SwiftterBoard firstPage={firstPage} />
     </div>
   );
 }

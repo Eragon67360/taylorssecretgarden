@@ -1,7 +1,7 @@
 "use client";
 
 import type { PublishResult } from "./composer";
-import type { FeedItem, FeedPost, HeldNote } from "@/lib/swiftter";
+import type { FeedItem, FeedPage, FeedPost, HeldNote } from "@/lib/swiftter";
 
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -28,19 +28,27 @@ type Feed = { status: "loading" } | { status: "error" } | { status: "ready"; ite
 const mapPost = (items: FeedItem[], id: string, update: (post: FeedPost) => FeedPost): FeedItem[] =>
   items.map((item) => (item.post.id === id && !("tornUp" in item.post) ? ({ ...item, post: update(item.post) } as FeedItem) : item));
 
-/** Swiftter's feed and, beside it, the composer for Members or an invitation to sign in for visitors. */
-export function SwiftterBoard() {
+/**
+ * Swiftter's feed and, beside it, the composer for Members or an invitation
+ * to sign in for visitors. The feed's first page comes rendered from the
+ * server (`firstPage`); null when the server could not read it, and the
+ * browser asks again.
+ */
+export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
   const { session, probe } = useMemberSession();
   const user = session.pending ? null : session.user;
-  const [feed, setFeed] = useState<Feed>({ status: "loading" });
-  const [feedRequest, setFeedRequest] = useState(0);
+  const [feed, setFeed] = useState<Feed>(firstPage ? { status: "ready", ...firstPage } : { status: "loading" });
+  // Counts the browser's reads of the first page: none while the server's is shown.
+  const [feedRequest, setFeedRequest] = useState(firstPage ? 0 : 1);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [moreFailed, setMoreFailed] = useState(false);
   const [checking, setChecking] = useState<string | null>(null);
   // Read out politely: what changed on the page after an action.
   const [announcement, setAnnouncement] = useState("");
   const feedHeading = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
+    if (feedRequest === 0) return;
     let current = true;
 
     fetchFeed().then((page) => {
@@ -72,11 +80,13 @@ export function SwiftterBoard() {
   const loadMore = async () => {
     if (feed.status !== "ready" || !feed.nextCursor) return;
     setLoadingMore(true);
+    setMoreFailed(false);
     const page = await fetchFeed(feed.nextCursor);
 
     setLoadingMore(false);
     if (!page) {
-      toast.error("The next notes couldn't be read just now. Try again in a moment.");
+      // Said beside the button, which now tries again.
+      setMoreFailed(true);
 
       return;
     }
@@ -213,7 +223,12 @@ export function SwiftterBoard() {
               })}
             </div>
             {feed.nextCursor && (
-              <div className="mt-10 flex justify-center">
+              <div className="mt-10 flex flex-col items-center gap-2">
+                {moreFailed && (
+                  <p className="text-pen text-[15px] font-semibold" role="alert">
+                    The next notes couldn&apos;t be read just now.
+                  </p>
+                )}
                 <button
                   aria-busy={loadingMore}
                   className="font-hand focus-ring decoration-pen min-h-11 rounded-sm px-2 text-[25px] font-bold underline decoration-wavy decoration-[1.5px] underline-offset-[5px] disabled:opacity-60"
@@ -221,7 +236,7 @@ export function SwiftterBoard() {
                   type="button"
                   onClick={loadMore}
                 >
-                  {loadingMore ? "turning the page…" : "older notes →"}
+                  {loadingMore ? "turning the page…" : moreFailed ? "try again: older notes →" : "older notes →"}
                 </button>
               </div>
             )}
