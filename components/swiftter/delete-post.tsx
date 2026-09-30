@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useRef } from "react";
 
 import { WashiTape } from "@/components/scrapbook";
 
@@ -18,16 +18,12 @@ export function DeletePost({ onDelete }: DeletePostProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const textId = useId();
-  const [deleting, setDeleting] = useState(false);
-
-  const confirm = async () => {
-    setDeleting(true);
-    try {
-      await onDelete();
-    } finally {
-      setDeleting(false);
-      dialog.current?.close();
-    }
+  // Closed first: the note leaves the page at once (use-swiftter.ts), and the
+  // page then moves focus to what comes next. Closing after would hand focus
+  // back to a button that is gone.
+  const confirm = () => {
+    dialog.current?.close();
+    void onDelete();
   };
 
   return (
@@ -59,15 +55,13 @@ export function DeletePost({ onDelete }: DeletePostProps) {
             // eslint-disable-next-line jsx-a11y/no-autofocus -- the safe choice takes focus when the dialog opens
             autoFocus
             className="focus-ring text-ink min-h-11 rounded-[4px] px-3 text-[15px] font-bold underline underline-offset-2"
-            disabled={deleting}
             type="button"
             onClick={() => dialog.current?.close()}
           >
             Keep it
           </button>
           <button
-            className="bg-pen focus-ring inline-flex min-h-11 items-center rounded-[4px] px-5 text-[15px] font-bold tracking-wide text-white disabled:opacity-60"
-            disabled={deleting}
+            className="bg-pen focus-ring inline-flex min-h-11 items-center rounded-[4px] px-5 text-[15px] font-bold tracking-wide text-white"
             type="button"
             onClick={confirm}
           >

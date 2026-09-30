@@ -176,5 +176,8 @@ export function useFocusAfterRender() {
   }, []);
 }
 
-/** A note's element id on the page: its article, focusable from script. */
+/** A note's element id on the page (its article, focusable from script): by feed entry on the feed, by note in a thread. */
 export const noteElementId = (id: string) => `note-${id}`;
+
+/** A held note's element id, in the Member's margin or under its parent in a thread. */
+export const heldElementId = (id: string) => `held-${id}`;

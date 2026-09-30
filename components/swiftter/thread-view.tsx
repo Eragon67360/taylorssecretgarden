@@ -16,7 +16,7 @@ import { type NotePaper } from "./note-paper";
 import { PostNote } from "./post-note";
 import { TornUpNote } from "./torn-up-note";
 import { useMemberSession } from "./use-member-session";
-import { applyWriteResult, tearUpNote, useMine, useReshare } from "./use-swiftter";
+import { applyWriteResult, heldElementId, noteElementId, tearUpNote, useFocusAfterRender, useMine, useReshare } from "./use-swiftter";
 
 /** Replies indent up to this depth; deeper ones stay at it and say whom they answer. */
 const MAX_INDENT = 4;
@@ -47,6 +47,7 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
   const [reshareCount, setReshareCount] = useState(thread.reshareCount);
   const [announcement, setAnnouncement] = useState("");
   const repliesId = useId();
+  const focusSoon = useFocusAfterRender();
 
   // What the Member reshares: the same merge as the feed, so a reshare pressed before this answers stays pressed.
   const mine = useMine(user?.id);
@@ -74,11 +75,14 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
             { id: note.id, parentId: parent.id, author: note.author, content: note.content, tornUp: false, isDemo: false, createdAt: note.createdAt, publishedAt: note.publishedAt },
           ]);
           setReplyingTo(null);
+          // The composer closes: the keyboard goes to the reply it wrote.
+          focusSoon(noteElementId(note.id));
           toast.success("Reply passed!");
           setAnnouncement(`Your reply to ${parent.author.displayName} was passed.`);
         },
         held: (note) => {
           setHeld((previous) => [...previous.filter((other) => other.id !== note.id), { ...note, parentId: parent.id }]);
+          if (note.status === "pending") focusSoon(heldElementId(note.id));
         },
         announce: (message) => {
           setReplyingTo(null);
@@ -95,6 +99,8 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
 
     await tearUpNote(note.id, () => {
       replace({ ...note, content: "", tornUp: true });
+      // Its scrap stays in place, where the keyboard was.
+      focusSoon(noteElementId(note.id));
 
       return () => replace(note);
     });
@@ -132,7 +138,7 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
     held
       .filter((reply) => reply.parentId === note.id)
       .map((reply) => (
-        <div key={reply.id} className="border-pen/50 bg-card mt-5 max-w-[560px] rounded-[3px] border-2 border-dashed px-4 py-3" role="status">
+        <div key={reply.id} className="focus-ring border-pen/50 bg-card mt-5 max-w-[560px] rounded-[3px] border-2 border-dashed px-4 py-3" id={heldElementId(reply.id)} role="status" tabIndex={-1}>
           <p className="text-pen text-[14.5px] font-bold">{HELD_LABEL[reply.status === "pending" ? "pending" : (reply.category ?? "insult")]}</p>
           {reply.reason && <p className="text-soft mt-1 text-[14px]">{reply.reason}</p>}
           <div dangerouslySetInnerHTML={{ __html: reply.content }} className="post-content mt-2 text-[15px]" dir="auto" />
@@ -153,13 +159,14 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
           const answering = depth > MAX_INDENT && parent ? (parent.tornUp ? "a torn-up note" : parent.author.displayName) : undefined;
 
           return (
-            <li key={note.id} id={`note-${note.id}`} style={{ marginInlineStart: indent === 1 ? 0 : `${Math.min(indent - 1, MAX_INDENT) * 1.25}rem` }}>
+            <li key={note.id} style={{ marginInlineStart: indent === 1 ? 0 : `${Math.min(indent - 1, MAX_INDENT) * 1.25}rem` }}>
               {note.tornUp ? (
-                <TornUpNote paper={paper} />
+                <TornUpNote id={noteElementId(note.id)} paper={paper} />
               ) : (
                 <PostNote
                   banner={answering ? <p className="font-hand relative pt-3 pl-[78px] text-[18px] leading-none font-bold opacity-80">↳ replying to {answering}</p> : undefined}
                   footer={replyControls(note)}
+                  id={noteElementId(note.id)}
                   paper={paper}
                   post={note}
                   onDelete={user && note.author.id === user.id ? tearUp(note) : undefined}
@@ -183,7 +190,7 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
       </p>
 
       {root.tornUp ? (
-        <TornUpNote paper="lined" />
+        <TornUpNote id={noteElementId(root.id)} paper="lined" />
       ) : (
         <PostNote
           footer={
@@ -203,6 +210,7 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
               {replyControls(root)}
             </Fragment>
           }
+          id={noteElementId(root.id)}
           paper="lined"
           post={root}
           onDelete={user && root.author.id === user.id ? tearUp(root) : undefined}

@@ -50,6 +50,8 @@ type PostNoteProps = {
   footer?: ReactNode;
   /** Above the Member's name: who reshared it. */
   banner?: ReactNode;
+  /** The article's id: focus is moved to it after an action (use-swiftter.ts). */
+  id?: string;
 };
 
 /**
@@ -57,7 +59,7 @@ type PostNoteProps = {
  * corner, their name in handwriting, when it was published, then the text on
  * the lines, and what can be done with it underneath.
  */
-export function PostNote({ post, paper, onDelete, footer, banner }: PostNoteProps) {
+export function PostNote({ post, paper, onDelete, footer, banner, id }: PostNoteProps) {
   const { author } = post;
   const nameId = useId();
   const look = PAPERS[paper];
@@ -67,8 +69,11 @@ export function PostNote({ post, paper, onDelete, footer, banner }: PostNoteProp
   return (
     <article
       aria-labelledby={nameId}
-      className="relative drop-shadow-[0_10px_12px_rgba(40,20,10,.18)]"
+      className="focus-ring relative drop-shadow-[0_10px_12px_rgba(40,20,10,.18)]"
       style={{ rotate: `${look.tilt}deg`, color: look.ink }}
+      id={id}
+      // Not in the tab order; focus lands here when an action takes away what the Member was on.
+      tabIndex={-1}
     >
       <NoteSheet paper={paper} />
       <PinnedPhoto name={author.displayName} src={author.avatarUrl} />

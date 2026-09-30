@@ -222,9 +222,12 @@ test.describe("Swiftter, signed out", () => {
 		const first = await feedPosts(page).count();
 
 		expect(first).toBe(20);
-		await page.getByRole("button", { name: /older notes/ }).click();
+		await page.getByRole("button", { name: /older notes/ }).focus();
+		await page.keyboard.press("Enter");
 		await expect(page.getByRole("status").filter({ hasText: /more notes loaded/ })).toBeAttached();
 		await expect.poll(() => feedPosts(page).count()).toBeGreaterThan(first);
+		// The keyboard carries on at the first new note.
+		await expect(feedPosts(page).nth(first)).toBeFocused();
 	});
 
 	test("each Post shows when it was published as a relative date", async ({ page }) => {
@@ -304,6 +307,7 @@ test.describe("Swiftter, signed out", () => {
 		await stubOlderNotes(page, JSON.stringify({ items: [stubItem("back", "<p>back again</p>")], nextCursor: null }));
 		await page.getByRole("button", { name: /try again: older notes/ }).click();
 		await expect(feedPosts(page).last()).toContainText("back again");
+		await expect(feedPosts(page).last()).toBeFocused();
 		await expect(page.getByRole("alert").filter({ hasText: "couldn't be read" })).toHaveCount(0);
 	});
 
@@ -589,10 +593,14 @@ test.describe("Swiftter, signed in", () => {
 		await expect(dialog).toBeHidden();
 		await expect(shown).toHaveCount(1);
 
+		const nextId = await shown.evaluate((note) => note.nextElementSibling?.id);
+
 		await tearUp.click();
 		await dialog.getByRole("button", { name: "Tear it up" }).click();
 		await expect(shown).toHaveCount(0);
 		await expect(page.getByText("Note torn up.")).toBeVisible();
+		// The keyboard goes on to the next note, not the top of the page.
+		await expect(page.locator(`[id="${nextId}"]`)).toBeFocused();
 
 		await page.reload();
 		await expect(feedPosts(page).first()).toBeVisible();
@@ -797,6 +805,8 @@ test.describe("Swiftter, replies and reshares", () => {
 		await replier.page.getByRole("button", { name: "Reply", exact: true }).click();
 		await expect(replier.page.getByRole("heading", { level: 2, name: "1 reply" })).toBeVisible();
 		await expect(replier.page.getByText("The one on track five, easily.")).toBeVisible();
+		// The composer closed: the keyboard is on the reply it wrote.
+		await expect(replier.page.getByRole("article").filter({ hasText: "The one on track five, easily." })).toBeFocused();
 
 		// A reply to the reply nests under it.
 		await replier.page.getByRole("button", { name: "reply to Big Fan" }).click();
@@ -861,6 +871,8 @@ test.describe("Swiftter, replies and reshares", () => {
 		expect((await reshared).status()).toBe(201);
 		await expect(button).toHaveAttribute("aria-pressed", "true");
 		await expect(button).toContainText("(1 reshare)");
+		// In flight it was aria-disabled, never disabled: the keyboard stayed on it.
+		await expect(button).toBeFocused();
 		expect((await fanPage.page.request.post(`${FEED}/${note.id}/reshare`, { headers: BOTID_HUMAN })).status()).toBe(409);
 		expect((await mine(fanPage.page.request)).reshared).toContain(note.id);
 
