@@ -61,6 +61,10 @@ export const posts = pgTable(
 			.on(table.publishedAt.desc(), table.id.desc())
 			.where(sql`${table.parentId} is null and ${table.publishedAt} is not null and ${table.deletedAt} is null`),
 		index("posts_thread_idx").on(table.rootId, table.createdAt),
+		// A thread's public notes in reading order (getThread), without scanning every Post.
+		index("posts_thread_id_idx")
+			.on(table.threadId, table.createdAt, table.id)
+			.where(sql`${table.publishedAt} is not null`),
 		index("posts_parent_idx").on(table.parentId),
 		index("posts_member_idx").on(table.memberId, table.createdAt.desc()),
 		unique("posts_id_thread_key").on(table.id, table.threadId),
