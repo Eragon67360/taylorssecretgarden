@@ -196,6 +196,12 @@ test.describe("Music", () => {
 
 		await expect(list.getByRole("link")).toHaveCount(3);
 		await expect(list.getByRole("link", { name: /The Til Dawn Edition/ })).toHaveAttribute("aria-current", "true");
+		// The open one is outlined in ink, not the Era accent, and ticked: not colour alone (WCAG 1.4.11, 1.4.1).
+		const open = list.locator("[aria-current=true]");
+
+		expect(await open.evaluate((link) => getComputedStyle(link).outlineColor)).toBe(await open.evaluate((link) => getComputedStyle(link).color));
+		await expect(open.locator("[data-selected-mark]")).toBeVisible();
+		await expect(list.locator("[data-selected-mark]")).toHaveCount(1);
 
 		await list.getByRole("link", { name: /3am Edition/ }).click();
 		await expect(page).toHaveURL(`/music?album=${IDS.midnights3am}`);
@@ -301,6 +307,49 @@ test.describe("Music", () => {
 			await expectAlbumShown(page, "folklore");
 			await expect(pauseButtons(page)).toHaveCount(0);
 			await expect(page.getByText("now playing")).toHaveCount(0);
+		});
+
+		test.describe("that fail to play", () => {
+			// The stubbed preview's 404, which the browser logs.
+			test.use({ expectedConsoleMessages: [/Failed to load resource: the server responded with a status of 404/] });
+
+			test("say so on the track's line and announce it politely, once", async ({ page }) => {
+				await page.route("**/api/preview/*", (route) => route.fulfill({ status: 404, body: "No preview for this track" }));
+				await page.goto(`/music?album=${IDS.reputation}`);
+				await expectAlbumShown(page, "reputation");
+
+				// The live region is on the page, empty, before anything fails, so the message is heard when it goes in.
+				const announcer = page.locator("main [role=status][aria-live=polite]");
+
+				await expect(announcer).toHaveCount(1);
+				await expect(announcer).toBeEmpty();
+
+				const line = page.getByRole("listitem").filter({ has: page.getByRole("button", { name: "Play preview of ...Ready For It?" }) });
+
+				await playButtons(page).nth(0).click();
+				await expect(line.getByText("preview unavailable")).toBeVisible();
+				await expect(announcer).toHaveText("Preview of ...Ready For It? unavailable.");
+				await expect(pauseButtons(page)).toHaveCount(0);
+				await expect(page.getByText("preview unavailable")).toHaveCount(1);
+
+				// Trying again fails again: still one line marked, and nothing new to announce.
+				const announced: string[] = [];
+
+				await announcer.evaluate((element) => {
+					new MutationObserver(() => ((window as unknown as { announced: string[] }).announced ??= []).push(element.textContent ?? "")).observe(element, {
+						childList: true,
+						characterData: true,
+						subtree: true,
+					});
+				});
+				await playButtons(page).nth(0).click();
+				await expect(pauseButtons(page)).toHaveCount(0);
+				await expect(page.getByText("preview unavailable")).toHaveCount(1);
+				await page.waitForTimeout(500);
+				announced.push(...(await page.evaluate(() => (window as unknown as { announced?: string[] }).announced ?? [])));
+				expect(announced, "no second announcement").toEqual([]);
+				await expectNoAxeViolations(page);
+			});
 		});
 
 		test("are keyboard operable", async ({ page }) => {
