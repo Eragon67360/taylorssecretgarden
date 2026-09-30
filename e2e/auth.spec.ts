@@ -130,6 +130,22 @@ for (const path of ["/api/auth/sign-up/email", "/api/auth/sign-in/email", "/api/
 	});
 }
 
+// Only the endpoints the site uses are forwarded to Neon Auth (lib/auth/proxy-routes.ts):
+// dot segments or encoded slashes that Neon Auth's own URL handling would resolve,
+// and the parts of its API the site never calls, stop here with 404.
+for (const path of [
+	"/api/auth/.%2Fsign-up/email",
+	"/api/auth/x%2F..%2Fsign-up/email",
+	"/api/auth/.%2Fsign-in/email",
+	"/api/auth/x%5C..%5Csign-in/email",
+	"/api/auth/update-user",
+	"/api/auth/admin/create-user",
+]) {
+	test(`${path} is not forwarded to Neon Auth (404)`, async ({ request }) => {
+		expect((await request.post(path, { data: {} })).status()).toBe(404);
+	});
+}
+
 test.describe("BotID in the browser", () => {
 	// The stubbed refusal below is logged by the browser as a failed request.
 	test.use({ expectedConsoleMessages: [/Failed to load resource: the server responded with a status of 401/] });

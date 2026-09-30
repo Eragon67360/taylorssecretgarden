@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 
+import { isAuthProxyRoute } from "@/lib/auth/proxy-routes";
 import { getAuth } from "@/lib/auth/server";
 import { isBot } from "@/lib/bot-protection";
 import { BOT_REFUSAL, isBotIdProtected } from "@/lib/botid-routes";
 
 /*
   Neon Auth's API on this origin: sign-up, sign-in (email and Google),
-  sign-out and the session. Every request is proxied to the branch's Neon Auth
-  URL, and its session cookies are set here, first-party. Signing up and
-  signing in are refused to bots (Vercel BotID) before they reach Neon Auth.
+  sign-out and the session, and nothing else (lib/auth/proxy-routes.ts). Those
+  requests are proxied to the branch's Neon Auth URL, and its session cookies
+  are set here, first-party. Signing up and signing in are refused to bots
+  (Vercel BotID) before they reach Neon Auth.
 */
 type Context = { params: Promise<{ path: string[] }> };
 
@@ -32,6 +34,10 @@ const handler = async (request: Request, context: Context) => {
 	// The decoded path segments, which are what Neon Auth's handler proxies
 	// (so `sign%2Dup` cannot slip past as something else).
 	const { path } = await context.params;
+
+	// Only the endpoints this site uses are forwarded (lib/auth/proxy-routes.ts):
+	// the rest of Neon Auth's API, and any oddly spelled path, stop here.
+	if (!isAuthProxyRoute(request.method, path)) return NextResponse.json({ code: "NOT_FOUND" }, { status: 404 });
 
 	if (isAnonymousSessionCheck(request, path)) return NextResponse.json(null, { headers: { "Cache-Control": "private, no-store" } });
 
