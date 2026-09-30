@@ -32,7 +32,7 @@ export async function generateMetadata({ searchParams }: MusicProps): Promise<Me
   const version = album.versions?.find(({ id }) => id === wanted);
   const original = album.reRecords ? CATALOGUE.find(({ id }) => id === album.reRecords) : undefined;
   const name = version ? `${albumName(album)}, ${version.name}` : albumName(album);
-  let about = `${name} by Taylor Swift, released ${formatReleaseDate(album.released)}${album.edition ? `, in its ${album.edition}` : ""}`;
+  let about = `${name} by Taylor Swift, released ${formatReleaseDate(album.released)}${album.edition ? ` (${album.edition})` : ""}`;
 
   if (version) about = `${name}, by Taylor Swift, released ${formatReleaseDate(version.released)}`;
   else if (original) about = `${name}, Taylor Swift's re-recording of ${albumName(original)}, released ${formatReleaseDate(album.released)}`;
