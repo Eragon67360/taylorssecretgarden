@@ -86,7 +86,7 @@ Neither a metadata route nor a route handler can load next/font faces, and `lib/
 Why these two, and how they behave off Vercel: [ADR-0005](docs/adr/0005-botid-and-posting-limit.md).
 
 - **Vercel BotID** ([`botid`](https://vercel.com/docs/botid), invisible, no puzzle) guards signing up, signing in (email and Google) and publishing a Post. The routes are listed once in [`lib/botid-routes.ts`](lib/botid-routes.ts): `instrumentation-client.ts` attaches BotID's token to those requests (its challenge script loads only when one is made), and the publish route and `app/api/auth/[...path]` (in front of Neon Auth's proxy) refuse a bot with 403 ([`lib/bot-protection.ts`](lib/bot-protection.ts)). `withBotId` in `next.config.ts` proxies BotID through this origin. It runs in Basic mode (free); Deep Analysis is a Firewall setting in the Vercel dashboard. Off Vercel (`next dev`, `next start`, CI) BotID has no OIDC token to verify with, so a stand-in treats a request carrying a token (`x-is-human`) as human and one without as a bot: the browser still fetches a real token, and the Playwright suite sends `BOTID_HUMAN` ([`e2e/member.ts`](e2e/member.ts)) with the requests it makes itself.
-- **Write limits:** per Member, 5 Posts, 10 replies and 10 reshares per 10 minutes (`LIMITS` in [`lib/swiftter.ts`](lib/swiftter.ts)), counted in Postgres and checked again under a per-Member lock when the note is inserted. The next one gets 429 with `Retry-After` and a message saying when it is allowed; the composer shows it on the note and keeps the text. Torn-up notes, refused notes and undone reshares still count, so neither deleting nor refused attempts are a way round the limit (or round moderation's cost); "check again" is capped at 4 attempts per note.
+- **Write limits:** per Member, 5 Posts, 10 replies and 10 reshares per 10 minutes (`LIMITS` in [`lib/swiftter.ts`](lib/swiftter.ts)), counted in Postgres and checked again under a per-Member lock when the note is inserted. The next one gets 429 with `Retry-After` and a message saying when it is allowed; the composer shows it on the note and keeps the text. Torn-up notes, refused notes and undone reshares still count, so neither deleting nor refused attempts are a way round the limit (or round moderation's cost); "check again" is offered for a note's first 4 attempts (the hourly re-check carries on for a week).
 - **Stored decisions, fail-closed** ([ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md)): a note is stored pending, then judged; approved notes become public, refused ones stay visible to their author only (with the reason), and a note with no verdict stays pending (author only, "check again", and the 15-minute cron) instead of being lost. Every attempt is appended to `moderation_decisions`. Before the model sees a note, its text is normalised (Unicode compatibility forms folded, invisible characters removed); look-alike letters from other scripts, leetspeak and spacing are left to the model, a known limit.
 - **AI moderation** ([`service/moderation.ts`](service/moderation.ts), [ADR-0006](docs/adr/0006-ai-moderation-before-publishing.md)): every new Post's plain text is judged by `anthropic/claude-haiku-4.5` through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) (AI SDK 7, structured output, temperature 0, 8 s timeout) against `MODERATION_POLICY`, written in plain language in that file: no insults, harassment or hate, and on topic (Taylor, her music, Eras, tours, the fandom), judged leniently. The Post is passed as delimited, untrusted data. A refused Post is not stored: 422 `{ category: "insult" | "off_topic", message }`, which the composer writes on the note, keeping the text. No verdict in time (Gateway down, timeout) is 503 "try again", nothing stored. On Vercel the Gateway authenticates with the deployment's OIDC token; the Vercel team (Le Bon Tempérament) needs paid AI Gateway credits, since the free tier refuses this model. The Playwright suite and CI set `SWIFTTER_MODERATION=fake` (never honoured on a Vercel deployment): Posts containing `fake-insult`, `fake-off-topic` or `fake-moderation-down` are refused or fail, the rest are allowed. To check the policy against the real model, `npm run moderation:check` (opt-in, not in CI) moderates a handful of sample Posts and prints the verdicts; it needs `AI_GATEWAY_API_KEY`, or a `VERCEL_OIDC_TOKEN` from `npx vercel env pull --scope le-bon-temperament`, in `.env.local`.
 
@@ -102,7 +102,9 @@ Swiftter's schema lives in [`db/schema.ts`](db/schema.ts): `members` (keyed by N
 | `POST`/`DELETE /api/swiftter/posts/[id]/reshare` | Reshare someone else's public Post, or undo it: 201/204; 422 your own, 409 already, 404 not public. |
 | `POST /api/swiftter/posts/[id]/check` | "Check again" on your pending note (at most 4 moderation attempts in all). |
 | `GET /api/swiftter/me` | Your held notes (pending or refused, with reasons) and what you reshare: session only, `no-store`. |
-| `GET /api/cron/moderation` | Vercel Cron (every 15 minutes, `vercel.json`): re-checks pending notes with backoff; needs `Authorization: Bearer $CRON_SECRET`. |
+| `DELETE /api/swiftter/me` | Delete your account: your notes torn up, your reshares and your Neon Auth account deleted, signed out; 204. From `/guestbook`. |
+| `GET /api/swiftter/me/export` | Your data as a JSON download (account, notes in every state, reshares, moderation decisions): session only, `no-store`. |
+| `GET /api/cron/moderation` | Vercel Cron (hourly, `vercel.json`): re-checks pending notes (every run for a day, then daily, given up after a week), and once a day purges what is past retention (30 days); needs `Authorization: Bearer $CRON_SECRET`. |
 
 Every write goes through [`lib/member-write.ts`](lib/member-write.ts): same-origin only (403), JSON only (415), signed in (401, or 503 when Neon Auth fails), BotID (403); then ownership and visibility in SQL (404). Threads have their own page, `/swiftter/p/[id]` (server-rendered, with `DiscussionForumPosting` structured data; demo, seed and torn-up notes are `noindex`).
 
@@ -110,7 +112,7 @@ Every database command uses `DATABASE_URL` (read from `.env.local` when it is no
 
 **Production's credentials are on no laptop.** Its `DATABASE_URL` is a Sensitive variable in Vercel (write-only: builds and functions get it, nobody can read it back) and otherwise lives only in Neon. Production migrations run in the **Migrate production** workflow ([`.github/workflows/migrate-production.yml`](.github/workflows/migrate-production.yml)): Actions → Migrate production → Run workflow, pick the branch whose migrations to apply (usually `dev`, before merging a release) and type `production`. It fetches the connection string from Neon's API for the run, masked in the log. Apply a migration to `dev` first (`npm run db:migrate` locally); its reverse lives in `drizzle/down/`.
 
-Neon Auth keeps the Members' accounts (users, sessions) in the `neon_auth` schema of the same database. It belongs to Neon: `drizzle.config.ts` limits drizzle-kit to `public`, and nothing in the app writes to `neon_auth` except through `/api/auth`.
+Neon Auth keeps the Members' accounts (users, sessions) in the `neon_auth` schema of the same database. It belongs to Neon: `drizzle.config.ts` limits drizzle-kit to `public`, and nothing in the app writes to `neon_auth` except through `/api/auth`, with one exception: a Member deleting their account deletes their own `neon_auth."user"` row (Neon Auth's hosted `delete-user` is disabled; [ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md)).
 
 ```bash
 npm run db:migrate   # apply the SQL migrations in drizzle/
@@ -118,6 +120,19 @@ npm run db:seed      # insert the demo Members and Posts (safe to re-run)
 npm run db:unseed    # show the demo rows; add `-- --yes` to delete them
 npm run db:generate  # after editing db/schema.ts: write a new migration to drizzle/, then commit it
 ```
+
+### Backups
+
+The **Backup production** workflow ([`.github/workflows/backup-production.yml`](.github/workflows/backup-production.yml)) runs every Monday (and by hand: Actions → Backup production → Run workflow). It fetches production's connection string from Neon's API like Migrate production, runs `pg_dump` at the project's Postgres major version, encrypts the dump with [`age`](https://github.com/FiloSottile/age) and keeps it 30 days as the run's artifact. The repository is public, so anyone can download its artifacts: the dump is only ever uploaded encrypted, and the job fails if no key is set.
+
+One-time setup, by the owner:
+
+1. Make a key pair on your own machine: `age-keygen -o garden-backup.key`. It prints the public key (`age1…`).
+2. Keep `garden-backup.key` (the private key) offline, e.g. in a password manager and on a USB stick: not in the repository, not in GitHub, not in Vercel. Without it no backup can be opened.
+3. Set the public key as a repository variable: Settings → Secrets and variables → Actions → Variables → `BACKUP_AGE_RECIPIENT` = `age1…` (or `gh variable set BACKUP_AGE_RECIPIENT --body age1…`).
+4. Run the workflow once by hand and check it succeeds.
+
+To restore: download the artifact, `age --decrypt -i garden-backup.key -o production.dump production-….dump.age`, then `pg_restore --no-owner --dbname=<a new Neon branch's URL> production.dump` (restore into a new branch first, never straight over production).
 
 ## Seeding
 
