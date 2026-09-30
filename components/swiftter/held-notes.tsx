@@ -12,8 +12,9 @@ import { PostContent } from "./post-content";
 import { relativeDate } from "./relative-date";
 
 /** The status, in words: never colour alone. */
-const STATUS: Record<"pending" | RefusalCategory, string> = {
+const STATUS: Record<"pending" | "givenUp" | RefusalCategory, string> = {
   pending: "Waiting for a check",
+  givenUp: "Couldn't be checked",
   insult: "Not passed: reads as unkind",
   restricted: "Not passed: not safe to share",
   off_topic: "Not passed: off-topic",
@@ -41,10 +42,12 @@ export function HeldNotes({ notes, checking, onCheckAgain, onTearUp }: HeldNotes
       <h2 className="font-hand text-[26px] leading-tight font-bold" id={headingId}>
         Only you can see these
       </h2>
-      <p className="text-soft mt-1 text-[14.5px]">Notes that aren&apos;t on the feed: waiting for a check, or not passed.</p>
+      <p className="text-soft mt-1 text-[14.5px]">
+        Notes that aren&apos;t on the feed: waiting for a check, or not passed. Notes not passed are kept for 30 days.
+      </p>
       <ul className="mt-4 flex flex-col gap-4">
         {notes.map((note) => {
-          const status = note.status === "pending" ? STATUS.pending : STATUS[note.category ?? "insult"];
+          const status = note.givenUp ? STATUS.givenUp : note.status === "pending" ? STATUS.pending : STATUS[note.category ?? "insult"];
 
           return (
             <li key={note.id} className="bg-paper rounded-[3px] px-4 py-3 shadow-[0_1px_2px_rgba(0,0,0,.12)]">
@@ -71,6 +74,14 @@ export function HeldNotes({ notes, checking, onCheckAgain, onTearUp }: HeldNotes
                   </p>
                 </div>
                 {note.reason && <p className="text-pen mt-2 text-[14.5px] font-semibold">{note.reason}</p>}
+                {note.givenUp && (
+                  <p className="text-pen mt-2 text-[14.5px] font-semibold">
+                    Moderation couldn&apos;t be reached for a week, so this note won&apos;t be published. Tear it up and write it again.
+                  </p>
+                )}
+                {note.status === "pending" && !note.givenUp && !note.canCheckAgain && (
+                  <p className="text-soft mt-2 text-[14.5px]">It will be checked again automatically for up to a week.</p>
+                )}
                 <PostContent className="text-ink mt-2 text-[15.5px] break-words" content={note.content} />
                 <div className="mt-2 flex flex-wrap items-center gap-x-5">
                   {note.canCheckAgain && (

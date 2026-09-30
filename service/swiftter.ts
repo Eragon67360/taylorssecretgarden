@@ -17,6 +17,8 @@ import {
 	type LimitedWrite,
 	MAX_MODERATION_ATTEMPTS,
 	MAX_NOTE_CHARACTERS,
+	MODERATION_RETRY,
+	NO_AUTHOR,
 	type RefusalCategory,
 	type Thread,
 	type ThreadNote,
@@ -303,7 +305,8 @@ async function outcomeOf(id: string): Promise<WriteOutcome> {
 
 /**
  * "Check again": moderates one of the Member's own pending notes once more,
- * at most MAX_MODERATION_ATTEMPTS times in all.
+ * while it has had fewer than MAX_MODERATION_ATTEMPTS checks and has not been
+ * given up on.
  */
 export async function checkAgain(memberId: string, id: string, moderate: Moderate = moderatePost): Promise<WriteOutcome> {
 	if (!isUuid(id)) throw new PostNotFoundError();
@@ -319,31 +322,60 @@ export async function checkAgain(memberId: string, id: string, moderate: Moderat
 }
 
 /**
- * The scheduled re-check (app/api/cron/moderation): moderates pending notes
- * whose last attempt is old enough (5, 10, then 20 minutes: backing off), at
- * most `batch` at a time and never past MAX_MODERATION_ATTEMPTS. Returns what
- * it did, and how many notes have waited longer than an hour.
+ * When a pending note is due another scheduled check, from its own rows only
+ * (its `created_at` and its last attempt in moderation_decisions), per
+ * MODERATION_RETRY: at every hourly run during its first day, then daily, then
+ * a last time once it is a week old. Each gap is ten minutes short, so a cron
+ * run a few seconds early does not skip a turn.
  */
-export async function recheckPending(batch = 10, moderate: Moderate = moderatePost) {
-	const { rows } = await getDb().execute<{ id: string; content: string }>(sql`
-		select p.id, p.content
+const dueForCheck = sql`(
+	d.last_at is null
+	or (p.created_at > now() - make_interval(hours => ${MODERATION_RETRY.hourlyForHours}) and d.last_at < now() - interval '50 minutes')
+	or (p.created_at > now() - make_interval(days => ${MODERATION_RETRY.days}) and d.last_at < now() - interval '23 hours 50 minutes')
+	or (p.created_at <= now() - make_interval(days => ${MODERATION_RETRY.days}) and d.last_at < p.created_at + make_interval(days => ${MODERATION_RETRY.days}))
+)`;
+
+/** A pending note `p` whose last check (`lastAt`) came after its week was up: given up on. */
+const givenUp = (lastAt = sql`d.last_at`) => sql`(p.status = 'pending' and ${lastAt} >= p.created_at + make_interval(days => ${MODERATION_RETRY.days}))`;
+
+/** Consecutive notes left without a verdict after which a run stops: the Gateway is down, the rest keep their turn. */
+const STOP_AFTER_NO_VERDICTS = 3;
+
+/**
+ * The scheduled re-check (app/api/cron/moderation, hourly): moderates the
+ * pending notes that are due (dueForCheck), least recently tried first, at
+ * most `batch` at a time. `ids` limits it to those notes (tests). Returns
+ * what it did, and the notes it gave up on in this run (their week is over
+ * and the last check still had no verdict): each is reported once.
+ */
+export async function recheckPending({ batch = 20, moderate = moderatePost, ids }: { batch?: number; moderate?: Moderate; ids?: string[] } = {}) {
+	const only = ids ? sql`and p.id in (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})` : sql``;
+	const { rows } = await getDb().execute<{ id: string; content: string; final: boolean }>(sql`
+		select p.id, p.content, p.created_at <= now() - make_interval(days => ${MODERATION_RETRY.days}) as final
 		from posts p
-		join lateral (
-			select count(*)::int as attempts, max(created_at) as last_at from moderation_decisions d where d.post_id = p.id
-		) d on true
-		where p.status = 'pending' and p.deleted_at is null
-			and d.attempts < ${MAX_MODERATION_ATTEMPTS}
-			and (d.last_at is null or d.last_at < now() - make_interval(mins => 5 * power(2, greatest(d.attempts - 1, 0))::int))
-		order by p.created_at
+		join lateral (select max(created_at) as last_at from moderation_decisions where post_id = p.id) d on true
+		where p.status = 'pending' and p.deleted_at is null and ${dueForCheck} ${only}
+		order by d.last_at nulls first, p.created_at
 		limit ${batch}`);
 	const outcomes: WriteOutcome["status"][] = [];
+	let gaveUp = 0;
+	let noVerdicts = 0;
 
-	for (const { id, content } of rows) outcomes.push((await judge(id, content, moderate)).status);
+	for (const { id, content, final } of rows) {
+		const { status } = await judge(id, content, moderate);
 
-	const { rows: stale } = await getDb().execute<{ count: number }>(sql`
-		select count(*)::int as count from posts where status = 'pending' and deleted_at is null and created_at < now() - interval '1 hour'`);
+		outcomes.push(status);
+		if (status === "pending" && final) gaveUp++;
+		noVerdicts = status === "pending" ? noVerdicts + 1 : 0;
+		if (noVerdicts >= STOP_AFTER_NO_VERDICTS) break;
+	}
 
-	return { checked: outcomes.length, approved: outcomes.filter((status) => status === "approved").length, stillPendingOverAnHour: stale[0].count };
+	return {
+		checked: outcomes.length,
+		approved: outcomes.filter((status) => status === "approved").length,
+		stillPending: outcomes.filter((status) => status === "pending").length,
+		gaveUp,
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -512,8 +544,8 @@ type ThreadRow = {
 
 /**
  * The thread a note belongs to: its first Post and every reply that is public
- * or torn up (kept, text erased, so the replies under it still read), oldest
- * first. Null when the note is not public (never was, or does not exist).
+ * or torn up (kept, text and author erased, so the replies under it still
+ * read), oldest first. Null when the note is not public (never was, or does not exist).
  */
 export async function getThread(id: string): Promise<Thread | null> {
 	if (!isUuid(id)) return null;
@@ -530,7 +562,7 @@ export async function getThread(id: string): Promise<Thread | null> {
 		(row): ThreadNote & { reshareCount: number } => ({
 			id: row.id,
 			parentId: row.parent_id,
-			author: authorOf(row),
+			author: row.deleted_at ? NO_AUTHOR : authorOf(row),
 			content: row.deleted_at ? "" : sanitisePostHtml(row.content),
 			tornUp: !!row.deleted_at,
 			isDemo: row.is_demo,
@@ -561,15 +593,16 @@ type HeldRow = {
 	root_id: string | null;
 	created_at: Date | string;
 	attempts: number;
+	given_up: boolean;
 	category: RefusalCategory | null;
 	reason: string | null;
 };
 
 async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 	const { rows } = await getDb().execute<HeldRow>(sql`
-		select p.id, p.content, p.status, p.root_id, p.created_at, d.attempts, last.category, last.reason
+		select p.id, p.content, p.status, p.root_id, p.created_at, d.attempts, coalesce(${givenUp()}, false) as given_up, last.category, last.reason
 		from posts p
-		join lateral (select count(*)::int as attempts from moderation_decisions where post_id = p.id) d on true
+		join lateral (select count(*)::int as attempts, max(created_at) as last_at from moderation_decisions where post_id = p.id) d on true
 		left join lateral (
 			select category, reason from moderation_decisions where post_id = p.id and outcome = 'blocked' order by created_at desc limit 1
 		) last on true
@@ -583,7 +616,8 @@ async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 		category: row.status === "blocked" ? row.category : null,
 		reason: row.status === "blocked" ? row.reason : null,
 		attempts: row.attempts,
-		canCheckAgain: row.status === "pending" && row.attempts < MAX_MODERATION_ATTEMPTS,
+		canCheckAgain: row.status === "pending" && !row.given_up && row.attempts < MAX_MODERATION_ATTEMPTS,
+		givenUp: row.given_up,
 		createdAt: iso(row.created_at),
 		rootId: row.root_id,
 	}));
@@ -712,4 +746,157 @@ async function purgeTombstones(memberId: string) {
 		// eslint-disable-next-line no-console
 		console.warn("Tombstone purge skipped", error instanceof Error ? error.message : error);
 	}
+}
+
+// ---------------------------------------------------------------------------
+// A Member's own data: export and account deletion (GDPR arts. 15, 17, 20)
+
+/** Everything Swiftter keeps about a Member, as their export gives it to them. */
+export type MemberExport = {
+	member: { id: string; displayName: string; username: string | null; avatarUrl: string | null; createdAt: string } | null;
+	notes: {
+		id: string;
+		kind: "post" | "reply";
+		parentId: string | null;
+		rootId: string | null;
+		/** Sanitised HTML; empty once torn up. */
+		content: string;
+		status: "pending" | "approved" | "blocked";
+		createdAt: string;
+		publishedAt: string | null;
+		tornUpAt: string | null;
+	}[];
+	reshares: { postId: string; createdAt: string; undoneAt: string | null }[];
+	moderationDecisions: { postId: string; outcome: string; category: string | null; reason: string | null; model: string; createdAt: string }[];
+};
+
+const isoOrNull = (value: Date | string | null) => (value === null ? null : iso(value));
+
+/** The Member's row, notes (every state, torn up included), reshares (undone included) and every moderation decision on their notes. */
+export async function exportMemberData(memberId: string): Promise<MemberExport> {
+	const db = getDb();
+	const [member, notes, reshares, decisions] = await Promise.all([
+		db.execute<{ id: string; display_name: string; username: string | null; avatar_url: string | null; created_at: Date | string }>(sql`
+			select id, display_name, username, avatar_url, created_at from members where id = ${memberId}`),
+		db.execute<{
+			id: string;
+			parent_id: string | null;
+			root_id: string | null;
+			content: string;
+			status: "pending" | "approved" | "blocked";
+			created_at: Date | string;
+			published_at: Date | string | null;
+			deleted_at: Date | string | null;
+		}>(sql`
+			select id, parent_id, root_id, content, status, created_at, published_at, deleted_at
+			from posts where member_id = ${memberId} order by created_at, id`),
+		db.execute<{ post_id: string; created_at: Date | string; deleted_at: Date | string | null }>(sql`
+			select post_id, created_at, deleted_at from reshares where member_id = ${memberId} order by created_at, id`),
+		db.execute<{ post_id: string; outcome: string; category: string | null; reason: string | null; model: string; created_at: Date | string }>(sql`
+			select d.post_id, d.outcome, d.category, d.reason, d.model, d.created_at
+			from moderation_decisions d join posts p on p.id = d.post_id
+			where p.member_id = ${memberId} order by d.created_at, d.id`),
+	]);
+	const row = member.rows[0];
+
+	return {
+		member: row ? { id: row.id, displayName: row.display_name, username: row.username, avatarUrl: row.avatar_url, createdAt: iso(row.created_at) } : null,
+		notes: notes.rows.map((note) => ({
+			id: note.id,
+			kind: note.parent_id ? "reply" : "post",
+			parentId: note.parent_id,
+			rootId: note.root_id,
+			content: note.deleted_at ? "" : sanitisePostHtml(note.content),
+			status: note.status,
+			createdAt: iso(note.created_at),
+			publishedAt: isoOrNull(note.published_at),
+			tornUpAt: isoOrNull(note.deleted_at),
+		})),
+		reshares: reshares.rows.map((entry) => ({ postId: entry.post_id, createdAt: iso(entry.created_at), undoneAt: isoOrNull(entry.deleted_at) })),
+		moderationDecisions: decisions.rows.map((decision) => ({
+			postId: decision.post_id,
+			outcome: decision.outcome,
+			category: decision.category,
+			reason: decision.reason,
+			model: decision.model,
+			createdAt: iso(decision.created_at),
+		})),
+	};
+}
+
+/**
+ * Deletes a Member's account, in one transaction, under their write lock:
+ * - every note of theirs is torn up (text and moderation reasons erased), so
+ *   the threads others replied in still read, with no name on them (NO_AUTHOR);
+ * - their reshares are deleted;
+ * - their Member row keeps only its id (other rows refer to it), no name or
+ *   picture;
+ * - their Neon Auth account goes, with its sessions and credentials (on
+ *   delete cascade), straight from the `neon_auth` schema. Neon Auth's own
+ *   delete-user endpoint is disabled on its hosted service (it answers 404),
+ *   so this is the second deliberate exception to ADR-0004, after
+ *   scripts/unseed.ts.
+ * Tombstones nothing refers to are removed then, or by the daily purge.
+ */
+export async function deleteMemberAccount(memberId: string): Promise<void> {
+	await getDb().transaction(async (tx) => {
+		await lockMember(tx, memberId);
+		await tx.execute(sql`update posts set content = '', deleted_at = coalesce(deleted_at, now()) where member_id = ${memberId}`);
+		await tx.execute(sql`update moderation_decisions set reason = null where post_id in (select id from posts where member_id = ${memberId})`);
+		await tx.execute(sql`delete from reshares where member_id = ${memberId}`);
+		await tx.execute(sql`update members set display_name = '', username = null, avatar_url = null where id = ${memberId}`);
+		await tx.execute(sql`delete from neon_auth."user" where id::text = ${memberId}`);
+	});
+
+	await purgeTombstones(memberId);
+}
+
+// ---------------------------------------------------------------------------
+// Retention
+
+/** How long Swiftter keeps what is not public, in days (docs/adr/0007). */
+export const RETENTION_DAYS = 30;
+
+/** Deepest chain of tombstones removed in one purge: a reply's tombstone goes first, then the one it answered. */
+const MAX_TOMBSTONE_DEPTH = 50;
+
+/**
+ * The daily purge (app/api/cron/moderation), so nothing is kept longer than
+ * it is needed:
+ * - tombstones nothing refers to any more (undone reshares of a torn-up note
+ *   go first: they can never be restored), once past the write limits' window;
+ * - refused notes, and notes given up on, after RETENTION_DAYS (their author
+ *   is told so in their margin), with their moderation history;
+ * - the model's reasons on approved notes' decisions after RETENTION_DAYS
+ *   (the outcome, category and model stay, for the audit).
+ * Returns how many rows each step removed or cleared.
+ */
+export async function purgeExpired(db: Executor = getDb()) {
+	const window = Math.max(LIMITS.post.minutes, LIMITS.reply.minutes);
+	const unreferenced = sql`not exists (select 1 from posts c where c.parent_id = p.id) and not exists (select 1 from reshares r where r.post_id = p.id)`;
+
+	const undoneReshares = await db.execute(sql`
+		delete from reshares r using posts p
+		where p.id = r.post_id and r.deleted_at is not null and p.deleted_at is not null`);
+	let tombstones = 0;
+
+	// One level of a thread at a time: a tombstone answered only by tombstones goes once they have.
+	for (let depth = 0; depth < MAX_TOMBSTONE_DEPTH; depth++) {
+		const { rowCount } = await db.execute(sql`
+			delete from posts p
+			where p.deleted_at is not null and p.created_at <= now() - make_interval(mins => ${window}) and ${unreferenced}`);
+
+		if (!rowCount) break;
+		tombstones += rowCount;
+	}
+
+	const held = await db.execute(sql`
+		delete from posts p
+		where p.deleted_at is null and p.created_at < now() - make_interval(days => ${RETENTION_DAYS})
+			and (p.status = 'blocked' or ${givenUp(sql`(select max(created_at) from moderation_decisions where post_id = p.id)`)}) and ${unreferenced}`);
+	const reasons = await db.execute(sql`
+		update moderation_decisions set reason = null
+		where outcome = 'approved' and reason is not null and created_at < now() - make_interval(days => ${RETENTION_DAYS})`);
+
+	return { undoneReshares: undoneReshares.rowCount ?? 0, tombstones, heldNotes: held.rowCount ?? 0, reasons: reasons.rowCount ?? 0 };
 }

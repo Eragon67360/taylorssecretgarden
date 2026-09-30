@@ -12,6 +12,8 @@ export const BOTID_PROTECTED_ROUTES = [
 	// Tearing up, resharing and undoing it, "check again": every other Swiftter write (lib/member-write.ts).
 	{ path: "/api/swiftter/posts/*", method: "POST" },
 	{ path: "/api/swiftter/posts/*", method: "DELETE" },
+	// Deleting one's account (app/api/swiftter/me).
+	{ path: "/api/swiftter/me", method: "DELETE" },
 	{ path: "/api/auth/sign-up/*", method: "POST" },
 	{ path: "/api/auth/sign-in/*", method: "POST" },
 ];

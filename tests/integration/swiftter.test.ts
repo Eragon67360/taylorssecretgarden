@@ -2,11 +2,13 @@ import { sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { getDb } from "@/db/client";
-import { LIMITS, MAX_MODERATION_ATTEMPTS } from "@/lib/swiftter";
+import { LIMITS, MAX_MODERATION_ATTEMPTS, NO_AUTHOR } from "@/lib/swiftter";
 import {
 	AlreadyResharedError,
 	checkAgain,
+	deleteMemberAccount,
 	deletePost,
+	exportMemberData,
 	getThread,
 	listFeed,
 	listHeld,
@@ -15,6 +17,8 @@ import {
 	NoMoreChecksError,
 	PostingLimitError,
 	PostNotFoundError,
+	purgeExpired,
+	recheckPending,
 	reshare,
 	SelfReshareError,
 	unreshare,
@@ -105,6 +109,182 @@ describe.skipIf(!!skipReason)("Swiftter service against Postgres", () => {
 			const { rows } = await getDb().execute<{ published_at: Date | null; content: string }>(sql`select published_at, content from posts where id = ${held.id}`);
 
 			expect(rows[0]).toEqual({ published_at: null, content: "" });
+		});
+	});
+
+	describe("the scheduled re-check", () => {
+		/** Moves a note and its moderation attempts back in time, as if written that long ago. */
+		const age = async (postId: string, interval: string) => {
+			await getDb().execute(sql`update posts set created_at = created_at - ${interval}::interval where id = ${postId}`);
+			await getDb().execute(sql`update moderation_decisions set created_at = created_at - ${interval}::interval where post_id = ${postId}`);
+		};
+
+		/** A pending note with every "check again" used up: MAX_MODERATION_ATTEMPTS attempts, none with a verdict. */
+		async function stuckNote() {
+			const alice = await newMember();
+			const { note: held } = await writeNote(alice, note("written during an outage"), null, unavailable);
+
+			for (let attempt = 2; attempt <= MAX_MODERATION_ATTEMPTS; attempt++) await checkAgain(alice, held.id, unavailable);
+
+			return { alice, id: held.id };
+		}
+
+		it("a note with 4 attempts and no verdict is retried later, and can still be approved", async () => {
+			const { alice, id } = await stuckNote();
+
+			// Just checked: not due yet.
+			expect(await recheckPending({ ids: [id], moderate: allow })).toMatchObject({ checked: 0 });
+			await age(id, "2 hours");
+			expect(await recheckPending({ ids: [id], moderate: allow })).toMatchObject({ checked: 1, approved: 1, gaveUp: 0 });
+			expect((await listFeed()).items.some((item) => item.post.id === id)).toBe(true);
+			expect(await listHeld(alice)).toEqual([]);
+		});
+
+		it("after its first day a note is checked daily, not hourly", async () => {
+			const { id } = await stuckNote();
+
+			await age(id, "2 days");
+			expect(await recheckPending({ ids: [id], moderate: unavailable })).toMatchObject({ checked: 1, stillPending: 1 });
+			await getDb().execute(sql`update moderation_decisions set created_at = now() - interval '3 hours' where post_id = ${id}`);
+			expect(await recheckPending({ ids: [id], moderate: allow })).toMatchObject({ checked: 0 });
+			await getDb().execute(sql`update moderation_decisions set created_at = now() - interval '1 day' where post_id = ${id}`);
+			expect(await recheckPending({ ids: [id], moderate: allow })).toMatchObject({ checked: 1, approved: 1 });
+		});
+
+		it("after a week, one last check; without a verdict the note is given up on, reported once, and its author told", async () => {
+			const { alice, id } = await stuckNote();
+
+			await age(id, "8 days");
+			expect(await recheckPending({ ids: [id], moderate: unavailable })).toMatchObject({ checked: 1, gaveUp: 1 });
+			expect(await recheckPending({ ids: [id], moderate: allow })).toMatchObject({ checked: 0, gaveUp: 0 });
+			expect(await listHeld(alice)).toEqual([expect.objectContaining({ id, status: "pending", givenUp: true, canCheckAgain: false })]);
+		});
+
+		it("a run stops after three notes in a row get no verdict: the Gateway is down", async () => {
+			const notes = await Promise.all(Array.from({ length: 5 }, () => stuckNote()));
+
+			for (const { id } of notes) await age(id, "2 hours");
+			expect(await recheckPending({ ids: notes.map(({ id }) => id), moderate: unavailable })).toMatchObject({ checked: 3, stillPending: 3 });
+		});
+	});
+
+	describe("a Member's own data", () => {
+		it("the export holds their notes in every state, reshares and moderation decisions, and nobody else's", async () => {
+			const [alice, bob] = [await newMember("Alice Exporting"), await newMember()];
+			const { note: post } = await writeNote(alice, note("exported post"), null, allow);
+			const { note: refused } = await writeNote(alice, note("exported refusal"), null, refuse());
+			const { note: theirs } = await writeNote(bob, note("bob's post"), null, allow);
+			const { note: reply } = await writeNote(alice, note("exported reply"), theirs.id, allow);
+
+			await reshare(alice, theirs.id);
+			const data = await exportMemberData(alice);
+
+			expect(data.member).toMatchObject({ id: alice, displayName: "Alice Exporting" });
+			expect(data.notes.map((entry) => [entry.id, entry.kind, entry.status])).toEqual([
+				[post.id, "post", "approved"],
+				[refused.id, "post", "blocked"],
+				[reply.id, "reply", "approved"],
+			]);
+			expect(data.reshares).toEqual([expect.objectContaining({ postId: theirs.id, undoneAt: null })]);
+			expect(data.moderationDecisions.map((decision) => decision.postId).sort()).toEqual([post.id, refused.id, reply.id].sort());
+			expect(JSON.stringify(data)).not.toContain("bob's post");
+		});
+
+		it("deleting an account tears up every note, drops the reshares, empties the Member row; threads still read", async () => {
+			const [alice, bob] = [await newMember("Alice Leaving"), await newMember()];
+			const { note: post } = await writeNote(alice, note("leaving soon"), null, allow);
+			const { note: held } = await writeNote(alice, note("pending when leaving"), null, unavailable);
+			const { note: theirs } = await writeNote(bob, note("bob stays"), null, allow);
+			const { note: answer } = await writeNote(bob, note("an answer that stays"), post.id, allow);
+
+			await reshare(alice, theirs.id);
+			await deleteMemberAccount(alice);
+
+			const thread = await getThread(answer.id);
+
+			expect(thread?.root).toMatchObject({ id: post.id, tornUp: true, content: "", author: NO_AUTHOR });
+			expect(thread?.replies[0]).toMatchObject({ id: answer.id, tornUp: false });
+			expect(await listHeld(alice)).toEqual([]);
+			expect(await listOwnReshares(alice)).toEqual([]);
+			const { rows } = await getDb().execute<{ display_name: string; held: number }>(sql`
+				select display_name, (select count(*)::int from posts where id = ${held.id} and deleted_at is null) as held from members where id = ${alice}`);
+
+			expect(rows[0]).toEqual({ display_name: "", held: 0 });
+			expect(JSON.stringify(await wholeFeed())).not.toContain("Alice Leaving");
+		});
+	});
+
+	describe("retention", () => {
+		const exists = async (postId: string) =>
+			(await getDb().execute<{ n: number }>(sql`select count(*)::int as n from posts where id = ${postId}`)).rows[0].n === 1;
+		const backdate = (postId: string, interval: string) =>
+			getDb().execute(sql`update posts set created_at = created_at - ${interval}::interval where id = ${postId}`);
+
+		it("removes tombstones nothing refers to, keeps those replies or reshares still show", async () => {
+			const [alice, bob] = [await newMember(), await newMember()];
+			const { note: lone } = await writeNote(alice, note("lone"), null, allow);
+			const { note: answered } = await writeNote(alice, note("answered"), null, allow);
+			const { note: undone } = await writeNote(alice, note("reshared, undone"), null, allow);
+			const { note: kept } = await writeNote(alice, note("reshared"), null, allow);
+			const { note: chainRoot } = await writeNote(alice, note("chain root"), null, allow);
+			const { note: chainReply } = await writeNote(alice, note("chain reply"), chainRoot.id, allow);
+
+			await writeNote(bob, note("an answer"), answered.id, allow);
+			await reshare(bob, undone.id);
+			await unreshare(bob, undone.id);
+			await reshare(bob, kept.id);
+			for (const { id } of [lone, answered, undone, kept, chainReply, chainRoot]) {
+				await deletePost(alice, id);
+				await backdate(id, "1 hour");
+			}
+
+			await purgeExpired();
+
+			expect(await exists(lone.id)).toBe(false);
+			expect(await exists(undone.id)).toBe(false);
+			expect(await exists(chainReply.id)).toBe(false);
+			expect(await exists(chainRoot.id)).toBe(false);
+			expect(await exists(answered.id)).toBe(true);
+			expect(await exists(kept.id)).toBe(true);
+		});
+
+		it("removes refused notes and notes given up on after 30 days, not sooner, nor anything public", async () => {
+			const alice = await newMember();
+			const { note: oldRefused } = await writeNote(alice, note("old refused"), null, refuse());
+			const { note: newRefused } = await writeNote(alice, note("new refused"), null, refuse());
+			const { note: givenUp } = await writeNote(alice, note("given up"), null, unavailable);
+			const { note: stillTrying } = await writeNote(alice, note("still pending"), null, unavailable);
+			const { note: published } = await writeNote(alice, note("public"), null, allow);
+
+			await backdate(oldRefused.id, "31 days");
+			await backdate(published.id, "31 days");
+			// Given up: its last check came after its week was over.
+			await backdate(givenUp.id, "31 days");
+			await backdate(stillTrying.id, "31 days");
+			await getDb().execute(sql`update moderation_decisions set created_at = now() - interval '23 days' where post_id = ${givenUp.id}`);
+			// Never checked since it was written (the re-check did not run): not given up on, so kept.
+			await getDb().execute(sql`update moderation_decisions set created_at = now() - interval '31 days' where post_id = ${stillTrying.id}`);
+
+			await purgeExpired();
+
+			expect(await exists(oldRefused.id)).toBe(false);
+			expect(await decisions(oldRefused.id)).toEqual([]);
+			expect(await exists(givenUp.id)).toBe(false);
+			expect(await exists(newRefused.id)).toBe(true);
+			expect(await exists(stillTrying.id)).toBe(true);
+			expect(await exists(published.id)).toBe(true);
+		});
+
+		it("clears the model's reason on approved decisions after 30 days, keeping the outcome", async () => {
+			const alice = await newMember();
+			const { note: old } = await writeNote(alice, note("old approved"), null, allow);
+			const { note: recent } = await writeNote(alice, note("recent approved"), null, allow);
+
+			await getDb().execute(sql`update moderation_decisions set created_at = now() - interval '31 days' where post_id = ${old.id}`);
+			await purgeExpired();
+
+			expect(await decisions(old.id)).toEqual([{ outcome: "approved", category: null, reason: null }]);
+			expect(await decisions(recent.id)).toEqual([{ outcome: "approved", category: null, reason: "Test: allowed." }]);
 		});
 	});
 
@@ -216,6 +396,28 @@ describe.skipIf(!!skipReason)("Swiftter service against Postgres", () => {
 
 			expect(thread?.root).toMatchObject({ id: post.id, tornUp: true, content: "" });
 			expect(thread?.replies[0]).toMatchObject({ id: reply.id, tornUp: false });
+		});
+
+		it("a torn-up note in a thread names nobody: no author name, id or avatar", async () => {
+			const [alice, bob] = [await newMember("Alice Vanishing"), await newMember("Bob Staying")];
+
+			await getDb().execute(sql`update members set avatar_url = 'https://example.com/alice.png' where id = ${alice}`);
+			const { note: post } = await writeNote(alice, note("root to tear up"), null, allow);
+			const { note: reply } = await writeNote(alice, note("reply to tear up"), post.id, allow);
+
+			await writeNote(bob, note("still here"), reply.id, allow);
+			await deletePost(alice, post.id);
+			await deletePost(alice, reply.id);
+
+			const thread = await getThread(post.id);
+
+			expect(thread?.root.author).toEqual(NO_AUTHOR);
+			expect(thread?.replies[0]).toMatchObject({ id: reply.id, tornUp: true, author: NO_AUTHOR });
+			expect(thread?.replies[1].author.displayName).toBe("Bob Staying");
+			// The whole payload, as the page hands it to the browser.
+			const payload = JSON.stringify(thread);
+
+			for (const leak of [alice, "Alice Vanishing", "alice.png"]) expect(payload).not.toContain(leak);
 		});
 	});
 

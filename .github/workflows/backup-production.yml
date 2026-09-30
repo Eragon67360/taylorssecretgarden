@@ -1,0 +1,93 @@
+# A weekly backup of the production database, beyond Neon's own restore
+# window (6 hours on the free plan): a `pg_dump` of the whole database
+# (Swiftter's tables and Neon Auth's accounts), encrypted, kept 30 days as
+# this run's artifact. Also run by hand: Actions → Backup production → Run
+# workflow.
+#
+# The repository is public, so its artifacts can be downloaded by anyone:
+# the dump is encrypted with `age` to the public key in
+# vars.BACKUP_AGE_RECIPIENT before it is uploaded, and the job fails if that
+# variable is not set. Only the owner's private key, kept offline, opens it
+# (README → Database → Backups).
+#
+# No database password is stored for it: the connection string is fetched
+# from Neon's API at run time, exactly as Migrate production does
+# (secrets.NEON_API_KEY, vars.NEON_PROJECT_ID), masked in the log, and gone
+# when the run ends. pg_dump matches the project's Postgres major version.
+name: Backup production
+
+on:
+  schedule:
+    - cron: "17 4 * * 1" # Mondays, 04:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-production
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: The encryption key is set
+        env:
+          RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+        run: |
+          if [ -z "$RECIPIENT" ]; then
+            echo "::error::vars.BACKUP_AGE_RECIPIENT is not set: no backup is made unencrypted (the repository is public). Set it to an age public key (age1…), see README → Database → Backups."
+            exit 1
+          fi
+          case "$RECIPIENT" in
+            age1*) ;;
+            *) echo "::error::vars.BACKUP_AGE_RECIPIENT must be an age public key (age1…), never the private key."; exit 1 ;;
+          esac
+
+      - name: Production's connection string and Postgres version, from Neon (masked)
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          api() { curl --fail-with-body -sS -H "Authorization: Bearer $NEON_API_KEY" "https://console.neon.tech/api/v2/projects/$PROJECT_ID$1"; }
+          json() { node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(($1)(JSON.parse(s))))"; }
+          version=$(api "" | json 'd => d.project.pg_version ?? ""')
+          test -n "$version" || { echo "::error::Neon did not say which Postgres version the project runs"; exit 1; }
+          branch=$(api /branches | json 'd => d.branches.find((b) => b.default)?.id ?? ""')
+          test -n "$branch" || { echo "::error::No default (production) branch found"; exit 1; }
+          uri=$(api "/connection_uri?branch_id=$branch&database_name=neondb&role_name=neondb_owner" | json 'd => d.uri')
+          password=$(node -e 'console.log(decodeURIComponent(new URL(process.argv[1]).password))' "$uri")
+          echo "::add-mask::$uri"
+          echo "::add-mask::$password"
+          echo "DATABASE_URL=$uri" >> "$GITHUB_ENV"
+          echo "PG_MAJOR=$version" >> "$GITHUB_ENV"
+          echo "Production branch: $branch, Postgres $version"
+
+      - name: pg_dump for that version, and age
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y --no-install-recommends "postgresql-client-$PG_MAJOR" age
+          "/usr/lib/postgresql/$PG_MAJOR/bin/pg_dump" --version
+          age --version
+
+      - name: Dump and encrypt
+        env:
+          RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+        run: |
+          set -o pipefail
+          file="production-$(date -u +%Y-%m-%dT%H%M)Z.dump.age"
+          # Straight from pg_dump into age: the plain dump never touches the disk.
+          "/usr/lib/postgresql/$PG_MAJOR/bin/pg_dump" --format=custom --no-owner --no-privileges --dbname="$DATABASE_URL" | age --encrypt --recipient "$RECIPIENT" --output "$file"
+          test -s "$file" || { echo "::error::The encrypted dump is empty"; exit 1; }
+          echo "BACKUP_FILE=$file" >> "$GITHUB_ENV"
+          ls -l "$file"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: production-backup
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 30
+          if-no-files-found: error
+          compression-level: 0 # already encrypted: it would not shrink

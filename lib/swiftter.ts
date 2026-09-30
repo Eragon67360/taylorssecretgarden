@@ -7,6 +7,13 @@
 /** A Member as a note shows them. */
 export type Author = { id: string; displayName: string; username: string | null; avatarUrl: string | null };
 
+/**
+ * A torn-up note's author, as a thread shows it: nobody. Tearing a note up
+ * takes the Member's name off it too, in the page, its structured data and
+ * the thread's JSON alike.
+ */
+export const NO_AUTHOR: Author = { id: "", displayName: "", username: null, avatarUrl: null };
+
 /** A public Post, as the feed and a thread show it. */
 export type FeedPost = {
 	id: string;
@@ -52,6 +59,11 @@ export type HeldNote = {
 	attempts: number;
 	/** Whether "check again" is still allowed. */
 	canCheckAgain: boolean;
+	/**
+	 * Moderation could not be reached for a whole week (MODERATION_RETRY), so
+	 * the scheduled re-check gave up on it: it will never be published as it is.
+	 */
+	givenUp: boolean;
 	createdAt: string;
 	/** For a reply: its thread's first Post. */
 	rootId: string | null;
@@ -61,6 +73,7 @@ export type HeldNote = {
 export type ThreadNote = {
 	id: string;
 	parentId: string | null;
+	/** NO_AUTHOR once torn up. */
 	author: Author;
 	/** Sanitised HTML; empty when torn up. */
 	content: string;
@@ -91,8 +104,20 @@ export const LIMITS = {
 
 export type LimitedWrite = keyof typeof LIMITS;
 
-/** Moderation attempts per note, "check again" and the scheduled re-check included. */
+/**
+ * Moderation attempts after which "check again" is no longer offered (every
+ * attempt counts, the scheduled re-check's too). The scheduled re-check itself
+ * is not capped by it: it follows MODERATION_RETRY.
+ */
 export const MAX_MODERATION_ATTEMPTS = 4;
+
+/**
+ * How long the scheduled re-check (hourly, vercel.json) keeps trying a note
+ * that moderation gave no verdict for: at every run for its first day, then
+ * once a day, then one last time a week after it was written. Only then is it
+ * given up on, and its author told; an outage of a few hours strands nothing.
+ */
+export const MODERATION_RETRY = { hourlyForHours: 24, days: 7 } as const;
 
 /** Visible characters in a string, as a reader counts them. */
 export function characterCount(text: string): number {

@@ -190,7 +190,8 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
         {list.map((note, index) => {
           const paper: NotePaper = (depth + index) % 2 === 0 ? "sticky" : "lined";
           const indent = Math.min(depth, MAX_INDENT);
-          const answering = depth > MAX_INDENT ? byId.get(note.parentId!)?.author.displayName : undefined;
+          const parent = byId.get(note.parentId!);
+          const answering = depth > MAX_INDENT && parent ? (parent.tornUp ? "a torn-up note" : parent.author.displayName) : undefined;
 
           return (
             <li key={note.id} id={`note-${note.id}`} style={{ marginInlineStart: indent === 1 ? 0 : `${Math.min(indent - 1, MAX_INDENT) * 1.25}rem` }}>
