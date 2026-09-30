@@ -194,9 +194,14 @@ test.describe("Swiftter, signed out", () => {
 		const older = page.getByRole("button", { name: /older notes/ });
 
 		// Newer notes may push it past the first page: turn pages until it shows.
+		// A page has turned once the feed holds more notes than before the click
+		// (a next page is never empty). Waiting on "the button or the last note"
+		// instead matched both once the page had loaded: a strict-mode failure.
 		for (let turn = 0; turn < 5 && !(await cardigan.isVisible()); turn++) {
+			const before = await feedPosts(page).count();
+
 			await older.click();
-			await expect(older.or(feedPosts(page).last())).toBeVisible();
+			await expect.poll(() => feedPosts(page).count()).toBeGreaterThan(before);
 		}
 		await expect(cardigan).toBeVisible();
 		await expect(cardigan.getByText("Juniper Wells", { exact: true })).toBeVisible();
