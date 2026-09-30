@@ -857,6 +857,35 @@ test.describe("Swiftter, replies and reshares", () => {
 		expect((await write(fanPage.page, "<p>too late</p>", note.id)).status()).toBe(404);
 		await fanPage.close();
 	});
+
+	test("on a thread, a reshare pressed before the Member's own view arrives stays pressed", async ({ page, browser }) => {
+		await page.goto("/swiftter");
+		const { note } = (await (await write(page, `<p>Reshare me quickly ${Date.now()}</p>`)).json()) as { note: FeedPost };
+		const fanPage = await openAs(browser, fan);
+		let release = () => {};
+		const held = new Promise<void>((resolve) => (release = resolve));
+
+		// /api/swiftter/me is read as the page opens (not reshared yet), and answers only after the click.
+		await fanPage.page.route("/api/swiftter/me", async (route) => {
+			const response = await route.fetch();
+
+			await held;
+			await route.fulfill({ response });
+		});
+		const answered = fanPage.page.waitForResponse("**/api/swiftter/me");
+
+		await fanPage.page.goto(`/swiftter/p/${note.id}`);
+		const button = fanPage.page.getByRole("button", { name: /reshare Thread Starter's note/ });
+		const reshared = fanPage.page.waitForResponse((response) => response.url().endsWith(`/${note.id}/reshare`) && response.request().method() === "POST");
+
+		await button.click();
+		expect((await reshared).status()).toBe(201);
+		release();
+		await answered;
+		await expect(button).toHaveAttribute("aria-pressed", "true");
+		await expect(button).toContainText("(1 reshare)");
+		await fanPage.close();
+	});
 });
 
 // A Member may pass 5 notes in 10 minutes. Its own fresh Member, so the Posts

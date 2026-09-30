@@ -3,21 +3,20 @@
 import type { PublishResult } from "./composer";
 import type { HeldNote, RefusalCategory, Thread, ThreadNote } from "@/lib/swiftter";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Fragment, useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 
 import { displayNameOf } from "@/lib/display-name";
 
-import { fetchMine, setReshared, tearUp, writeNote } from "./api";
+import { writeNote } from "./api";
+import { Composer } from "./lazy-composer";
 import { NoteActions } from "./note-actions";
 import { type NotePaper } from "./note-paper";
 import { PostNote } from "./post-note";
 import { TornUpNote } from "./torn-up-note";
 import { useMemberSession } from "./use-member-session";
-
-const Composer = dynamic(() => import("@/components/swiftter/composer"), { ssr: false });
+import { applyWriteResult, tearUpNote, useMine, useReshare } from "./use-swiftter";
 
 /** Replies indent up to this depth; deeper ones stay at it and say whom they answer. */
 const MAX_INDENT = 4;
@@ -45,26 +44,13 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
   const [replies, setReplies] = useState<ThreadNote[]>(thread.replies);
   const [held, setHeld] = useState<HeldReply[]>([]);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [reshared, setResharedState] = useState(false);
   const [reshareCount, setReshareCount] = useState(thread.reshareCount);
-  const [busy, setBusy] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const repliesId = useId();
 
-  const userId = user?.id;
-
-  useEffect(() => {
-    if (!userId) return;
-    let current = true;
-
-    fetchMine().then((mine) => {
-      if (current && mine) setResharedState(mine.reshared.includes(thread.root.id));
-    });
-
-    return () => {
-      current = false;
-    };
-  }, [userId, thread.root.id]);
+  // What the Member reshares: the same merge as the feed, so a reshare pressed before this answers stays pressed.
+  const mine = useMine(user?.id);
+  const reshare = useReshare(mine, (_, delta) => setReshareCount((count) => count + delta), setAnnouncement);
 
   // A link to a reply lands on it.
   useEffect(() => {
@@ -78,67 +64,40 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
   const byId = new Map([root, ...replies].map((note) => [note.id, note]));
   const publicReplies = replies.filter((reply) => !reply.tornUp).length;
 
-  const reply = (parent: ThreadNote) => async (content: string): Promise<PublishResult> => {
-    const result = await writeNote(content, parent.id);
+  const reply =
+    (parent: ThreadNote) =>
+    async (content: string): Promise<PublishResult> =>
+      applyWriteResult(await writeNote(content, parent.id), {
+        approved: (note) => {
+          setReplies((previous) => [
+            ...previous,
+            { id: note.id, parentId: parent.id, author: note.author, content: note.content, tornUp: false, isDemo: false, createdAt: note.createdAt, publishedAt: note.publishedAt },
+          ]);
+          setReplyingTo(null);
+          toast.success("Reply passed!");
+          setAnnouncement(`Your reply to ${parent.author.displayName} was passed.`);
+        },
+        held: (note) => {
+          setHeld((previous) => [...previous.filter((other) => other.id !== note.id), { ...note, parentId: parent.id }]);
+        },
+        announce: (message) => {
+          setReplyingTo(null);
+          setAnnouncement(message);
+        },
+      });
 
-    if (!result.ok) return { published: false, message: result.message };
-    if (result.status === "approved") {
-      const note = result.note;
+  // Torn up at once (text gone, the replies under it kept); put back if the server refuses.
+  const tearUp = (note: ThreadNote) => async () => {
+    const replace = (next: ThreadNote) => {
+      if (note.id === root.id) setRoot(next);
+      else setReplies((previous) => previous.map((other) => (other.id === note.id ? next : other)));
+    };
 
-      setReplies((previous) => [
-        ...previous,
-        { id: note.id, parentId: parent.id, author: note.author, content: note.content, tornUp: false, isDemo: false, createdAt: note.createdAt, publishedAt: note.publishedAt },
-      ]);
-      setReplyingTo(null);
-      toast.success("Reply passed!");
-      setAnnouncement(`Your reply to ${parent.author.displayName} was passed.`);
+    await tearUpNote(note.id, () => {
+      replace({ ...note, content: "", tornUp: true });
 
-      return { published: true };
-    }
-
-    setHeld((previous) => [...previous, { ...result.note, parentId: parent.id }]);
-    if (result.status === "pending") {
-      setReplyingTo(null);
-      setAnnouncement(result.message);
-
-      return { published: true };
-    }
-
-    return { published: false, message: result.message };
-  };
-
-  const tearUpNote = (note: ThreadNote) => async () => {
-    const result = await tearUp(note.id);
-
-    if (!result.ok) {
-      toast.error(result.message);
-
-      return;
-    }
-    const torn = { ...note, content: "", tornUp: true };
-
-    if (note.id === root.id) setRoot(torn);
-    else setReplies((previous) => previous.map((other) => (other.id === note.id ? torn : other)));
-    toast.success("Note torn up.");
-  };
-
-  const toggleReshare = async () => {
-    const on = !reshared;
-
-    setBusy(true);
-    setResharedState(on);
-    setReshareCount((count) => count + (on ? 1 : -1));
-    const result = await setReshared(root.id, on);
-
-    setBusy(false);
-    if (result.ok) {
-      setAnnouncement(on ? "Reshared." : "Reshare undone.");
-
-      return;
-    }
-    setResharedState(!on);
-    setReshareCount((count) => count + (on ? -1 : 1));
-    toast.error(result.message);
+      return () => replace(note);
+    });
   };
 
   const signInHref = `/sign-in?redirect_url=${encodeURIComponent(`/swiftter/p/${thread.root.id}`)}`;
@@ -203,7 +162,7 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
                   footer={replyControls(note)}
                   paper={paper}
                   post={note}
-                  onDelete={user && note.author.id === user.id ? tearUpNote(note) : undefined}
+                  onDelete={user && note.author.id === user.id ? tearUp(note) : undefined}
                 />
               )}
               {composerFor(note)}
@@ -234,7 +193,11 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
                 linkToThread={false}
                 postId={root.id}
                 replyCount={publicReplies}
-                reshare={user && root.author.id !== user.id ? { reshared, busy, onToggle: toggleReshare } : undefined}
+                reshare={
+                  user && root.author.id !== user.id
+                    ? { reshared: mine.reshared.has(root.id), busy: reshare.busy === root.id, onToggle: () => reshare.toggle(root) }
+                    : undefined
+                }
                 reshareCount={reshareCount}
               />
               {replyControls(root)}
@@ -242,7 +205,7 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
           }
           paper="lined"
           post={root}
-          onDelete={user && root.author.id === user.id ? tearUpNote(root) : undefined}
+          onDelete={user && root.author.id === user.id ? tearUp(root) : undefined}
         />
       )}
       {composerFor(root)}

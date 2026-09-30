@@ -3,7 +3,6 @@
 import type { PublishResult } from "./composer";
 import type { FeedItem, FeedPost, HeldNote } from "@/lib/swiftter";
 
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -11,19 +10,17 @@ import { IntentLink } from "@/components/intent-link";
 import { WashiTape } from "@/components/scrapbook";
 import { displayNameOf } from "@/lib/display-name";
 
-import { checkAgain as checkAgainRequest, fetchFeed, fetchMine, setReshared, tearUp, writeNote } from "./api";
+import { checkAgain as checkAgainRequest, fetchFeed, writeNote } from "./api";
 import { FeedEmpty, FeedError, FeedLoading } from "./feed-states";
 import { HeldNotes } from "./held-notes";
+import { Composer, ComposerPlaceholder } from "./lazy-composer";
 import { NoteActions } from "./note-actions";
-import { NoteSheet, PAPERS, ruling } from "./note-paper";
 import { paperFor, PostNote } from "./post-note";
 import { TornUpNote } from "./torn-up-note";
 import { useMemberSession } from "./use-member-session";
+import { applyWriteResult, tearUpNote, useMine, useReshare } from "./use-swiftter";
 
 const SIGN_IN_URL = "/sign-in?redirect_url=%2Fswiftter";
-
-// Only Members write, so visitors never download the editor.
-const Composer = dynamic(() => import("@/components/swiftter/composer"), { loading: () => <ComposerPlaceholder /> });
 
 type Feed = { status: "loading" } | { status: "error" } | { status: "ready"; items: FeedItem[]; nextCursor: string | null };
 
@@ -38,15 +35,10 @@ export function SwiftterBoard() {
   const [feed, setFeed] = useState<Feed>({ status: "loading" });
   const [feedRequest, setFeedRequest] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [held, setHeld] = useState<HeldNote[]>([]);
-  const [reshared, setResharedIds] = useState<Set<string>>(new Set());
-  const [busy, setBusy] = useState<string | null>(null);
   const [checking, setChecking] = useState<string | null>(null);
   // Read out politely: what changed on the page after an action.
   const [announcement, setAnnouncement] = useState("");
   const feedHeading = useRef<HTMLHeadingElement>(null);
-  // Reshares toggled on this page: they win over an answer from /api/swiftter/me that was already on its way.
-  const toggled = useRef(new Map<string, boolean>());
 
   useEffect(() => {
     let current = true;
@@ -61,29 +53,16 @@ export function SwiftterBoard() {
   }, [feedRequest]);
 
   // The signed-in Member's own view: held notes and what they reshare.
-  const userId = user?.id;
-
-  useEffect(() => {
-    if (!userId) return;
-    let current = true;
-
-    fetchMine().then((mine) => {
-      if (!current || !mine) return;
-      // Merged, not replaced: notes written or reshares toggled meanwhile stay.
-      setHeld((previous) => [...previous.filter((note) => !mine.held.some((other) => other.id === note.id)), ...mine.held]);
-      const next = new Set(mine.reshared);
-
-      for (const [id, on] of toggled.current) {
-        if (on) next.add(id);
-        else next.delete(id);
-      }
-      setResharedIds(next);
-    });
-
-    return () => {
-      current = false;
-    };
-  }, [userId]);
+  const mine = useMine(user?.id);
+  const { held, addHeld, dropHeld } = mine;
+  const reshare = useReshare(
+    mine,
+    (id, delta) =>
+      setFeed((previous) =>
+        previous.status === "ready" ? { ...previous, items: mapPost(previous.items, id, (shown) => ({ ...shown, reshareCount: shown.reshareCount + delta })) } : previous,
+      ),
+    setAnnouncement,
+  );
 
   const retry = () => {
     setFeed({ status: "loading" });
@@ -105,105 +84,52 @@ export function SwiftterBoard() {
     setAnnouncement(`${page.items.length} more notes loaded.`);
   };
 
-  const addHeld = (note: HeldNote) => setHeld((previous) => [note, ...previous.filter((other) => other.id !== note.id)]);
+  /** A Post just made public, first in the feed. */
+  const showPost = (post: FeedPost) =>
+    setFeed((previous) =>
+      previous.status === "ready"
+        ? { ...previous, items: [{ kind: "post", key: post.id, post }, ...previous.items] }
+        : { status: "ready", items: [{ kind: "post", key: post.id, post }], nextCursor: null },
+    );
 
-  const publish = async (content: string): Promise<PublishResult> => {
-    const result = await writeNote(content);
-
-    if (!result.ok) return { published: false, message: result.message };
-    if (result.status === "approved") {
-      const post = result.note;
-
-      toast.success("Note passed!");
-      setFeed((previous) =>
-        previous.status === "ready" ? { ...previous, items: [{ kind: "post", key: post.id, post }, ...previous.items] } : { status: "ready", items: [{ kind: "post", key: post.id, post }], nextCursor: null },
-      );
-
-      return { published: true };
-    }
-
-    addHeld(result.note);
-    if (result.status === "pending") {
-      // Kept and waiting: the composer is cleared, the note is in the Member's margin.
-      toast.info("Your note is saved and waiting for a check.");
-      setAnnouncement(result.message);
-
-      return { published: true };
-    }
-
-    // Refused: the reason is written on the note and the text stays to rework.
-    return { published: false, message: result.message };
-  };
-
-  const toggleReshare = async (post: FeedPost) => {
-    const on = !reshared.has(post.id);
-    const change = (delta: number, has: boolean) => {
-      setResharedIds((previous) => {
-        const next = new Set(previous);
-
-        if (has) next.add(post.id);
-        else next.delete(post.id);
-
-        return next;
-      });
-      setFeed((previous) => (previous.status === "ready" ? { ...previous, items: mapPost(previous.items, post.id, (shown) => ({ ...shown, reshareCount: shown.reshareCount + delta })) } : previous));
-    };
-
-    setBusy(post.id);
-    toggled.current.set(post.id, on);
-    change(on ? 1 : -1, on);
-    const result = await setReshared(post.id, on);
-
-    setBusy(null);
-    if (result.ok) {
-      setAnnouncement(on ? `Reshared ${post.author.displayName}'s note.` : `Stopped resharing ${post.author.displayName}'s note.`);
-
-      return;
-    }
-    toggled.current.set(post.id, !on);
-    change(on ? -1 : 1, !on);
-    toast.error(result.message);
-  };
+  const publish = async (content: string): Promise<PublishResult> =>
+    applyWriteResult(await writeNote(content), {
+      approved: (post) => {
+        toast.success("Note passed!");
+        showPost(post);
+      },
+      held: addHeld,
+      announce: setAnnouncement,
+    });
 
   // Gone from the feed at once; put back if the server refuses.
   const remove = async (post: FeedPost) => {
-    const before = feed;
+    await tearUpNote(post.id, () => {
+      const before = feed;
 
-    setFeed((previous) =>
-      previous.status === "ready"
-        ? {
-            ...previous,
-            items: previous.items
-              .filter((item) => !(item.kind === "post" && item.post.id === post.id))
-              .map((item): FeedItem => (item.kind === "reshare" && item.post.id === post.id ? { ...item, post: { id: post.id, tornUp: true } } : item)),
-          }
-        : previous,
-    );
-    // Its "tear up" button is gone with it: keep the keyboard in the feed.
-    feedHeading.current?.focus();
+      setFeed((previous) =>
+        previous.status === "ready"
+          ? {
+              ...previous,
+              items: previous.items
+                .filter((item) => !(item.kind === "post" && item.post.id === post.id))
+                .map((item): FeedItem => (item.kind === "reshare" && item.post.id === post.id ? { ...item, post: { id: post.id, tornUp: true } } : item)),
+            }
+          : previous,
+      );
+      // Its "tear up" button is gone with it: keep the keyboard in the feed.
+      feedHeading.current?.focus();
 
-    const result = await tearUp(post.id);
-
-    if (result.ok) {
-      toast.success("Note torn up.");
-
-      return;
-    }
-    setFeed(before);
-    toast.error(result.message);
+      return () => setFeed(before);
+    });
   };
 
   const tearUpHeld = async (note: HeldNote) => {
-    setHeld((previous) => previous.filter((other) => other.id !== note.id));
-    const result = await tearUp(note.id);
+    await tearUpNote(note.id, () => {
+      dropHeld(note.id);
 
-    if (result.ok) {
-      toast.success("Note torn up.");
-
-      return;
-    }
-    addHeld(note);
-    toast.error(result.message);
+      return () => addHeld(note);
+    });
   };
 
   const checkHeld = async (note: HeldNote) => {
@@ -216,18 +142,17 @@ export function SwiftterBoard() {
 
       return;
     }
-    if (result.status === "approved") {
-      const post = result.note;
-
-      setHeld((previous) => previous.filter((other) => other.id !== note.id));
-      if (!note.rootId) setFeed((previous) => (previous.status === "ready" ? { ...previous, items: [{ kind: "post", key: post.id, post }, ...previous.items] } : previous));
-      setAnnouncement("Your note was checked and passed.");
-      toast.success("Note passed!");
-
-      return;
-    }
-    addHeld(result.note);
-    setAnnouncement(result.message);
+    applyWriteResult(result, {
+      approved: (post) => {
+        dropHeld(note.id);
+        if (!note.rootId) showPost(post);
+        setAnnouncement("Your note was checked and passed.");
+        toast.success("Note passed!");
+      },
+      held: addHeld,
+      announce: setAnnouncement,
+    });
+    if (result.status === "blocked") setAnnouncement(result.message);
   };
 
   return (
@@ -265,7 +190,7 @@ export function SwiftterBoard() {
                 }
 
                 const post = item.post;
-                const mine = !!user && post.author.id === user.id;
+                const own = !!user && post.author.id === user.id;
 
                 return (
                   <PostNote
@@ -276,13 +201,13 @@ export function SwiftterBoard() {
                         authorName={post.author.displayName}
                         postId={post.id}
                         replyCount={post.replyCount}
-                        reshare={user && !mine ? { reshared: reshared.has(post.id), busy: busy === post.id, onToggle: () => toggleReshare(post) } : undefined}
+                        reshare={user && !own ? { reshared: mine.reshared.has(post.id), busy: reshare.busy === post.id, onToggle: () => reshare.toggle(post) } : undefined}
                         reshareCount={post.reshareCount}
                       />
                     }
                     paper={paper}
                     post={post}
-                    onDelete={mine && item.kind === "post" ? () => remove(post) : undefined}
+                    onDelete={own && item.kind === "post" ? () => remove(post) : undefined}
                   />
                 );
               })}
@@ -343,16 +268,6 @@ function GuestbookPrompt() {
       <p className="mt-5">
         <GuestbookLink />
       </p>
-    </div>
-  );
-}
-
-/** Blank lined paper the size of the composer, while it (or the sign-in state) loads. */
-function ComposerPlaceholder() {
-  return (
-    <div aria-hidden="true" className="relative h-[340px]" style={{ rotate: `${PAPERS.lined.tilt}deg` }}>
-      <NoteSheet paper="lined" />
-      <div className="relative mt-[76px] h-[224px]" style={ruling("lined")} />
     </div>
   );
 }
