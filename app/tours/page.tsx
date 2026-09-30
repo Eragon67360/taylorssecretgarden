@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
-
 import { Scribble, StickyNote } from "@/components/scrapbook";
 import { TourEntry } from "@/components/tours/tour-entry";
+import { pageMetadata } from "@/lib/metadata";
 import { TOURS, tourYears } from "@/lib/tours";
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Tours",
   description: "Every Taylor Swift Tour, from Fearless to the Eras Tour, kept in a fan's scrapbook: tickets, posters and footage.",
-};
+  path: "/tours",
+});
 
 export default function ToursPage() {
   return (

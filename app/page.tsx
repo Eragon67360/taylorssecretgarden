@@ -3,6 +3,10 @@ import { EraGallery } from "@/components/home/era-gallery";
 import { Hero } from "@/components/home/hero";
 import { TourWall } from "@/components/home/tour-wall";
 import { WaysIn } from "@/components/home/ways-in";
+import { pageMetadata } from "@/lib/metadata";
+
+// The site's own title and description (app/layout.tsx).
+export const metadata = pageMetadata({ path: "/" });
 
 /** The Eras whose covers spill out of the Music envelope. */
 const ENVELOPE_ERAS = ["folklore", "red", "reputation", "lover"] as const;

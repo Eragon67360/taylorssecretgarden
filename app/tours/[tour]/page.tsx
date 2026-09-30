@@ -10,6 +10,7 @@ import { TourScope } from "@/components/tours/tour-scope";
 import { TourNote, TourStub } from "@/components/tours/tour-stub";
 import { TourVideo } from "@/components/tours/tour-video";
 import { ERA_LOOKS } from "@/lib/eras";
+import { pageMetadata } from "@/lib/metadata";
 import { TOURS, getTour, tourEraLabel, tourLook, tourYears } from "@/lib/tours";
 
 type TourPageProps = { params: Promise<{ tour: string }> };
@@ -24,7 +25,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: TourPageProps): Promise<Metadata> {
   const tour = getTour((await params).tour);
 
-  return tour ? { title: tour.tour, description: `${tour.tour} (${tourYears(tour)}): ${tour.facts.join(" ")}` } : {};
+  return tour
+    ? pageMetadata({ title: tour.tour, description: `${tour.tour} (${tourYears(tour)}): ${tour.facts.join(" ")}`, path: `/tours/${tour.slug}` })
+    : {};
 }
 
 export default async function TourPage({ params }: TourPageProps) {
