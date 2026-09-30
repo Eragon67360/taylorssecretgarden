@@ -86,3 +86,16 @@ Estimates are rough working time. P0 = must ship for anything to ship; P1 = shou
 ## Order of work
 
 S1 → S8 → S2 → S5 → S3 → S4 → S6 → S7 → S9 (Swiftter, on the main thread), with V1–V8 delegated to a subagent on its own branch and reviewed, tested and merged by me. S10, S11 after the P0 set. Every item: feature branch → PR into `dev` → CI green → merge → `SESSION-LOG.md` entry.
+
+## Status at the end of the session
+
+All on `dev` (CI green at `6f6b3cc`), **not on `main`**: see WAKE-UP-REPORT.md, section 7.
+
+| Item | Status |
+| --- | --- |
+| S1–S10 | Done (#64, #66): moderation covers Posts and replies; display names are not moderated (S12, P2). |
+| S11 | Done (#67): live Gateway check 25/25. |
+| S12 | Not started (P2). |
+| V1 | Done except the vercel.app → .com redirect (blocker B1). |
+| V2–V8 | Done (#65, plus Swiftter threads in the sitemap). |
+| V9 | Not started (P2). |
