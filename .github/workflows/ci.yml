@@ -1,7 +1,8 @@
 name: CI
 
 # Two jobs on every pull request and on pushes to dev, each on its own
-# production build under `next start`:
+# production build under `next start`, unless only documentation changed
+# (see the `changes` job):
 #   smoke       lint, typecheck, unit and integration tests, build, then the
 #               Playwright smoke suite
 #   lighthouse  build, then Lighthouse CI (lighthouserc.js): mobile, median of
@@ -52,7 +53,44 @@ env:
   SWIFTTER_MODERATION: fake
 
 jobs:
+  # Whether anything besides documentation changed: Markdown files, docs/,
+  # LICENSE, .vscode/ and dependabot.yml neither build nor run. A pull request
+  # is compared with its base (from where they part); a push to dev with main,
+  # the same comparison as the release pull request that shares its
+  # concurrency group, so whichever of the two survives decides the same way.
+  # When only documentation changed, smoke and lighthouse are skipped (no Neon
+  # branch, no build) and, skipped, still count as passed for the required
+  # checks. Anything uncertain (a failed diff, this job failing) runs both.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # both ends of the comparison and where they part
+          filter: blob:none # file names only: no need for the old contents
+
+      - name: Anything besides documentation?
+        id: diff
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || 'origin/main' }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if ! files=$(git diff --name-only "$BASE...$HEAD"); then
+            echo "::warning::Could not compare $HEAD with $BASE: running every check"
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          code=$(printf '%s\n' "$files" | grep -Ev '(^|/)[^/]*\.md$|^docs/|^LICENSE$|^\.vscode/|^\.github/dependabot\.yml$' | grep -c . || true)
+          echo "$code file(s) besides documentation changed"
+          if [ "$code" -gt 0 ]; then echo "code=true"; else echo "code=false"; fi >> "$GITHUB_OUTPUT"
+
   smoke:
+    needs: changes
+    # Runs unless the changes job said "documentation only" (so also when it failed).
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -88,10 +126,30 @@ jobs:
           NEON_AUTH_COOKIE_SECRET: ${{ secrets.NEON_AUTH_COOKIE_SECRET }} # the write guard wants it
         run: npm run test:integration # the Swiftter service against this run's Neon branch
 
+      - name: Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          # A new key whenever the lockfile or a source changes; restoring the
+          # closest older one still saves most of the work.
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx', '**/*.mjs', '**/*.css', '!node_modules/**', '!.next/**', '!portfolio-hover/**') }}
+          restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
       - name: Build
         run: npm run build # Neon Auth is set up on first use, not at build time (lib/auth/server.ts)
 
+      - name: Playwright's version
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright browser cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
       - name: Install Playwright browser
+        # From the cache when it hit; the system libraries are installed either way.
         run: npx playwright install --with-deps chromium
 
       - name: Smoke tests
@@ -123,6 +181,8 @@ jobs:
           branch_id: ${{ steps.branch.outputs.branch_id }}
 
   lighthouse:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -143,6 +203,15 @@ jobs:
           project_id: ${{ vars.NEON_PROJECT_ID }}
           branch_name: ci/${{ github.run_id }}-${{ github.run_attempt }}-lighthouse
           cookie_secret: ${{ secrets.NEON_AUTH_COOKIE_SECRET }}
+
+      - name: Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          # A new key whenever the lockfile or a source changes; restoring the
+          # closest older one still saves most of the work.
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx', '**/*.mjs', '**/*.css', '!node_modules/**', '!.next/**', '!portfolio-hover/**') }}
+          restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
       - name: Build
         run: npm run build
