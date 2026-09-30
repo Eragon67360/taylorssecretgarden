@@ -23,7 +23,8 @@ module.exports = {
       startServerCommand: `npx next start -p ${PORT}`,
       startServerReadyPattern: "Ready",
       startServerReadyTimeout: 60000,
-      url: ["/", "/music", "/tours", "/tours/the-eras-tour", "/swiftter"].map((path) => `${base}${path}`),
+      // The last: a seeded Swiftter thread (scripts/seed-data.ts), eight replies deep.
+      url: ["/", "/music", "/tours", "/tours/the-eras-tour", "/swiftter", "/swiftter/p/5eed0000-0000-4000-8000-000000000001"].map((path) => `${base}${path}`),
       numberOfRuns: 3,
       settings: {
         // Mobile is Lighthouse's default form factor; only the asserted categories run.

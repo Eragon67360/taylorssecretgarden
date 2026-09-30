@@ -11,5 +11,6 @@ type PostContentProps = { content: string; className?: string; style?: CSSProper
  * `.post-content` in styles/globals.css.
  */
 export function PostContent({ content, className, style }: PostContentProps) {
-  return <div dangerouslySetInnerHTML={{ __html: content }} className={cn("post-content", className)} style={style} />;
+  // dir="auto" and, per paragraph, `unicode-bidi: plaintext` (globals.css): right-to-left text reads right.
+  return <div dangerouslySetInnerHTML={{ __html: content }} className={cn("post-content", className)} dir="auto" style={style} />;
 }

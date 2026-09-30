@@ -74,7 +74,9 @@ jobs:
           echo "NEON_AUTH_BASE_URL=$AUTH_URL" >> "$GITHUB_ENV"
 
       - name: Migrate and seed the branch
-        run: npm run db:migrate && npm run db:seed
+        # The demo content, then the development fixtures (scripts/seed.ts: accounts,
+        # three feed pages, threads, reshares, every moderation state).
+        run: npm run db:migrate && npm run db:seed && npm run seed
 
       - name: Lint
         run: npm run lint
@@ -84,6 +86,9 @@ jobs:
 
       - name: Unit tests
         run: npm test # hermetic: moderation runs against the AI SDK's mock model
+
+      - name: Integration tests
+        run: npm run test:integration # the Swiftter service against this run's Neon branch
 
       - name: Build
         run: npm run build
@@ -152,7 +157,9 @@ jobs:
           echo "NEON_AUTH_BASE_URL=$AUTH_URL" >> "$GITHUB_ENV"
 
       - name: Migrate and seed the branch
-        run: npm run db:migrate && npm run db:seed
+        # The demo content, then the development fixtures (scripts/seed.ts: accounts,
+        # three feed pages, threads, reshares, every moderation state).
+        run: npm run db:migrate && npm run db:seed && npm run seed
 
       - name: Build
         run: npm run build
