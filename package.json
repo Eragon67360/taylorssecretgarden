@@ -11,6 +11,9 @@
 		"start": "next start",
 		"lint": "eslint .",
 		"typecheck": "tsc --noEmit",
+		"test": "vitest run --project unit",
+		"test:integration": "vitest run --project integration",
+		"test:coverage": "vitest run --project unit --coverage",
 		"test:e2e": "playwright test",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "tsx --env-file-if-exists=.env.local db/migrate.ts",
@@ -50,6 +53,7 @@
 		"@types/react": "19.3.0",
 		"@types/react-dom": "19.3.0",
 		"@types/sanitize-html": "^2.16.1",
+		"@vitest/coverage-v8": "^5.0.2",
 		"drizzle-kit": "^0.31.11",
 		"eslint": "9.39.5",
 		"eslint-config-next": "16.3.6",
@@ -63,6 +67,7 @@
 		"tailwindcss": "^4.3.3",
 		"tsx": "^4.23.15",
 		"typescript": "6.0.3",
-		"typescript-eslint": "^8.70.1"
+		"typescript-eslint": "^8.70.1",
+		"vitest": "^5.0.2"
 	}
 }

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { generateText, Output } from "ai";
+import { generateText, type LanguageModel, Output } from "ai";
 import { z } from "zod";
 
 /**
@@ -18,7 +18,7 @@ export const MODERATION_MODEL = "anthropic/claude-haiku-4.5";
  * Verdicts take 1–2.6 s; a cold first call through the Gateway can pass 3 s,
  * so 8 s keeps real Posts from bouncing while an outage still fails fast.
  */
-const TIMEOUT_MS = 8000;
+export const TIMEOUT_MS = 8000;
 
 /** Swiftter's moderation policy, in plain language: edit it here. */
 export const MODERATION_POLICY = `
@@ -70,32 +70,52 @@ export type ModerationResult =
 /** Moderation could not give a verdict (Gateway down, timeout, unusable answer). */
 export class ModerationUnavailableError extends Error {}
 
+/** For tests: another model (the AI SDK's mock) and a shorter timeout. */
+export type ModerationOptions = { model?: LanguageModel; timeoutMs?: number };
+
 /**
  * Judges a Post's plain text (see `postPlainText`) against the
  * policy. Throws ModerationUnavailableError if no verdict came in time.
  */
-export async function moderatePost(text: string): Promise<ModerationResult> {
-	const { decision, reason } = isFake() ? fakeAnswer(text) : await askModel(text);
+export async function moderatePost(text: string, options: ModerationOptions = {}): Promise<ModerationResult> {
+	const normalised = normaliseForModeration(text);
+	// An injected model (the tests' mock) always wins over the fake.
+	const { decision, reason } = isFake() && !options.model ? fakeAnswer(normalised) : await askModel(normalised, options);
 
 	if (decision === "allowed") return { verdict: "allowed", reason };
 
-	// The reason, not the Post: enough to see how the policy is applied.
+	// The category only: the reason can paraphrase the Post, and it is stored
+	// with the decision anyway (moderation_decisions).
 	// eslint-disable-next-line no-console
-	console.info(`Moderation refused a Post (${decision}): ${reason}`);
+	console.info(`Moderation refused a Post (${decision})`);
 
 	return { verdict: "rejected", category: decision, reason };
 }
 
-async function askModel(text: string): Promise<ModelAnswer> {
+/** Zero-width characters and bidirectional controls: invisible, and a way to split words past a filter. */
+const INVISIBLE = /[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
+
+/**
+ * The text as the model should read it: Unicode compatibility forms folded
+ * (NFKC: full-width letters, ligatures, circled and styled letters become
+ * plain ones) and invisible characters removed. It does not fold look-alike
+ * letters from other scripts (a Cyrillic "а" stays Cyrillic) nor undo
+ * leetspeak or spacing: the model judges those, with known limits.
+ */
+export function normaliseForModeration(text: string): string {
+	return text.normalize("NFKC").replace(INVISIBLE, "");
+}
+
+async function askModel(text: string, { model = MODERATION_MODEL, timeoutMs = TIMEOUT_MS }: ModerationOptions): Promise<ModelAnswer> {
 	try {
 		const { output } = await generateText({
-			model: MODERATION_MODEL,
+			model,
 			instructions: INSTRUCTIONS,
 			// Tags that look like the delimiters are dropped, so the Post cannot end its data early.
 			prompt: `<post>\n${text.replaceAll(/<\s*\/?\s*post\b[^>]*>/gi, "")}\n</post>`,
 			output: Output.object({ schema: MODEL_ANSWER }),
 			temperature: 0,
-			timeout: TIMEOUT_MS,
+			timeout: timeoutMs,
 			// One attempt within the timeout: the Member is asked to try again instead.
 			maxRetries: 0,
 		});
