@@ -31,6 +31,7 @@ _Avoid_: Forum
 
 **Post**:
 A single rich-text message a Member publishes on Swiftter. Its Member can delete it ("tear up" in the interface); Posts cannot be edited.
+In the interface a Post (and a Reply) is a **note**, passed like a note in class: "Pass a note", "older notes", "Tear up this note?". "Post" is the domain term, for the code, the API and these docs; the pages never say it.
 _Avoid_: Tweet, message, swift
 
 **Reply**:

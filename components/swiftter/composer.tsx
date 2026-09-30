@@ -44,7 +44,7 @@ export default function Composer({
   onPublish,
   title = "Pass a note",
   placeholder = "ok but did you hear the bridge on track 5??",
-  submitLabel = "Post",
+  submitLabel = "Pass note",
 }: ComposerProps) {
   const headingId = useId();
   const [publishing, setPublishing] = useState(false);
@@ -77,7 +77,7 @@ export default function Composer({
       attributes: {
         role: "textbox",
         "aria-multiline": "true",
-        "aria-label": title === "Pass a note" ? "Write a Post" : title,
+        "aria-label": title === "Pass a note" ? "Write a note" : title,
         class: cn("post-content min-h-[140px] pr-5 pb-7 text-[16.5px] break-words outline-none sm:pr-8", TEXT_INSET),
       },
     },

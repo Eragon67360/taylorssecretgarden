@@ -89,7 +89,7 @@ export function HeldNoteCard({ note, checking, onCheckAgain, onTearUp, inThread 
               a reply
             </Link>
           ) : (
-            "a Post"
+            "a note"
           )}
           , {relativeDate(new Date(note.createdAt))}
         </p>

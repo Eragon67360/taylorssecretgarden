@@ -216,14 +216,14 @@ export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
       <section aria-labelledby="swiftter-feed" className="min-w-0 lg:order-1">
         {user && <HeldNotes checking={checking} notes={held} onCheckAgain={checkHeld} onTearUp={tearUpHeld} />}
         <h2 className="sr-only" id="swiftter-feed" tabIndex={-1}>
-          Posts
+          Notes
         </h2>
         {feed.status === "loading" && <FeedLoading />}
         {feed.status === "error" && <FeedError onRetry={retry} />}
         {feed.status === "ready" && feed.items.length === 0 && <FeedEmpty action={user ? undefined : <GuestbookLink />} />}
         {feed.status === "ready" && feed.items.length > 0 && (
           <>
-            <div aria-busy={loadingMore} aria-label="Posts" className="flex flex-col gap-9 sm:gap-11" role="feed">
+            <div aria-busy={loadingMore} aria-label="Notes" className="flex flex-col gap-9 sm:gap-11" role="feed">
               {feed.items.map((item, index) => {
                 const paper = paperFor(index, feed.items.length);
                 // Where it sits in the feed; how many there are is unknown while older notes remain.

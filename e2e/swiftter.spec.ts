@@ -125,7 +125,7 @@ async function openAs(browser: Browser, state: string) {
 	return { page, close: () => context.close() };
 }
 
-const feedPosts = (page: Page) => page.getByRole("feed", { name: "Posts" }).getByRole("article");
+const feedPosts = (page: Page) => page.getByRole("feed", { name: "Notes" }).getByRole("article");
 
 /** A request for a page of the feed after the first. */
 const OLDER_PAGE = (url: URL) => url.pathname === FEED && url.searchParams.has("cursor");
@@ -363,8 +363,8 @@ test.describe("Swiftter, signed out", () => {
 		const prompt = page.getByRole("link", { name: /sign the guestbook to pass a note/i });
 
 		await expect(prompt).toBeVisible();
-		await expect(page.getByRole("textbox", { name: "Write a Post" })).toHaveCount(0);
-		await expect(page.getByRole("button", { name: "Post", exact: true })).toHaveCount(0);
+		await expect(page.getByRole("textbox", { name: "Write a note" })).toHaveCount(0);
+		await expect(page.getByRole("button", { name: "Pass note", exact: true })).toHaveCount(0);
 
 		await prompt.click();
 		await expect(page).toHaveURL(/\/sign-in/);
@@ -466,11 +466,11 @@ test.describe("Swiftter, signed in", () => {
 		await signIn(page);
 
 		const text = `Long live, from the test Member ${Date.now()}`;
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 
 		await editor.click();
 		await editor.pressSequentially(text);
-		await page.getByRole("button", { name: "Post", exact: true }).click();
+		await page.getByRole("button", { name: "Pass note", exact: true }).click();
 
 		const first = feedPosts(page).first();
 
@@ -500,7 +500,7 @@ test.describe("Swiftter, signed in", () => {
 		await expect(first).toContainText(marker);
 		await expect(first.locator("script, img")).toHaveCount(0);
 		await page.goto(`/swiftter/p/${note.id}`);
-		await expect(page.getByText(marker)).toBeVisible();
+		await expect(page.getByText(marker, { exact: true })).toBeVisible();
 		expect(await page.evaluate(() => (window as { __swiftterPwned?: boolean }).__swiftterPwned)).toBeUndefined();
 	});
 
@@ -525,7 +525,7 @@ test.describe("Swiftter, signed in", () => {
 		await signIn(page);
 
 		const marker = `formatted ${Date.now()}`;
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 		const toolbar = page.getByRole("group", { name: "Formatting" });
 
 		await editor.click();
@@ -553,7 +553,7 @@ test.describe("Swiftter, signed in", () => {
 
 		const published = page.waitForResponse((response) => response.url().endsWith(FEED) && response.request().method() === "POST");
 
-		await page.getByRole("button", { name: "Post", exact: true }).click();
+		await page.getByRole("button", { name: "Pass note", exact: true }).click();
 		const { note } = (await (await published).json()) as { note: FeedPost };
 
 		expect(note.content).toContain("<strong>loud</strong>");
@@ -636,7 +636,7 @@ test.describe("Swiftter, signed in", () => {
 
 	test("passes axe, fits a phone and is still under reduced motion", async ({ page }) => {
 		await signIn(page);
-		await expect(page.getByRole("textbox", { name: "Write a Post" })).toBeVisible();
+		await expect(page.getByRole("textbox", { name: "Write a note" })).toBeVisible();
 		await expectNoAxeViolations(page);
 
 		await page.setViewportSize(PHONE);
@@ -674,15 +674,15 @@ test.describe("Swiftter, note edge cases", () => {
 	test("the composer counts characters near the limit and will not send too many", async ({ page }) => {
 		await page.goto("/swiftter");
 
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 
 		await editor.fill("b".repeat(1001));
 		await expect(page.getByText("1001/1000")).toBeVisible();
 		await expect(page.getByText(/: too long/)).toBeVisible();
-		await expect(page.getByRole("button", { name: "Post", exact: true })).toBeDisabled();
+		await expect(page.getByRole("button", { name: "Pass note", exact: true })).toBeDisabled();
 		await editor.press("Backspace");
 		await expect(page.getByText("1000/1000")).toBeVisible();
-		await expect(page.getByRole("button", { name: "Post", exact: true })).toBeEnabled();
+		await expect(page.getByRole("button", { name: "Pass note", exact: true })).toBeEnabled();
 	});
 });
 
@@ -739,11 +739,11 @@ test.describe("Swiftter, moderation", () => {
 		await page.goto("/swiftter");
 
 		const text = `buy cheap sneakers ${MARKER.offTopic} ${Date.now()}`;
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 
 		await editor.click();
 		await editor.pressSequentially(text);
-		await page.getByRole("button", { name: "Post", exact: true }).click();
+		await page.getByRole("button", { name: "Pass note", exact: true }).click();
 
 		await expect(page.getByRole("form", { name: "Pass a note" }).getByRole("alert")).toContainText(/Taylor/);
 		await expect(editor).toHaveText(text);
@@ -762,11 +762,11 @@ test.describe("Swiftter, moderation", () => {
 
 		// Through the composer: saved, cleared, announced, and waiting in the Member's margin.
 		const second = `${MARKER.down} second ${Date.now()}`;
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 
 		await editor.click();
 		await editor.pressSequentially(second);
-		await page.getByRole("button", { name: "Post", exact: true }).click();
+		await page.getByRole("button", { name: "Pass note", exact: true }).click();
 		await expect(editor).toHaveText("");
 		await expect(page.getByRole("status").filter({ hasText: /couldn't be checked just now/ })).toBeAttached();
 
@@ -991,11 +991,11 @@ test.describe("Swiftter, posting limit", () => {
 
 		// The same refusal from the composer: written on the note, and the text stays.
 		const text = `still one too many, ${stamp}`;
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 
 		await editor.click();
 		await editor.pressSequentially(text);
-		await page.getByRole("button", { name: "Post", exact: true }).click();
+		await page.getByRole("button", { name: "Pass note", exact: true }).click();
 
 		await expect(page.getByRole("form", { name: "Pass a note" }).getByRole("alert")).toContainText(/10 minutes/);
 		await expect(editor).toHaveText(text);
@@ -1011,6 +1011,19 @@ test.describe("Swiftter, posting limit", () => {
 		expect((await page.request.delete(`${FEED}/${posts[0].id}`, { headers: BOTID_HUMAN })).status()).toBe(204);
 		expect((await write(page, `<p>after tearing up, ${stamp}</p>`)).status()).toBe(429);
 	});
+});
+
+test("the scrapbook's page kickers never repeat a number across Home, Tours and Swiftter", async ({ request }) => {
+	const numbers: string[] = [];
+
+	for (const path of ["/", "/tours", "/swiftter"]) {
+		const html = await (await request.get(path)).text();
+
+		// Once per page: a kicker can also be in the page's React payload.
+		numbers.push(...new Set([...html.matchAll(/page (\d+) ·/g)].map((match) => match[1])));
+	}
+	expect(numbers.length).toBeGreaterThanOrEqual(5);
+	expect(new Set(numbers).size).toBe(numbers.length);
 });
 
 test("the old /forum address permanently redirects to /swiftter", async ({ page, request }) => {

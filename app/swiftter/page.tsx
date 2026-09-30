@@ -35,7 +35,7 @@ export default async function SwiftterPage() {
           color="#9ab3d6"
           kind="lavender"
         />
-        <p className="font-hand text-accent text-[24px] font-bold">page 4 · notes passed in class</p>
+        <p className="font-hand text-accent text-[24px] font-bold">page 6 · notes passed in class</p>
         <h1 className="font-serif relative inline-block text-[64px] leading-[0.95] font-semibold tracking-tight sm:text-[88px]">
           Swiftter
           <Scribble className="absolute -bottom-2 left-0 h-4 w-full" color="var(--pen)" />
