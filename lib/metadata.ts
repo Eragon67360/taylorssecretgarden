@@ -34,18 +34,20 @@ type PageMetadataOptions = {
   path: string;
   /** Kept out of search results (the guestbook, the styleguide). */
   noindex?: boolean;
+  /** An article (a Swiftter thread): its Open Graph type is "article", with when it was published. */
+  article?: { publishedTime: string };
 };
 
 /**
  * A page's metadata: title, description, canonical link and Open Graph card.
  * og:title and og:description follow the page's own title and description.
  */
-export function pageMetadata({ title, description, path, noindex }: PageMetadataOptions): Metadata {
+export function pageMetadata({ title, description, path, noindex, article }: PageMetadataOptions): Metadata {
   return {
     ...(title && { title }),
     ...(description && { description }),
     alternates: { canonical: path },
-    openGraph: { ...OPEN_GRAPH, url: path, images: [CARD] },
+    openGraph: article ? { ...OPEN_GRAPH, type: "article", publishedTime: article.publishedTime, url: path, images: [CARD] } : { ...OPEN_GRAPH, url: path, images: [CARD] },
     ...(noindex && { robots: { index: false, follow: false } }),
   };
 }

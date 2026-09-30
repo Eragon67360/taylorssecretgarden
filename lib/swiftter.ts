@@ -75,7 +75,7 @@ export type Thread = {
 	root: ThreadNote;
 	replies: ThreadNote[];
 	reshareCount: number;
-	/** Whether search engines may index it: a real Member's Post, not demo or seed content, not torn up. */
+	/** Whether search engines may index it: a real Member's Post, not demo or seed content, not torn up, meeting the indexing bar (service/swiftter.ts). */
 	indexable: boolean;
 };
 

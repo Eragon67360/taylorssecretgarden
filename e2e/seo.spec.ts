@@ -184,6 +184,26 @@ test.describe("llms.txt", () => {
 
 		for (const url of links) expect(url.startsWith(`${SITE}/`), url).toBe(true);
 	});
+
+	test("gives each Album's song count, running time and label, as its page does", async ({ request }) => {
+		const text = await (await request.get("/llms.txt")).text();
+
+		expect(text).toMatch(new RegExp(`^- \\[reputation\\]\\(${SITE}/music\\?album=52612062\\): released November 10, 2017; 15 songs, \\d+ min, label .+\\.$`, "m"));
+		expect(text).toMatch(/^- \[Midnights\]\(.+\): released October 21, 2022; 23 songs, 1 h \d{2} min, label /m);
+	});
+
+	test("/llms-full.txt lists every Album's tracklist", async ({ request }) => {
+		const response = await request.get("/llms-full.txt");
+
+		expect(response.status()).toBe(200);
+		expect(response.headers()["content-type"]).toContain("text/plain");
+		const text = await response.text();
+
+		expect(text).toMatch(/^# Taylor's Secret Garden: every tracklist\n/);
+		expect(text).toContain(`## reputation\n\n${SITE}/music?album=52612062\n`);
+		expect(text).toContain("\n1. ...Ready For It? (3:28)\n");
+		expect(text.match(/^## /gm)).toHaveLength(CATALOGUE.length);
+	});
 });
 
 test.describe("JSON-LD", () => {
@@ -306,6 +326,31 @@ test.describe("JSON-LD", () => {
 					performer: expect.objectContaining({ "@type": "MusicGroup", name: "Taylor Swift" }),
 				}),
 			]);
+		});
+	}
+});
+
+test.describe("metadata crawlers read in the <head>", () => {
+	// A thread's metadata awaits the database: Next would stream it into the
+	// body for any user agent outside next.config.ts's htmlLimitedBots.
+	const CRAWLERS = {
+		Googlebot: "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+		GPTBot: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.2; +https://openai.com/gptbot",
+		ClaudeBot: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)",
+		PerplexityBot: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)",
+	};
+
+	for (const [name, userAgent] of Object.entries(CRAWLERS)) {
+		test(`${name} gets a thread's canonical link and robots tag before </head>`, async ({ request }) => {
+			const response = await request.get(SEEDED_THREAD, { headers: { "User-Agent": userAgent } });
+
+			expect(response.status()).toBe(200);
+			const html = await response.text();
+			const head = html.slice(0, html.indexOf("</head>"));
+
+			expect(html.indexOf("</head>")).toBeGreaterThan(0);
+			expect(head).toContain(`<link rel="canonical" href="${SITE}${SEEDED_THREAD}"/>`);
+			expect(head).toContain('<meta name="robots" content="noindex, nofollow"/>');
 		});
 	}
 });

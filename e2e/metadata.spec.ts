@@ -1,6 +1,7 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 
 import tours from "../public/json/tours.json";
+import { seedId } from "../scripts/seed-data";
 
 import { expect, test } from "./fixtures";
 
@@ -89,6 +90,9 @@ async function metadataOf(page: Page, request: APIRequestContext, path: string) 
 	}, await response.text());
 }
 
+/** A seeded Swiftter thread (scripts/seed-data.ts), loaded on every test branch. */
+const SEEDED_THREAD = seedId("p", 1);
+
 const canonicalPages = [
 	{ path: "/", canonical: "/", title: "Taylor's Secret Garden: a Taylor Swift fan scrapbook" },
 	{ path: "/music", canonical: "/music", title: "Taylor Swift's Albums and tracklists · Taylor's Secret Garden" },
@@ -102,6 +106,8 @@ const canonicalPages = [
 	{ path: "/tours", canonical: "/tours", title: "Taylor Swift's Tours · Taylor's Secret Garden" },
 	...tours.map(({ slug, tour, date }) => ({ path: `/tours/${slug}`, canonical: `/tours/${slug}`, title: `${tour}: Taylor Swift's ${date.replace("-", "–")} tour · Taylor's Secret Garden` })),
 	{ path: "/swiftter", canonical: "/swiftter", title: "Swiftter · Taylor's Secret Garden" },
+	// A thread (seeded, scripts/seed-data.ts): the site's card and name, its title under the layout's template.
+	{ path: `/swiftter/p/${SEEDED_THREAD}`, canonical: `/swiftter/p/${SEEDED_THREAD}`, title: "Wren Holloway's note on Swiftter · Taylor's Secret Garden" },
 	{ path: "/sign-in?redirect_url=%2Fswiftter", canonical: "/sign-in", title: "Sign in · Taylor's Secret Garden" },
 	{ path: "/sign-up", canonical: "/sign-up", title: "Sign up · Taylor's Secret Garden" },
 ];
@@ -138,6 +144,13 @@ test.describe("per-route metadata", () => {
 			expect(description.length, slug).toBeLessThanOrEqual(160);
 		}
 		for (const path of ["/", "/music", "/music?album=426350", "/music?album=188803732", "/tours"]) expect((await describe(path)).length, path).toBeLessThanOrEqual(165);
+	});
+
+	test("a thread's card is an article's, with when it was published", async ({ request }) => {
+		const html = await (await request.get(`/swiftter/p/${SEEDED_THREAD}`)).text();
+
+		expect(html).toContain('<meta property="og:type" content="article"/>');
+		expect(html).toMatch(/<meta property="article:published_time" content="\d{4}-\d{2}-\d{2}T/);
 	});
 
 	test("the guestbook pages are noindex", async ({ page, request }) => {
