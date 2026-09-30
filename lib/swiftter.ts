@@ -52,6 +52,11 @@ export type HeldNote = {
 	attempts: number;
 	/** Whether "check again" is still allowed. */
 	canCheckAgain: boolean;
+	/**
+	 * Moderation could not be reached for a whole week (MODERATION_RETRY), so
+	 * the scheduled re-check gave up on it: it will never be published as it is.
+	 */
+	givenUp: boolean;
 	createdAt: string;
 	/** For a reply: its thread's first Post. */
 	rootId: string | null;
@@ -91,8 +96,20 @@ export const LIMITS = {
 
 export type LimitedWrite = keyof typeof LIMITS;
 
-/** Moderation attempts per note, "check again" and the scheduled re-check included. */
+/**
+ * Moderation attempts after which "check again" is no longer offered (every
+ * attempt counts, the scheduled re-check's too). The scheduled re-check itself
+ * is not capped by it: it follows MODERATION_RETRY.
+ */
 export const MAX_MODERATION_ATTEMPTS = 4;
+
+/**
+ * How long the scheduled re-check (hourly, vercel.json) keeps trying a note
+ * that moderation gave no verdict for: at every run for its first day, then
+ * once a day, then one last time a week after it was written. Only then is it
+ * given up on, and its author told; an outage of a few hours strands nothing.
+ */
+export const MODERATION_RETRY = { hourlyForHours: 24, days: 7 } as const;
 
 /** Visible characters in a string, as a reader counts them. */
 export function characterCount(text: string): number {

@@ -15,6 +15,7 @@ import {
 	NoMoreChecksError,
 	PostingLimitError,
 	PostNotFoundError,
+	recheckPending,
 	reshare,
 	SelfReshareError,
 	unreshare,
@@ -105,6 +106,62 @@ describe.skipIf(!!skipReason)("Swiftter service against Postgres", () => {
 			const { rows } = await getDb().execute<{ published_at: Date | null; content: string }>(sql`select published_at, content from posts where id = ${held.id}`);
 
 			expect(rows[0]).toEqual({ published_at: null, content: "" });
+		});
+	});
+
+	describe("the scheduled re-check", () => {
+		/** Moves a note and its moderation attempts back in time, as if written that long ago. */
+		const age = async (postId: string, interval: string) => {
+			await getDb().execute(sql`update posts set created_at = created_at - ${interval}::interval where id = ${postId}`);
+			await getDb().execute(sql`update moderation_decisions set created_at = created_at - ${interval}::interval where post_id = ${postId}`);
+		};
+
+		/** A pending note with every "check again" used up: MAX_MODERATION_ATTEMPTS attempts, none with a verdict. */
+		async function stuckNote() {
+			const alice = await newMember();
+			const { note: held } = await writeNote(alice, note("written during an outage"), null, unavailable);
+
+			for (let attempt = 2; attempt <= MAX_MODERATION_ATTEMPTS; attempt++) await checkAgain(alice, held.id, unavailable);
+
+			return { alice, id: held.id };
+		}
+
+		it("a note with 4 attempts and no verdict is retried later, and can still be approved", async () => {
+			const { alice, id } = await stuckNote();
+
+			// Just checked: not due yet.
+			expect(await recheckPending({ ids: [id], moderate: allow })).toMatchObject({ checked: 0 });
+			await age(id, "2 hours");
+			expect(await recheckPending({ ids: [id], moderate: allow })).toMatchObject({ checked: 1, approved: 1, gaveUp: 0 });
+			expect((await listFeed()).items.some((item) => item.post.id === id)).toBe(true);
+			expect(await listHeld(alice)).toEqual([]);
+		});
+
+		it("after its first day a note is checked daily, not hourly", async () => {
+			const { id } = await stuckNote();
+
+			await age(id, "2 days");
+			expect(await recheckPending({ ids: [id], moderate: unavailable })).toMatchObject({ checked: 1, stillPending: 1 });
+			await getDb().execute(sql`update moderation_decisions set created_at = now() - interval '3 hours' where post_id = ${id}`);
+			expect(await recheckPending({ ids: [id], moderate: allow })).toMatchObject({ checked: 0 });
+			await getDb().execute(sql`update moderation_decisions set created_at = now() - interval '1 day' where post_id = ${id}`);
+			expect(await recheckPending({ ids: [id], moderate: allow })).toMatchObject({ checked: 1, approved: 1 });
+		});
+
+		it("after a week, one last check; without a verdict the note is given up on, reported once, and its author told", async () => {
+			const { alice, id } = await stuckNote();
+
+			await age(id, "8 days");
+			expect(await recheckPending({ ids: [id], moderate: unavailable })).toMatchObject({ checked: 1, gaveUp: 1 });
+			expect(await recheckPending({ ids: [id], moderate: allow })).toMatchObject({ checked: 0, gaveUp: 0 });
+			expect(await listHeld(alice)).toEqual([expect.objectContaining({ id, status: "pending", givenUp: true, canCheckAgain: false })]);
+		});
+
+		it("a run stops after three notes in a row get no verdict: the Gateway is down", async () => {
+			const notes = await Promise.all(Array.from({ length: 5 }, () => stuckNote()));
+
+			for (const { id } of notes) await age(id, "2 hours");
+			expect(await recheckPending({ ids: notes.map(({ id }) => id), moderate: unavailable })).toMatchObject({ checked: 3, stillPending: 3 });
 		});
 	});
 

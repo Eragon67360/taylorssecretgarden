@@ -17,6 +17,7 @@ import {
 	type LimitedWrite,
 	MAX_MODERATION_ATTEMPTS,
 	MAX_NOTE_CHARACTERS,
+	MODERATION_RETRY,
 	type RefusalCategory,
 	type Thread,
 	type ThreadNote,
@@ -303,7 +304,8 @@ async function outcomeOf(id: string): Promise<WriteOutcome> {
 
 /**
  * "Check again": moderates one of the Member's own pending notes once more,
- * at most MAX_MODERATION_ATTEMPTS times in all.
+ * while it has had fewer than MAX_MODERATION_ATTEMPTS checks and has not been
+ * given up on.
  */
 export async function checkAgain(memberId: string, id: string, moderate: Moderate = moderatePost): Promise<WriteOutcome> {
 	if (!isUuid(id)) throw new PostNotFoundError();
@@ -319,31 +321,60 @@ export async function checkAgain(memberId: string, id: string, moderate: Moderat
 }
 
 /**
- * The scheduled re-check (app/api/cron/moderation): moderates pending notes
- * whose last attempt is old enough (5, 10, then 20 minutes: backing off), at
- * most `batch` at a time and never past MAX_MODERATION_ATTEMPTS. Returns what
- * it did, and how many notes have waited longer than an hour.
+ * When a pending note is due another scheduled check, from its own rows only
+ * (its `created_at` and its last attempt in moderation_decisions), per
+ * MODERATION_RETRY: at every hourly run during its first day, then daily, then
+ * a last time once it is a week old. Each gap is ten minutes short, so a cron
+ * run a few seconds early does not skip a turn.
  */
-export async function recheckPending(batch = 10, moderate: Moderate = moderatePost) {
-	const { rows } = await getDb().execute<{ id: string; content: string }>(sql`
-		select p.id, p.content
+const dueForCheck = sql`(
+	d.last_at is null
+	or (p.created_at > now() - make_interval(hours => ${MODERATION_RETRY.hourlyForHours}) and d.last_at < now() - interval '50 minutes')
+	or (p.created_at > now() - make_interval(days => ${MODERATION_RETRY.days}) and d.last_at < now() - interval '23 hours 50 minutes')
+	or (p.created_at <= now() - make_interval(days => ${MODERATION_RETRY.days}) and d.last_at < p.created_at + make_interval(days => ${MODERATION_RETRY.days}))
+)`;
+
+/** A pending note whose last check came after its week was up: given up on. */
+const givenUp = sql`(p.status = 'pending' and d.last_at >= p.created_at + make_interval(days => ${MODERATION_RETRY.days}))`;
+
+/** Consecutive notes left without a verdict after which a run stops: the Gateway is down, the rest keep their turn. */
+const STOP_AFTER_NO_VERDICTS = 3;
+
+/**
+ * The scheduled re-check (app/api/cron/moderation, hourly): moderates the
+ * pending notes that are due (dueForCheck), least recently tried first, at
+ * most `batch` at a time. `ids` limits it to those notes (tests). Returns
+ * what it did, and the notes it gave up on in this run (their week is over
+ * and the last check still had no verdict): each is reported once.
+ */
+export async function recheckPending({ batch = 20, moderate = moderatePost, ids }: { batch?: number; moderate?: Moderate; ids?: string[] } = {}) {
+	const only = ids ? sql`and p.id in (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})` : sql``;
+	const { rows } = await getDb().execute<{ id: string; content: string; final: boolean }>(sql`
+		select p.id, p.content, p.created_at <= now() - make_interval(days => ${MODERATION_RETRY.days}) as final
 		from posts p
-		join lateral (
-			select count(*)::int as attempts, max(created_at) as last_at from moderation_decisions d where d.post_id = p.id
-		) d on true
-		where p.status = 'pending' and p.deleted_at is null
-			and d.attempts < ${MAX_MODERATION_ATTEMPTS}
-			and (d.last_at is null or d.last_at < now() - make_interval(mins => 5 * power(2, greatest(d.attempts - 1, 0))::int))
-		order by p.created_at
+		join lateral (select max(created_at) as last_at from moderation_decisions where post_id = p.id) d on true
+		where p.status = 'pending' and p.deleted_at is null and ${dueForCheck} ${only}
+		order by d.last_at nulls first, p.created_at
 		limit ${batch}`);
 	const outcomes: WriteOutcome["status"][] = [];
+	let gaveUp = 0;
+	let noVerdicts = 0;
 
-	for (const { id, content } of rows) outcomes.push((await judge(id, content, moderate)).status);
+	for (const { id, content, final } of rows) {
+		const { status } = await judge(id, content, moderate);
 
-	const { rows: stale } = await getDb().execute<{ count: number }>(sql`
-		select count(*)::int as count from posts where status = 'pending' and deleted_at is null and created_at < now() - interval '1 hour'`);
+		outcomes.push(status);
+		if (status === "pending" && final) gaveUp++;
+		noVerdicts = status === "pending" ? noVerdicts + 1 : 0;
+		if (noVerdicts >= STOP_AFTER_NO_VERDICTS) break;
+	}
 
-	return { checked: outcomes.length, approved: outcomes.filter((status) => status === "approved").length, stillPendingOverAnHour: stale[0].count };
+	return {
+		checked: outcomes.length,
+		approved: outcomes.filter((status) => status === "approved").length,
+		stillPending: outcomes.filter((status) => status === "pending").length,
+		gaveUp,
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -547,15 +578,16 @@ type HeldRow = {
 	root_id: string | null;
 	created_at: Date | string;
 	attempts: number;
+	given_up: boolean;
 	category: RefusalCategory | null;
 	reason: string | null;
 };
 
 async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 	const { rows } = await getDb().execute<HeldRow>(sql`
-		select p.id, p.content, p.status, p.root_id, p.created_at, d.attempts, last.category, last.reason
+		select p.id, p.content, p.status, p.root_id, p.created_at, d.attempts, coalesce(${givenUp}, false) as given_up, last.category, last.reason
 		from posts p
-		join lateral (select count(*)::int as attempts from moderation_decisions where post_id = p.id) d on true
+		join lateral (select count(*)::int as attempts, max(created_at) as last_at from moderation_decisions where post_id = p.id) d on true
 		left join lateral (
 			select category, reason from moderation_decisions where post_id = p.id and outcome = 'blocked' order by created_at desc limit 1
 		) last on true
@@ -569,7 +601,8 @@ async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 		category: row.status === "blocked" ? row.category : null,
 		reason: row.status === "blocked" ? row.reason : null,
 		attempts: row.attempts,
-		canCheckAgain: row.status === "pending" && row.attempts < MAX_MODERATION_ATTEMPTS,
+		canCheckAgain: row.status === "pending" && !row.given_up && row.attempts < MAX_MODERATION_ATTEMPTS,
+		givenUp: row.given_up,
 		createdAt: iso(row.created_at),
 		rootId: row.root_id,
 	}));
