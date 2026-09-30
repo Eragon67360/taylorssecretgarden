@@ -79,7 +79,8 @@ export type ModerationOptions = { model?: LanguageModel; timeoutMs?: number };
  */
 export async function moderatePost(text: string, options: ModerationOptions = {}): Promise<ModerationResult> {
 	const normalised = normaliseForModeration(text);
-	const { decision, reason } = isFake() ? fakeAnswer(normalised) : await askModel(normalised, options);
+	// An injected model (the tests' mock) always wins over the fake.
+	const { decision, reason } = isFake() && !options.model ? fakeAnswer(normalised) : await askModel(normalised, options);
 
 	if (decision === "allowed") return { verdict: "allowed", reason };
 
