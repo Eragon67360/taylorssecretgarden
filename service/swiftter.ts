@@ -724,6 +724,109 @@ async function purgeTombstones(memberId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// A Member's own data: export and account deletion (GDPR arts. 15, 17, 20)
+
+/** Everything Swiftter keeps about a Member, as their export gives it to them. */
+export type MemberExport = {
+	member: { id: string; displayName: string; username: string | null; avatarUrl: string | null; createdAt: string } | null;
+	notes: {
+		id: string;
+		kind: "post" | "reply";
+		parentId: string | null;
+		rootId: string | null;
+		/** Sanitised HTML; empty once torn up. */
+		content: string;
+		status: "pending" | "approved" | "blocked";
+		createdAt: string;
+		publishedAt: string | null;
+		tornUpAt: string | null;
+	}[];
+	reshares: { postId: string; createdAt: string; undoneAt: string | null }[];
+	moderationDecisions: { postId: string; outcome: string; category: string | null; reason: string | null; model: string; createdAt: string }[];
+};
+
+const isoOrNull = (value: Date | string | null) => (value === null ? null : iso(value));
+
+/** The Member's row, notes (every state, torn up included), reshares (undone included) and every moderation decision on their notes. */
+export async function exportMemberData(memberId: string): Promise<MemberExport> {
+	const db = getDb();
+	const [member, notes, reshares, decisions] = await Promise.all([
+		db.execute<{ id: string; display_name: string; username: string | null; avatar_url: string | null; created_at: Date | string }>(sql`
+			select id, display_name, username, avatar_url, created_at from members where id = ${memberId}`),
+		db.execute<{
+			id: string;
+			parent_id: string | null;
+			root_id: string | null;
+			content: string;
+			status: "pending" | "approved" | "blocked";
+			created_at: Date | string;
+			published_at: Date | string | null;
+			deleted_at: Date | string | null;
+		}>(sql`
+			select id, parent_id, root_id, content, status, created_at, published_at, deleted_at
+			from posts where member_id = ${memberId} order by created_at, id`),
+		db.execute<{ post_id: string; created_at: Date | string; deleted_at: Date | string | null }>(sql`
+			select post_id, created_at, deleted_at from reshares where member_id = ${memberId} order by created_at, id`),
+		db.execute<{ post_id: string; outcome: string; category: string | null; reason: string | null; model: string; created_at: Date | string }>(sql`
+			select d.post_id, d.outcome, d.category, d.reason, d.model, d.created_at
+			from moderation_decisions d join posts p on p.id = d.post_id
+			where p.member_id = ${memberId} order by d.created_at, d.id`),
+	]);
+	const row = member.rows[0];
+
+	return {
+		member: row ? { id: row.id, displayName: row.display_name, username: row.username, avatarUrl: row.avatar_url, createdAt: iso(row.created_at) } : null,
+		notes: notes.rows.map((note) => ({
+			id: note.id,
+			kind: note.parent_id ? "reply" : "post",
+			parentId: note.parent_id,
+			rootId: note.root_id,
+			content: note.deleted_at ? "" : sanitisePostHtml(note.content),
+			status: note.status,
+			createdAt: iso(note.created_at),
+			publishedAt: isoOrNull(note.published_at),
+			tornUpAt: isoOrNull(note.deleted_at),
+		})),
+		reshares: reshares.rows.map((entry) => ({ postId: entry.post_id, createdAt: iso(entry.created_at), undoneAt: isoOrNull(entry.deleted_at) })),
+		moderationDecisions: decisions.rows.map((decision) => ({
+			postId: decision.post_id,
+			outcome: decision.outcome,
+			category: decision.category,
+			reason: decision.reason,
+			model: decision.model,
+			createdAt: iso(decision.created_at),
+		})),
+	};
+}
+
+/**
+ * Deletes a Member's account, in one transaction, under their write lock:
+ * - every note of theirs is torn up (text and moderation reasons erased), so
+ *   the threads others replied in still read, with no name on them (NO_AUTHOR);
+ * - their reshares are deleted;
+ * - their Member row keeps only its id (other rows refer to it), no name or
+ *   picture;
+ * - their Neon Auth account goes, with its sessions and credentials (on
+ *   delete cascade), straight from the `neon_auth` schema. Neon Auth's own
+ *   delete-user endpoint is disabled on its hosted service (it answers 404),
+ *   so this is the second deliberate exception to ADR-0004, after
+ *   scripts/unseed.ts.
+ * Tombstones nothing refers to are removed then, or by the daily purge.
+ */
+export async function deleteMemberAccount(memberId: string): Promise<void> {
+	await getDb().transaction(async (tx) => {
+		await lockMember(tx, memberId);
+		await tx.execute(sql`update posts set content = '', deleted_at = coalesce(deleted_at, now()) where member_id = ${memberId}`);
+		await tx.execute(sql`update moderation_decisions set reason = null where post_id in (select id from posts where member_id = ${memberId})`);
+		await tx.execute(sql`delete from reshares where member_id = ${memberId}`);
+		await tx.execute(sql`update members set display_name = '', username = null, avatar_url = null where id = ${memberId}`);
+		await tx.execute(sql`delete from neon_auth."user" where id::text = ${memberId}`);
+	});
+
+	await purgeTombstones(memberId);
+}
+
+// ---------------------------------------------------------------------------
 // Retention
 
 /** How long Swiftter keeps what is not public, in days (docs/adr/0007). */

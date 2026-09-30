@@ -2,12 +2,14 @@
 
 import type { MemberUser } from "@/lib/auth/member-hint";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { signOut } from "@/lib/auth/client";
 
 /**
- * The signed-in Member's corner of the header: their name and "Sign out".
+ * The signed-in Member's corner of the header: their name, their guestbook
+ * page and "Sign out".
  * Shown only once the page knows someone is signed in (components/site-header.tsx).
  */
 export default function MemberMenu({ user }: { user: MemberUser }) {
@@ -18,6 +20,10 @@ export default function MemberMenu({ user }: { user: MemberUser }) {
       <span className="text-soft hidden max-w-[32ch] truncate md:inline">
         signed in as <span className="text-ink font-semibold">{user.name || user.email}</span>
       </span>
+      {/* Their data and account (app/(guestbook)/guestbook). */}
+      <Link className="focus-ring text-ink flex min-h-9 items-center rounded-[6px] px-1 font-bold underline underline-offset-2" href="/guestbook">
+        Your page
+      </Link>
       <button
         className="focus-ring text-ink min-h-9 rounded-[6px] px-1 font-bold underline underline-offset-2"
         disabled={leaving}

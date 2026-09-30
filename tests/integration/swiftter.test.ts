@@ -6,7 +6,9 @@ import { LIMITS, MAX_MODERATION_ATTEMPTS, NO_AUTHOR } from "@/lib/swiftter";
 import {
 	AlreadyResharedError,
 	checkAgain,
+	deleteMemberAccount,
 	deletePost,
+	exportMemberData,
 	getThread,
 	listFeed,
 	listHeld,
@@ -163,6 +165,52 @@ describe.skipIf(!!skipReason)("Swiftter service against Postgres", () => {
 
 			for (const { id } of notes) await age(id, "2 hours");
 			expect(await recheckPending({ ids: notes.map(({ id }) => id), moderate: unavailable })).toMatchObject({ checked: 3, stillPending: 3 });
+		});
+	});
+
+	describe("a Member's own data", () => {
+		it("the export holds their notes in every state, reshares and moderation decisions, and nobody else's", async () => {
+			const [alice, bob] = [await newMember("Alice Exporting"), await newMember()];
+			const { note: post } = await writeNote(alice, note("exported post"), null, allow);
+			const { note: refused } = await writeNote(alice, note("exported refusal"), null, refuse());
+			const { note: theirs } = await writeNote(bob, note("bob's post"), null, allow);
+			const { note: reply } = await writeNote(alice, note("exported reply"), theirs.id, allow);
+
+			await reshare(alice, theirs.id);
+			const data = await exportMemberData(alice);
+
+			expect(data.member).toMatchObject({ id: alice, displayName: "Alice Exporting" });
+			expect(data.notes.map((entry) => [entry.id, entry.kind, entry.status])).toEqual([
+				[post.id, "post", "approved"],
+				[refused.id, "post", "blocked"],
+				[reply.id, "reply", "approved"],
+			]);
+			expect(data.reshares).toEqual([expect.objectContaining({ postId: theirs.id, undoneAt: null })]);
+			expect(data.moderationDecisions.map((decision) => decision.postId).sort()).toEqual([post.id, refused.id, reply.id].sort());
+			expect(JSON.stringify(data)).not.toContain("bob's post");
+		});
+
+		it("deleting an account tears up every note, drops the reshares, empties the Member row; threads still read", async () => {
+			const [alice, bob] = [await newMember("Alice Leaving"), await newMember()];
+			const { note: post } = await writeNote(alice, note("leaving soon"), null, allow);
+			const { note: held } = await writeNote(alice, note("pending when leaving"), null, unavailable);
+			const { note: theirs } = await writeNote(bob, note("bob stays"), null, allow);
+			const { note: answer } = await writeNote(bob, note("an answer that stays"), post.id, allow);
+
+			await reshare(alice, theirs.id);
+			await deleteMemberAccount(alice);
+
+			const thread = await getThread(answer.id);
+
+			expect(thread?.root).toMatchObject({ id: post.id, tornUp: true, content: "", author: NO_AUTHOR });
+			expect(thread?.replies[0]).toMatchObject({ id: answer.id, tornUp: false });
+			expect(await listHeld(alice)).toEqual([]);
+			expect(await listOwnReshares(alice)).toEqual([]);
+			const { rows } = await getDb().execute<{ display_name: string; held: number }>(sql`
+				select display_name, (select count(*)::int from posts where id = ${held.id} and deleted_at is null) as held from members where id = ${alice}`);
+
+			expect(rows[0]).toEqual({ display_name: "", held: 0 });
+			expect(JSON.stringify(await wholeFeed())).not.toContain("Alice Leaving");
 		});
 	});
 
