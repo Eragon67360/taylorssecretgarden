@@ -1,9 +1,8 @@
 "use client";
 
 import type { PublishResult } from "./composer";
-import type { FeedItem, FeedPost, HeldNote } from "@/lib/swiftter";
+import type { FeedItem, FeedPage, FeedPost, HeldNote } from "@/lib/swiftter";
 
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -11,19 +10,17 @@ import { IntentLink } from "@/components/intent-link";
 import { WashiTape } from "@/components/scrapbook";
 import { displayNameOf } from "@/lib/display-name";
 
-import { checkAgain as checkAgainRequest, fetchFeed, fetchMine, setReshared, tearUp, writeNote } from "./api";
+import { checkAgain as checkAgainRequest, fetchFeed, writeNote } from "./api";
 import { FeedEmpty, FeedError, FeedLoading } from "./feed-states";
 import { HeldNotes } from "./held-notes";
+import { Composer, ComposerPlaceholder } from "./lazy-composer";
 import { NoteActions } from "./note-actions";
-import { NoteSheet, PAPERS, ruling } from "./note-paper";
 import { paperFor, PostNote } from "./post-note";
 import { TornUpNote } from "./torn-up-note";
 import { useMemberSession } from "./use-member-session";
+import { applyWriteResult, heldElementId, noteElementId, tearUpNote, useFocusAfterRender, useMine, useReshare } from "./use-swiftter";
 
 const SIGN_IN_URL = "/sign-in?redirect_url=%2Fswiftter";
-
-// Only Members write, so visitors never download the editor.
-const Composer = dynamic(() => import("@/components/swiftter/composer"), { loading: () => <ComposerPlaceholder /> });
 
 type Feed = { status: "loading" } | { status: "error" } | { status: "ready"; items: FeedItem[]; nextCursor: string | null };
 
@@ -31,182 +28,145 @@ type Feed = { status: "loading" } | { status: "error" } | { status: "ready"; ite
 const mapPost = (items: FeedItem[], id: string, update: (post: FeedPost) => FeedPost): FeedItem[] =>
   items.map((item) => (item.post.id === id && !("tornUp" in item.post) ? ({ ...item, post: update(item.post) } as FeedItem) : item));
 
-/** Swiftter's feed and, beside it, the composer for Members or an invitation to sign in for visitors. */
-export function SwiftterBoard() {
+/**
+ * Swiftter's feed and, beside it, the composer for Members or an invitation
+ * to sign in for visitors. The feed's first page comes rendered from the
+ * server (`firstPage`); null when the server could not read it, and the
+ * browser asks again.
+ */
+export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
   const { session, probe } = useMemberSession();
   const user = session.pending ? null : session.user;
-  const [feed, setFeed] = useState<Feed>({ status: "loading" });
-  const [feedRequest, setFeedRequest] = useState(0);
+  const [feed, setFeed] = useState<Feed>(firstPage ? { status: "ready", ...firstPage } : { status: "loading" });
+  // Counts the browser's reads of the first page: none while the server's is shown.
+  const [feedRequest, setFeedRequest] = useState(firstPage ? 0 : 1);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [held, setHeld] = useState<HeldNote[]>([]);
-  const [reshared, setResharedIds] = useState<Set<string>>(new Set());
-  const [busy, setBusy] = useState<string | null>(null);
+  const [moreFailed, setMoreFailed] = useState(false);
   const [checking, setChecking] = useState<string | null>(null);
   // Read out politely: what changed on the page after an action.
   const [announcement, setAnnouncement] = useState("");
-  const feedHeading = useRef<HTMLHeadingElement>(null);
-  // Reshares toggled on this page: they win over an answer from /api/swiftter/me that was already on its way.
-  const toggled = useRef(new Map<string, boolean>());
+  const focusSoon = useFocusAfterRender();
+  // "Try again" was pressed: once the feed is back, the keyboard goes to its first note.
+  const retried = useRef(false);
 
   useEffect(() => {
+    if (feedRequest === 0) return;
     let current = true;
 
     fetchFeed().then((page) => {
-      if (current) setFeed(page ? { status: "ready", ...page } : { status: "error" });
+      if (!current) return;
+      setFeed(page ? { status: "ready", ...page } : { status: "error" });
+      if (retried.current) {
+        retried.current = false;
+        focusSoon(page?.items[0] ? noteElementId(page.items[0].key) : "swiftter-feed");
+      }
     });
 
     return () => {
       current = false;
     };
-  }, [feedRequest]);
+  }, [feedRequest, focusSoon]);
 
   // The signed-in Member's own view: held notes and what they reshare.
-  const userId = user?.id;
-
-  useEffect(() => {
-    if (!userId) return;
-    let current = true;
-
-    fetchMine().then((mine) => {
-      if (!current || !mine) return;
-      // Merged, not replaced: notes written or reshares toggled meanwhile stay.
-      setHeld((previous) => [...previous.filter((note) => !mine.held.some((other) => other.id === note.id)), ...mine.held]);
-      const next = new Set(mine.reshared);
-
-      for (const [id, on] of toggled.current) {
-        if (on) next.add(id);
-        else next.delete(id);
-      }
-      setResharedIds(next);
-    });
-
-    return () => {
-      current = false;
-    };
-  }, [userId]);
+  const mine = useMine(user?.id);
+  const { held, addHeld, dropHeld } = mine;
+  const reshare = useReshare(
+    mine,
+    (id, delta) =>
+      setFeed((previous) =>
+        previous.status === "ready" ? { ...previous, items: mapPost(previous.items, id, (shown) => ({ ...shown, reshareCount: shown.reshareCount + delta })) } : previous,
+      ),
+    setAnnouncement,
+  );
 
   const retry = () => {
+    retried.current = true;
     setFeed({ status: "loading" });
     setFeedRequest((count) => count + 1);
   };
 
   const loadMore = async () => {
-    if (feed.status !== "ready" || !feed.nextCursor) return;
+    // The button stays focusable while the page is read (aria-disabled): a second press does nothing.
+    if (feed.status !== "ready" || !feed.nextCursor || loadingMore) return;
     setLoadingMore(true);
+    setMoreFailed(false);
     const page = await fetchFeed(feed.nextCursor);
 
     setLoadingMore(false);
     if (!page) {
-      toast.error("The next notes couldn't be read just now. Try again in a moment.");
+      // Said beside the button, which now tries again.
+      setMoreFailed(true);
 
       return;
     }
     setFeed((previous) => (previous.status === "ready" ? { status: "ready", items: [...previous.items, ...page.items], nextCursor: page.nextCursor } : previous));
-    setAnnouncement(`${page.items.length} more notes loaded.`);
+    setAnnouncement(`${page.items.length} more ${page.items.length === 1 ? "note" : "notes"} loaded.`);
+    // The button may be gone (last page): the keyboard carries on at the first new note.
+    if (page.items[0]) focusSoon(noteElementId(page.items[0].key));
   };
 
-  const addHeld = (note: HeldNote) => setHeld((previous) => [note, ...previous.filter((other) => other.id !== note.id)]);
+  /** A Post just made public, first in the feed. */
+  const showPost = (post: FeedPost) =>
+    setFeed((previous) =>
+      previous.status === "ready"
+        ? { ...previous, items: [{ kind: "post", key: post.id, post }, ...previous.items] }
+        : { status: "ready", items: [{ kind: "post", key: post.id, post }], nextCursor: null },
+    );
 
-  const publish = async (content: string): Promise<PublishResult> => {
-    const result = await writeNote(content);
-
-    if (!result.ok) return { published: false, message: result.message };
-    if (result.status === "approved") {
-      const post = result.note;
-
-      toast.success("Note passed!");
-      setFeed((previous) =>
-        previous.status === "ready" ? { ...previous, items: [{ kind: "post", key: post.id, post }, ...previous.items] } : { status: "ready", items: [{ kind: "post", key: post.id, post }], nextCursor: null },
-      );
-
-      return { published: true };
-    }
-
-    addHeld(result.note);
-    if (result.status === "pending") {
-      // Kept and waiting: the composer is cleared, the note is in the Member's margin.
-      toast.info("Your note is saved and waiting for a check.");
-      setAnnouncement(result.message);
-
-      return { published: true };
-    }
-
-    // Refused: the reason is written on the note and the text stays to rework.
-    return { published: false, message: result.message };
-  };
-
-  const toggleReshare = async (post: FeedPost) => {
-    const on = !reshared.has(post.id);
-    const change = (delta: number, has: boolean) => {
-      setResharedIds((previous) => {
-        const next = new Set(previous);
-
-        if (has) next.add(post.id);
-        else next.delete(post.id);
-
-        return next;
-      });
-      setFeed((previous) => (previous.status === "ready" ? { ...previous, items: mapPost(previous.items, post.id, (shown) => ({ ...shown, reshareCount: shown.reshareCount + delta })) } : previous));
-    };
-
-    setBusy(post.id);
-    toggled.current.set(post.id, on);
-    change(on ? 1 : -1, on);
-    const result = await setReshared(post.id, on);
-
-    setBusy(null);
-    if (result.ok) {
-      setAnnouncement(on ? `Reshared ${post.author.displayName}'s note.` : `Stopped resharing ${post.author.displayName}'s note.`);
-
-      return;
-    }
-    toggled.current.set(post.id, !on);
-    change(on ? -1 : 1, !on);
-    toast.error(result.message);
-  };
+  const publish = async (content: string): Promise<PublishResult> =>
+    applyWriteResult(await writeNote(content), {
+      approved: (post) => {
+        toast.success("Note passed!");
+        showPost(post);
+      },
+      held: addHeld,
+      announce: setAnnouncement,
+    });
 
   // Gone from the feed at once; put back if the server refuses.
   const remove = async (post: FeedPost) => {
-    const before = feed;
+    await tearUpNote(post.id, () => {
+      const before = feed;
+      const items = feed.status === "ready" ? feed.items : [];
+      const at = items.findIndex((item) => item.kind === "post" && item.post.id === post.id);
+      // Its "tear up" button is gone with it: the keyboard goes on to the next note (or back to the one before, or the feed).
+      const next = items[at + 1] ?? items[at - 1];
 
-    setFeed((previous) =>
-      previous.status === "ready"
-        ? {
-            ...previous,
-            items: previous.items
-              .filter((item) => !(item.kind === "post" && item.post.id === post.id))
-              .map((item): FeedItem => (item.kind === "reshare" && item.post.id === post.id ? { ...item, post: { id: post.id, tornUp: true } } : item)),
-          }
-        : previous,
-    );
-    // Its "tear up" button is gone with it: keep the keyboard in the feed.
-    feedHeading.current?.focus();
+      setFeed((previous) =>
+        previous.status === "ready"
+          ? {
+              ...previous,
+              items: previous.items
+                .filter((item) => !(item.kind === "post" && item.post.id === post.id))
+                .map((item): FeedItem => (item.kind === "reshare" && item.post.id === post.id ? { ...item, post: { id: post.id, tornUp: true } } : item)),
+            }
+          : previous,
+      );
+      focusSoon(next && at >= 0 ? noteElementId(next.key) : "swiftter-feed");
 
-    const result = await tearUp(post.id);
+      return () => setFeed(before);
+    });
+  };
 
-    if (result.ok) {
-      toast.success("Note torn up.");
+  /** After a held note leaves the Member's margin: the next one there, or the feed. */
+  const focusAfterHeld = (note: HeldNote) => {
+    const at = held.findIndex((other) => other.id === note.id);
+    const next = held[at + 1] ?? held[at - 1];
 
-      return;
-    }
-    setFeed(before);
-    toast.error(result.message);
+    focusSoon(next ? heldElementId(next.id) : "swiftter-feed");
   };
 
   const tearUpHeld = async (note: HeldNote) => {
-    setHeld((previous) => previous.filter((other) => other.id !== note.id));
-    const result = await tearUp(note.id);
+    await tearUpNote(note.id, () => {
+      dropHeld(note.id);
+      focusAfterHeld(note);
 
-    if (result.ok) {
-      toast.success("Note torn up.");
-
-      return;
-    }
-    addHeld(note);
-    toast.error(result.message);
+      return () => addHeld(note);
+    });
   };
 
   const checkHeld = async (note: HeldNote) => {
+    if (checking) return;
     setChecking(note.id);
     const result = await checkAgainRequest(note.id);
 
@@ -216,18 +176,25 @@ export function SwiftterBoard() {
 
       return;
     }
-    if (result.status === "approved") {
-      const post = result.note;
-
-      setHeld((previous) => previous.filter((other) => other.id !== note.id));
-      if (!note.rootId) setFeed((previous) => (previous.status === "ready" ? { ...previous, items: [{ kind: "post", key: post.id, post }, ...previous.items] } : previous));
-      setAnnouncement("Your note was checked and passed.");
-      toast.success("Note passed!");
-
-      return;
-    }
-    addHeld(result.note);
-    setAnnouncement(result.message);
+    applyWriteResult(result, {
+      approved: (post) => {
+        dropHeld(note.id);
+        // A Post is now first in the feed: the keyboard goes to it.
+        if (!note.rootId) {
+          showPost(post);
+          focusSoon(noteElementId(post.id));
+        } else focusAfterHeld(note);
+        // Said once, by the toast (read out as it appears).
+        toast.success("Your note was checked and passed.");
+      },
+      held: (updated) => {
+        addHeld(updated);
+        // No more checks: the button is gone, the keyboard stays on the note.
+        if (!updated.canCheckAgain) focusSoon(heldElementId(updated.id));
+      },
+      announce: setAnnouncement,
+    });
+    if (result.status === "blocked") setAnnouncement(result.message);
   };
 
   return (
@@ -248,24 +215,26 @@ export function SwiftterBoard() {
 
       <section aria-labelledby="swiftter-feed" className="min-w-0 lg:order-1">
         {user && <HeldNotes checking={checking} notes={held} onCheckAgain={checkHeld} onTearUp={tearUpHeld} />}
-        <h2 ref={feedHeading} className="sr-only" id="swiftter-feed" tabIndex={-1}>
-          Posts
+        <h2 className="sr-only" id="swiftter-feed" tabIndex={-1}>
+          Notes
         </h2>
         {feed.status === "loading" && <FeedLoading />}
         {feed.status === "error" && <FeedError onRetry={retry} />}
         {feed.status === "ready" && feed.items.length === 0 && <FeedEmpty action={user ? undefined : <GuestbookLink />} />}
         {feed.status === "ready" && feed.items.length > 0 && (
           <>
-            <div aria-busy={loadingMore} aria-label="Posts" className="flex flex-col gap-9 sm:gap-11" role="feed">
+            <div aria-busy={loadingMore} aria-label="Notes" className="flex flex-col gap-9 sm:gap-11" role="feed">
               {feed.items.map((item, index) => {
                 const paper = paperFor(index, feed.items.length);
+                // Where it sits in the feed; how many there are is unknown while older notes remain.
+                const position = { at: index + 1, of: feed.nextCursor ? -1 : feed.items.length };
 
                 if ("tornUp" in item.post) {
-                  return <TornUpNote key={item.key} paper={paper} resharedBy={item.kind === "reshare" ? item.resharedBy.displayName : undefined} />;
+                  return <TornUpNote key={item.key} id={noteElementId(item.key)} paper={paper} position={position} resharedBy={item.kind === "reshare" ? item.resharedBy.displayName : undefined} />;
                 }
 
                 const post = item.post;
-                const mine = !!user && post.author.id === user.id;
+                const own = !!user && post.author.id === user.id;
 
                 return (
                   <PostNote
@@ -276,27 +245,34 @@ export function SwiftterBoard() {
                         authorName={post.author.displayName}
                         postId={post.id}
                         replyCount={post.replyCount}
-                        reshare={user && !mine ? { reshared: reshared.has(post.id), busy: busy === post.id, onToggle: () => toggleReshare(post) } : undefined}
+                        reshare={user && !own ? { reshared: mine.reshared.has(post.id), busy: reshare.busy === post.id, onToggle: () => reshare.toggle(post) } : undefined}
                         reshareCount={post.reshareCount}
                       />
                     }
+                    id={noteElementId(item.key)}
                     paper={paper}
+                    position={position}
                     post={post}
-                    onDelete={mine && item.kind === "post" ? () => remove(post) : undefined}
+                    onDelete={own && item.kind === "post" ? () => remove(post) : undefined}
                   />
                 );
               })}
             </div>
             {feed.nextCursor && (
-              <div className="mt-10 flex justify-center">
+              <div className="mt-10 flex flex-col items-center gap-2">
+                {moreFailed && (
+                  <p className="text-pen text-[15px] font-semibold" role="alert">
+                    The next notes couldn&apos;t be read just now.
+                  </p>
+                )}
                 <button
                   aria-busy={loadingMore}
-                  className="font-hand focus-ring decoration-pen min-h-11 rounded-sm px-2 text-[25px] font-bold underline decoration-wavy decoration-[1.5px] underline-offset-[5px] disabled:opacity-60"
-                  disabled={loadingMore}
+                  aria-disabled={loadingMore}
+                  className="font-hand focus-ring decoration-pen min-h-11 rounded-sm px-2 text-[25px] font-bold underline decoration-wavy decoration-[1.5px] underline-offset-[5px] aria-disabled:opacity-60"
                   type="button"
                   onClick={loadMore}
                 >
-                  {loadingMore ? "turning the page…" : "older notes →"}
+                  {loadingMore ? "turning the page…" : moreFailed ? "try again: older notes →" : "older notes →"}
                 </button>
               </div>
             )}
@@ -343,16 +319,6 @@ function GuestbookPrompt() {
       <p className="mt-5">
         <GuestbookLink />
       </p>
-    </div>
-  );
-}
-
-/** Blank lined paper the size of the composer, while it (or the sign-in state) loads. */
-function ComposerPlaceholder() {
-  return (
-    <div aria-hidden="true" className="relative h-[340px]" style={{ rotate: `${PAPERS.lined.tilt}deg` }}>
-      <NoteSheet paper="lined" />
-      <div className="relative mt-[76px] h-[224px]" style={ruling("lined")} />
     </div>
   );
 }

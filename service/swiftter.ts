@@ -591,6 +591,7 @@ type HeldRow = {
 	content: string;
 	status: "pending" | "blocked";
 	root_id: string | null;
+	parent_id: string | null;
 	created_at: Date | string;
 	attempts: number;
 	given_up: boolean;
@@ -600,7 +601,7 @@ type HeldRow = {
 
 async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 	const { rows } = await getDb().execute<HeldRow>(sql`
-		select p.id, p.content, p.status, p.root_id, p.created_at, d.attempts, coalesce(${givenUp()}, false) as given_up, last.category, last.reason
+		select p.id, p.content, p.status, p.root_id, p.parent_id, p.created_at, d.attempts, coalesce(${givenUp()}, false) as given_up, last.category, last.reason
 		from posts p
 		join lateral (select count(*)::int as attempts, max(created_at) as last_at from moderation_decisions where post_id = p.id) d on true
 		left join lateral (
@@ -620,6 +621,7 @@ async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 		givenUp: row.given_up,
 		createdAt: iso(row.created_at),
 		rootId: row.root_id,
+		parentId: row.parent_id,
 	}));
 }
 

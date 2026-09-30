@@ -39,9 +39,10 @@ export function NoteActions({ postId, authorName, replyCount, reshareCount, resh
       )}
       {reshare ? (
         <button
+          // Stays focusable while its request is out (a press then does nothing, use-swiftter.ts).
+          aria-disabled={reshare.busy}
           aria-pressed={reshare.reshared}
-          className={cn(ACTION, reshare.reshared && "text-pen", "disabled:opacity-60")}
-          disabled={reshare.busy}
+          className={cn(ACTION, reshare.reshared && "text-pen", "aria-disabled:opacity-60")}
           type="button"
           onClick={reshare.onToggle}
         >

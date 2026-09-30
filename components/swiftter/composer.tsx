@@ -11,6 +11,7 @@ import { characterCount, MAX_NOTE_CHARACTERS } from "@/lib/swiftter";
 import { cn } from "@/lib/utils";
 
 import { NoteSheet, PAPERS, PinnedPhoto, ruling, TEXT_INSET } from "./note-paper";
+import { limitMessage } from "./words";
 
 /** Blank lines left at the end of a Post (pressing Enter once too often). */
 const withoutTrailingBlankLines = (html: string) => html.replace(/(<p><\/p>)+$/, "");
@@ -43,7 +44,7 @@ export default function Composer({
   onPublish,
   title = "Pass a note",
   placeholder = "ok but did you hear the bridge on track 5??",
-  submitLabel = "Post",
+  submitLabel = "Pass note",
 }: ComposerProps) {
   const headingId = useId();
   const [publishing, setPublishing] = useState(false);
@@ -76,7 +77,7 @@ export default function Composer({
       attributes: {
         role: "textbox",
         "aria-multiline": "true",
-        "aria-label": title === "Pass a note" ? "Write a Post" : title,
+        "aria-label": title === "Pass a note" ? "Write a note" : title,
         class: cn("post-content min-h-[140px] pr-5 pb-7 text-[16.5px] break-words outline-none sm:pr-8", TEXT_INSET),
       },
     },
@@ -90,7 +91,7 @@ export default function Composer({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!editor || editor.isEmpty || tooLong) return;
+    if (!editor || editor.isEmpty || tooLong || publishing) return;
 
     setPublishing(true);
     setRefusal(null);
@@ -148,9 +149,12 @@ export default function Composer({
         <p aria-hidden="true" className="font-hand text-[19px] font-bold whitespace-nowrap" style={{ color: PAPERS.lined.soft }}>
           (pass it on ♡)
         </p>
-        {/* Near the limit, how many characters are left, read out politely as it changes. */}
+        {/* Read out only when a threshold is crossed, not at every keystroke. */}
+        <p aria-live="polite" className="sr-only">
+          {limitMessage(characters)}
+        </p>
+        {/* Near the limit, how many characters are left. */}
         <p
-          aria-live="polite"
           className={cn("ml-auto text-[13px] font-bold tabular-nums", tooLong ? "text-pen" : "")}
           id={counterId}
           style={tooLong ? undefined : { color: PAPERS.lined.soft }}
@@ -164,8 +168,10 @@ export default function Composer({
         </p>
         <button
           aria-describedby={characters >= COUNT_FROM ? counterId : undefined}
-          className="bg-accent text-on-accent focus-ring inline-flex min-h-11 items-center gap-2 rounded-[4px] px-5 text-[15px] font-bold tracking-wide shadow-[0_2px_0_rgba(0,0,0,.15),0_8px_18px_-8px_rgba(60,20,20,.5)] transition-transform duration-200 disabled:opacity-60 motion-safe:active:scale-[.97] motion-safe:enabled:hover:-translate-y-0.5"
-          disabled={!editor || isEmpty || publishing || tooLong}
+          // aria-disabled, not disabled: it stays focusable while the note is sent and once
+          // the page is cleared, where `disabled` would drop the keyboard to the top of the page.
+          aria-disabled={!editor || isEmpty || publishing || tooLong}
+          className="bg-accent text-on-accent focus-ring inline-flex min-h-11 items-center gap-2 rounded-[4px] px-5 text-[15px] font-bold tracking-wide shadow-[0_2px_0_rgba(0,0,0,.15),0_8px_18px_-8px_rgba(60,20,20,.5)] transition-transform duration-200 aria-disabled:opacity-60 motion-safe:active:scale-[.97] motion-safe:hover:not-aria-disabled:-translate-y-0.5"
           type="submit"
         >
           {submitLabel}

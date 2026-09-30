@@ -67,6 +67,8 @@ export type HeldNote = {
 	createdAt: string;
 	/** For a reply: its thread's first Post. */
 	rootId: string | null;
+	/** For a reply: the note it answers, where its thread shows it. */
+	parentId: string | null;
 };
 
 /** A note in a thread: public, or torn up (text gone) but kept so the replies under it still read. */

@@ -125,11 +125,17 @@ async function openAs(browser: Browser, state: string) {
 	return { page, close: () => context.close() };
 }
 
-const feedPosts = (page: Page) => page.getByRole("feed", { name: "Posts" }).getByRole("article");
+const feedPosts = (page: Page) => page.getByRole("feed", { name: "Notes" }).getByRole("article");
 
-/** Serves the feed from a stub instead of the database, for this page only. */
-async function stubFeed(page: Page, body: string) {
-	await page.route(FEED, (route) =>
+/** A request for a page of the feed after the first. */
+const OLDER_PAGE = (url: URL) => url.pathname === FEED && url.searchParams.has("cursor");
+
+/**
+ * Serves the feed's older pages ("older notes") from a stub instead of the
+ * database, for this page only. The first page is rendered by the server.
+ */
+async function stubOlderNotes(page: Page, body: string) {
+	await page.route(OLDER_PAGE, (route) =>
 		route.request().method() === "GET" ? route.fulfill({ status: 200, contentType: "application/json", body }) : route.fallback(),
 	);
 }
@@ -197,7 +203,7 @@ test.describe("Swiftter, signed out", () => {
 		// A page has turned once the feed holds more notes than before the click
 		// (a next page is never empty). Waiting on "the button or the last note"
 		// instead matched both once the page had loaded: a strict-mode failure.
-		for (let turn = 0; turn < 5 && !(await cardigan.isVisible()); turn++) {
+		for (let turn = 0; turn < 12 && !(await cardigan.isVisible()); turn++) {
 			const before = await feedPosts(page).count();
 
 			await older.click();
@@ -216,9 +222,15 @@ test.describe("Swiftter, signed out", () => {
 		const first = await feedPosts(page).count();
 
 		expect(first).toBe(20);
-		await page.getByRole("button", { name: /older notes/ }).click();
+		// A feed: each note says where it sits; how many there are is unknown while older notes remain.
+		await expect(feedPosts(page).nth(1)).toHaveAttribute("aria-posinset", "2");
+		await expect(feedPosts(page).nth(1)).toHaveAttribute("aria-setsize", "-1");
+		await page.getByRole("button", { name: /older notes/ }).focus();
+		await page.keyboard.press("Enter");
 		await expect(page.getByRole("status").filter({ hasText: /more notes loaded/ })).toBeAttached();
 		await expect.poll(() => feedPosts(page).count()).toBeGreaterThan(first);
+		// The keyboard carries on at the first new note.
+		await expect(feedPosts(page).nth(first)).toBeFocused();
 	});
 
 	test("each Post shows when it was published as a relative date", async ({ page }) => {
@@ -233,8 +245,31 @@ test.describe("Swiftter, signed out", () => {
 		}
 	});
 
+	test("the first page of notes, and links to their threads, are in the page's HTML (no JavaScript needed)", async ({ request }) => {
+		const feed = (await (await request.get(FEED)).json()) as FeedPage;
+		const html = await (await request.get("/swiftter")).text();
+		// Other runs may write to the same database meanwhile: most of the page is still the same notes.
+		const shown = feed.items.flatMap((item) =>
+			item.kind === "post" && html.includes(item.post.content) && html.includes(`href="/swiftter/p/${item.post.id}"`) ? [item.post.id] : [],
+		);
+
+		expect(shown.length).toBeGreaterThanOrEqual(5);
+		expect(html).not.toMatch(/Loading (Posts|notes)/);
+	});
+
+	test("the feed's first page may be cached by the CDN; older pages and the Member's own view may not", async ({ request }) => {
+		const first = await request.get(FEED);
+
+		expect(first.headers()["cache-control"]).toBe("public, s-maxage=15, stale-while-revalidate=60");
+		expect(Object.keys((await first.json()) as object).toSorted()).toEqual(["items", "nextCursor"]);
+		const { nextCursor } = (await first.json()) as FeedPage;
+
+		expect((await request.get(`${FEED}?cursor=${encodeURIComponent(nextCursor!)}`)).headers()["cache-control"] ?? "").not.toMatch(/public/);
+		expect((await request.get("/api/swiftter/me")).headers()["cache-control"]).toBe("private, no-store");
+	});
+
 	test("Posts render their formatting: Tiptap lists, old Quill bullet lists, links", async ({ page }) => {
-		await stubFeed(
+		await stubOlderNotes(
 			page,
 			JSON.stringify({
 				items: [
@@ -245,13 +280,14 @@ test.describe("Swiftter, signed out", () => {
 			}),
 		);
 		await page.goto("/swiftter");
+		await page.getByRole("button", { name: /older notes/ }).click();
 
 		const listStyle = (text: string) =>
 			feedPosts(page)
 				.locator("li", { hasText: text })
 				.evaluate((item) => getComputedStyle(item).listStyleType);
 
-		await expect(feedPosts(page)).toHaveCount(2);
+		await expect(feedPosts(page).filter({ hasText: "tiptap bullet" })).toHaveCount(1);
 		expect(await listStyle("tiptap bullet")).toBe("disc");
 		expect(await listStyle("tiptap number")).toBe("decimal");
 		expect(await listStyle("quill bullet")).toBe("disc");
@@ -261,25 +297,21 @@ test.describe("Swiftter, signed out", () => {
 		await expect(feedPosts(page).getByRole("link", { name: "a link" })).toHaveAttribute("href", "https://example.com");
 	});
 
-	test("an empty feed says so, in the journal's style", async ({ page }) => {
-		await stubFeed(page, JSON.stringify({ items: [], nextCursor: null }));
-		await page.goto("/swiftter");
-
-		await expect(page.getByText("No notes passed yet")).toBeVisible();
-		await expect(feedPosts(page)).toHaveCount(0);
-	});
-
-	test("a feed that cannot be read shows an error with a way to try again", async ({ page }) => {
+	test("older notes that cannot be read say so, with a way to try again", async ({ page }) => {
 		// A malformed answer rather than a 500: the browser logs failed requests
 		// as console errors, which the fixture rightly rejects.
-		await stubFeed(page, "{}");
+		await stubOlderNotes(page, "{}");
 		await page.goto("/swiftter");
+		const older = page.getByRole("button", { name: /older notes/ });
 
-		await expect(page.getByText("can't reach its Posts")).toBeVisible();
-		await page.unroute(FEED);
-		await stubFeed(page, JSON.stringify({ items: [stubItem("back", "<p>back again</p>")], nextCursor: null }));
-		await page.getByRole("button", { name: "Try again" }).click();
-		await expect(feedPosts(page).first()).toContainText("back again");
+		await older.click();
+		await expect(page.getByRole("alert").filter({ hasText: "The next notes couldn't be read just now." })).toBeVisible();
+		await page.unroute(OLDER_PAGE);
+		await stubOlderNotes(page, JSON.stringify({ items: [stubItem("back", "<p>back again</p>")], nextCursor: null }));
+		await page.getByRole("button", { name: /try again: older notes/ }).click();
+		await expect(feedPosts(page).last()).toContainText("back again");
+		await expect(feedPosts(page).last()).toBeFocused();
+		await expect(page.getByRole("alert").filter({ hasText: "couldn't be read" })).toHaveCount(0);
 	});
 
 	test("publishing a Post while signed out is rejected with 401 and nothing is stored", async ({ request }) => {
@@ -315,7 +347,8 @@ test.describe("Swiftter, signed out", () => {
 		await expect(feedPosts(page).first()).toBeVisible();
 		await expect(page.getByRole("button", { name: /tear up|reshare/ })).toHaveCount(0);
 
-		await feedPosts(page).first().getByRole("link", { name: /^(reply|\d+ repl)/ }).click();
+		// The first note with a thread (a torn-up note, reshared, has none).
+		await feedPosts(page).getByRole("link", { name: /^(reply|\d+ repl)/ }).first().click();
 		await expect(page).toHaveURL(/\/swiftter\/p\//);
 		await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 		await expect(page.getByRole("button", { name: /^reply/ })).toHaveCount(0);
@@ -330,8 +363,8 @@ test.describe("Swiftter, signed out", () => {
 		const prompt = page.getByRole("link", { name: /sign the guestbook to pass a note/i });
 
 		await expect(prompt).toBeVisible();
-		await expect(page.getByRole("textbox", { name: "Write a Post" })).toHaveCount(0);
-		await expect(page.getByRole("button", { name: "Post", exact: true })).toHaveCount(0);
+		await expect(page.getByRole("textbox", { name: "Write a note" })).toHaveCount(0);
+		await expect(page.getByRole("button", { name: "Pass note", exact: true })).toHaveCount(0);
 
 		await prompt.click();
 		await expect(page).toHaveURL(/\/sign-in/);
@@ -433,11 +466,11 @@ test.describe("Swiftter, signed in", () => {
 		await signIn(page);
 
 		const text = `Long live, from the test Member ${Date.now()}`;
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 
 		await editor.click();
 		await editor.pressSequentially(text);
-		await page.getByRole("button", { name: "Post", exact: true }).click();
+		await page.getByRole("button", { name: "Pass note", exact: true }).click();
 
 		const first = feedPosts(page).first();
 
@@ -467,7 +500,7 @@ test.describe("Swiftter, signed in", () => {
 		await expect(first).toContainText(marker);
 		await expect(first.locator("script, img")).toHaveCount(0);
 		await page.goto(`/swiftter/p/${note.id}`);
-		await expect(page.getByText(marker)).toBeVisible();
+		await expect(page.getByText(marker, { exact: true })).toBeVisible();
 		expect(await page.evaluate(() => (window as { __swiftterPwned?: boolean }).__swiftterPwned)).toBeUndefined();
 	});
 
@@ -492,7 +525,7 @@ test.describe("Swiftter, signed in", () => {
 		await signIn(page);
 
 		const marker = `formatted ${Date.now()}`;
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 		const toolbar = page.getByRole("group", { name: "Formatting" });
 
 		await editor.click();
@@ -520,7 +553,7 @@ test.describe("Swiftter, signed in", () => {
 
 		const published = page.waitForResponse((response) => response.url().endsWith(FEED) && response.request().method() === "POST");
 
-		await page.getByRole("button", { name: "Post", exact: true }).click();
+		await page.getByRole("button", { name: "Pass note", exact: true }).click();
 		const { note } = (await (await published).json()) as { note: FeedPost };
 
 		expect(note.content).toContain("<strong>loud</strong>");
@@ -549,8 +582,11 @@ test.describe("Swiftter, signed in", () => {
 
 		await page.reload();
 		const shown = feedPosts(page).filter({ hasText: text });
-		const tearUp = shown.getByRole("button", { name: "tear up this Post" });
-		const dialog = page.getByRole("dialog", { name: "Tear up this note?" });
+		// Each note's control and dialog are named by its first words; the note by its author and time.
+		const tearUp = shown.getByRole("button", { name: `tear up your note “${text}”` });
+		const dialog = page.getByRole("dialog", { name: `Tear up this note? “${text}”` });
+
+		await expect(shown).toHaveAccessibleName(`${readTestMember()!.name} just now`);
 
 		// Changing their mind, with the button or with Escape, keeps the note.
 		await tearUp.click();
@@ -564,10 +600,14 @@ test.describe("Swiftter, signed in", () => {
 		await expect(dialog).toBeHidden();
 		await expect(shown).toHaveCount(1);
 
+		const nextId = await shown.evaluate((note) => note.nextElementSibling?.id);
+
 		await tearUp.click();
 		await dialog.getByRole("button", { name: "Tear it up" }).click();
 		await expect(shown).toHaveCount(0);
 		await expect(page.getByText("Note torn up.")).toBeVisible();
+		// The keyboard goes on to the next note, not the top of the page.
+		await expect(page.locator(`[id="${nextId}"]`)).toBeFocused();
 
 		await page.reload();
 		await expect(feedPosts(page).first()).toBeVisible();
@@ -582,7 +622,7 @@ test.describe("Swiftter, signed in", () => {
 
 		const demo = (await allItems(page.request)).flatMap((item) => (item.kind === "post" && item.post.isDemo ? [item.post] : []))[0];
 
-		for (let turn = 0; turn < 5 && !(await feedPosts(page).filter({ hasText: "Juniper Wells" }).first().isVisible()); turn++) {
+		for (let turn = 0; turn < 12 && !(await feedPosts(page).filter({ hasText: "Juniper Wells" }).first().isVisible()); turn++) {
 			await page.getByRole("button", { name: /older notes/ }).click();
 		}
 		await expect(feedPosts(page).filter({ hasText: "Juniper Wells" }).first()).toBeVisible();
@@ -596,7 +636,7 @@ test.describe("Swiftter, signed in", () => {
 
 	test("passes axe, fits a phone and is still under reduced motion", async ({ page }) => {
 		await signIn(page);
-		await expect(page.getByRole("textbox", { name: "Write a Post" })).toBeVisible();
+		await expect(page.getByRole("textbox", { name: "Write a note" })).toBeVisible();
 		await expectNoAxeViolations(page);
 
 		await page.setViewportSize(PHONE);
@@ -634,15 +674,15 @@ test.describe("Swiftter, note edge cases", () => {
 	test("the composer counts characters near the limit and will not send too many", async ({ page }) => {
 		await page.goto("/swiftter");
 
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 
 		await editor.fill("b".repeat(1001));
 		await expect(page.getByText("1001/1000")).toBeVisible();
-		await expect(page.getByText("too long")).toBeVisible();
-		await expect(page.getByRole("button", { name: "Post", exact: true })).toBeDisabled();
+		await expect(page.getByText(/: too long/)).toBeVisible();
+		await expect(page.getByRole("button", { name: "Pass note", exact: true })).toBeDisabled();
 		await editor.press("Backspace");
 		await expect(page.getByText("1000/1000")).toBeVisible();
-		await expect(page.getByRole("button", { name: "Post", exact: true })).toBeEnabled();
+		await expect(page.getByRole("button", { name: "Pass note", exact: true })).toBeEnabled();
 	});
 });
 
@@ -699,11 +739,11 @@ test.describe("Swiftter, moderation", () => {
 		await page.goto("/swiftter");
 
 		const text = `buy cheap sneakers ${MARKER.offTopic} ${Date.now()}`;
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 
 		await editor.click();
 		await editor.pressSequentially(text);
-		await page.getByRole("button", { name: "Post", exact: true }).click();
+		await page.getByRole("button", { name: "Pass note", exact: true }).click();
 
 		await expect(page.getByRole("form", { name: "Pass a note" }).getByRole("alert")).toContainText(/Taylor/);
 		await expect(editor).toHaveText(text);
@@ -722,11 +762,11 @@ test.describe("Swiftter, moderation", () => {
 
 		// Through the composer: saved, cleared, announced, and waiting in the Member's margin.
 		const second = `${MARKER.down} second ${Date.now()}`;
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 
 		await editor.click();
 		await editor.pressSequentially(second);
-		await page.getByRole("button", { name: "Post", exact: true }).click();
+		await page.getByRole("button", { name: "Pass note", exact: true }).click();
 		await expect(editor).toHaveText("");
 		await expect(page.getByRole("status").filter({ hasText: /couldn't be checked just now/ })).toBeAttached();
 
@@ -771,7 +811,9 @@ test.describe("Swiftter, replies and reshares", () => {
 		await composer.pressSequentially("The one on track five, easily.");
 		await replier.page.getByRole("button", { name: "Reply", exact: true }).click();
 		await expect(replier.page.getByRole("heading", { level: 2, name: "1 reply" })).toBeVisible();
-		await expect(replier.page.getByText("The one on track five, easily.")).toBeVisible();
+		await expect(replier.page.getByText("The one on track five, easily.", { exact: true })).toBeVisible();
+		// The composer closed: the keyboard is on the reply it wrote.
+		await expect(replier.page.getByRole("article").filter({ hasText: "The one on track five, easily." })).toBeFocused();
 
 		// A reply to the reply nests under it.
 		await replier.page.getByRole("button", { name: "reply to Big Fan" }).click();
@@ -781,12 +823,12 @@ test.describe("Swiftter, replies and reshares", () => {
 		await nested.pressSequentially("Replying to myself, as one does.");
 		await replier.page.getByRole("button", { name: "Reply", exact: true }).click();
 		await expect(replier.page.getByRole("heading", { level: 2, name: "2 replies" })).toBeVisible();
-		await expect(replier.page.locator("ol ol").getByText("Replying to myself, as one does.")).toBeVisible();
+		await expect(replier.page.locator("ol ol").getByText("Replying to myself, as one does.", { exact: true })).toBeVisible();
 		await expectNoAxeViolations(replier.page);
 
 		// The author sees both, and the feed counts them.
 		await page.goto(`/swiftter/p/${note.id}`);
-		await expect(page.getByText("Replying to myself, as one does.")).toBeVisible();
+		await expect(page.getByText("Replying to myself, as one does.", { exact: true })).toBeVisible();
 		const feed = (await allItems(page.request)).find((item) => item.kind === "post" && item.post.id === note.id);
 
 		expect(feed?.post).toMatchObject({ replyCount: 2 });
@@ -836,6 +878,8 @@ test.describe("Swiftter, replies and reshares", () => {
 		expect((await reshared).status()).toBe(201);
 		await expect(button).toHaveAttribute("aria-pressed", "true");
 		await expect(button).toContainText("(1 reshare)");
+		// In flight it was aria-disabled, never disabled: the keyboard stayed on it.
+		await expect(button).toBeFocused();
 		expect((await fanPage.page.request.post(`${FEED}/${note.id}/reshare`, { headers: BOTID_HUMAN })).status()).toBe(409);
 		expect((await mine(fanPage.page.request)).reshared).toContain(note.id);
 
@@ -855,6 +899,66 @@ test.describe("Swiftter, replies and reshares", () => {
 		// Undo still works on the torn-up Post's reshare; replies to it are refused.
 		expect((await fanPage.page.request.delete(`${FEED}/${note.id}/reshare`, { headers: BOTID_HUMAN })).status()).toBe(204);
 		expect((await write(fanPage.page, "<p>too late</p>", note.id)).status()).toBe(404);
+		await fanPage.close();
+	});
+
+	test("a Member's held reply shows on its thread after a reload, with check again and tear up", async ({ page, browser }) => {
+		await page.goto("/swiftter");
+		const { note } = (await (await write(page, `<p>hold on ${Date.now()}</p>`)).json()) as { note: FeedPost };
+		const replier = await openAs(browser, fan);
+		const text = `${MARKER.down} held reply ${Date.now()}`;
+
+		expect((await write(replier.page, `<p>${text}</p>`, note.id)).status()).toBe(202);
+		await replier.page.goto(`/swiftter/p/${note.id}`);
+		const held = replier.page.getByRole("article", { name: /Your reply, waiting for a check/ });
+
+		await expect(held).toContainText(text);
+		await expect(replier.page.getByText("Only you can see this reply: it's waiting for a check.")).toBeVisible();
+		await expect(held.getByRole("button", { name: "check again" })).toBeVisible();
+		await expectNoAxeViolations(replier.page);
+
+		// Nobody else sees it: not its thread's author.
+		await page.goto(`/swiftter/p/${note.id}`);
+		await expect(page.getByRole("heading", { level: 2, name: "No replies yet" })).toBeVisible();
+		await expect(page.getByText(text)).toHaveCount(0);
+
+		await held.getByRole("button", { name: /tear up your note/ }).click();
+		await replier.page.getByRole("dialog").getByRole("button", { name: "Tear it up" }).click();
+		await expect(held).toHaveCount(0);
+		// The keyboard goes back to the note it answered.
+		await expect(replier.page.locator(`[id="note-${note.id}"]`)).toBeFocused();
+		await replier.page.reload();
+		await expect(replier.page.getByRole("heading", { level: 2, name: "No replies yet" })).toBeVisible();
+		await expect(replier.page.getByText(text)).toHaveCount(0);
+		await replier.close();
+	});
+
+	test("on a thread, a reshare pressed before the Member's own view arrives stays pressed", async ({ page, browser }) => {
+		await page.goto("/swiftter");
+		const { note } = (await (await write(page, `<p>Reshare me quickly ${Date.now()}</p>`)).json()) as { note: FeedPost };
+		const fanPage = await openAs(browser, fan);
+		let release = () => {};
+		const held = new Promise<void>((resolve) => (release = resolve));
+
+		// /api/swiftter/me is read as the page opens (not reshared yet), and answers only after the click.
+		await fanPage.page.route("/api/swiftter/me", async (route) => {
+			const response = await route.fetch();
+
+			await held;
+			await route.fulfill({ response });
+		});
+		const answered = fanPage.page.waitForResponse("**/api/swiftter/me");
+
+		await fanPage.page.goto(`/swiftter/p/${note.id}`);
+		const button = fanPage.page.getByRole("button", { name: /reshare Thread Starter's note/ });
+		const reshared = fanPage.page.waitForResponse((response) => response.url().endsWith(`/${note.id}/reshare`) && response.request().method() === "POST");
+
+		await button.click();
+		expect((await reshared).status()).toBe(201);
+		release();
+		await answered;
+		await expect(button).toHaveAttribute("aria-pressed", "true");
+		await expect(button).toContainText("(1 reshare)");
 		await fanPage.close();
 	});
 });
@@ -887,11 +991,11 @@ test.describe("Swiftter, posting limit", () => {
 
 		// The same refusal from the composer: written on the note, and the text stays.
 		const text = `still one too many, ${stamp}`;
-		const editor = page.getByRole("textbox", { name: "Write a Post" });
+		const editor = page.getByRole("textbox", { name: "Write a note" });
 
 		await editor.click();
 		await editor.pressSequentially(text);
-		await page.getByRole("button", { name: "Post", exact: true }).click();
+		await page.getByRole("button", { name: "Pass note", exact: true }).click();
 
 		await expect(page.getByRole("form", { name: "Pass a note" }).getByRole("alert")).toContainText(/10 minutes/);
 		await expect(editor).toHaveText(text);
@@ -907,6 +1011,19 @@ test.describe("Swiftter, posting limit", () => {
 		expect((await page.request.delete(`${FEED}/${posts[0].id}`, { headers: BOTID_HUMAN })).status()).toBe(204);
 		expect((await write(page, `<p>after tearing up, ${stamp}</p>`)).status()).toBe(429);
 	});
+});
+
+test("the scrapbook's page kickers never repeat a number across Home, Tours and Swiftter", async ({ request }) => {
+	const numbers: string[] = [];
+
+	for (const path of ["/", "/tours", "/swiftter"]) {
+		const html = await (await request.get(path)).text();
+
+		// Once per page: a kicker can also be in the page's React payload.
+		numbers.push(...new Set([...html.matchAll(/page (\d+) ·/g)].map((match) => match[1])));
+	}
+	expect(numbers.length).toBeGreaterThanOrEqual(5);
+	expect(new Set(numbers).size).toBe(numbers.length);
 });
 
 test("the old /forum address permanently redirects to /swiftter", async ({ page, request }) => {

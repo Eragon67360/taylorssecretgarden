@@ -32,7 +32,7 @@ export default function ToursPage() {
       <header className="relative overflow-x-clip">
         <div className="mx-auto grid max-w-[1180px] gap-10 px-4 pt-12 pb-16 sm:px-8 sm:pt-16 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-7">
-            <p className="font-hand text-accent mb-2 -rotate-2 text-2xl font-bold">page 3 · the tour diary</p>
+            <p className="font-hand text-accent mb-2 -rotate-2 text-2xl font-bold">page 5 · the tour diary</p>
             <h1 className="relative inline-block font-serif text-[clamp(3.6rem,11vw,7rem)] leading-[0.9] font-semibold tracking-[-0.02em]">
               Tours
               <Scribble className="absolute -bottom-3 left-0 h-4 w-full" />
