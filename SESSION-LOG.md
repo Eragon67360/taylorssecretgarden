@@ -6,6 +6,9 @@ One line per roadmap item (timestamp UTC, item, outcome, commit), plus the desig
 
 - 2026-09-30T00:03Z · infra · Neon branch `dev` (br-round-darkness-b7qiopg9) created from production, with its own Neon Auth; Vercel `DATABASE_URL` and `NEON_AUTH_BASE_URL` split: production keeps the production branch, Preview + Development now use `dev` · no commit (outside the repo)
 - 2026-09-30T00:10Z · infra · Adding the .com to production Neon Auth's trusted domains: **refused by the session's permission policy** (write outside repo/GitHub/Vercel) · blocker B1
+- 2026-09-30T00:40Z · baseline · Lighthouse CI on `dev` 65056da (CI run 36644950703, mobile, median of 3): perf / a11y: `/` 0.89/1, `/music` 0.87/1, `/tours` 0.89/1, `/tours/the-eras-tour` 0.91/1, `/swiftter` 0.93/1 · no commit
+- 2026-09-30T01:05Z · incident · Loading `dev.env` through the shell split the database URL at its `&` and the shell echoed it: **the `neondb_owner` password (identical on the dev and production branches) appeared in this session's local tool output.** Not written to any file, commit, PR or remote log. Rotating it needs a Neon change, outside this session's allowed scope · blocker B2
+- 2026-09-30T01:10Z · infra · Vercel `CRON_SECRET` (sensitive, Production) created for the moderation re-check cron · no commit
 
 ## Debates
 
@@ -16,3 +19,7 @@ One line per roadmap item (timestamp UTC, item, outcome, commit), plus the desig
 **Auth flows.** Proposal: keep Neon Auth; session then ownership checks per route; a cookie-presence shortcut for per-viewer fields; seed users cleaned up by email suffix. Opponent found an existing open redirect, a posting-limit bypass through reshares and "check again", replies/reshares on hidden Posts, no CSRF check beyond SameSite, and a spoofable cookie heuristic. **Opponent won on every hole** (one write wrapper with Origin + JSON + session + BotID, visibility checks, per-kind limits, a separate private endpoint, redirect fix, cleanup by fixed account list); **the proposal kept** Neon Auth, the owner check in SQL with 404, no sign-in-only pages, and the brief's shared test password (owner's explicit requirement; previews are behind Vercel Authentication).
 
 ## Items
+- 2026-09-30T00:55Z · S8 · Vitest unit tests (hermetic, mocked Gateway: happy, blocked ×2, timeout, error, malformed ×3, injection, unicode), shared write guard; CI runs them · #64 5b1772b
+- 2026-09-30T01:00Z · S1 · Migration 0002 up → down → up verified on the `dev` branch (tables, columns and the 10 existing Posts intact at each step) · PR below
+- 2026-09-30T01:40Z · S2–S6, S9, S10 · Stored moderation (fail-closed with pending, capped re-checks, cron), replies, reshares, keyset feed, tear-up tombstones, write wrapper (origin/JSON/session/BotID), open-redirect fix, anonymous session checks answered locally; 17 integration tests green on `dev` branch; Swiftter + auth e2e 69/69 locally, whole suite minus Home/Music (Deezer covers blocked on this machine) 185/185 · PR below
+- 2026-09-30T01:45Z · S7 · Seed on `dev`: 6 accounts, 53 Posts, 14 replies, 5 reshares, 67 decisions; re-run creates 0; `unseed --dry-run` counts identical; real unseed → 0 of each, then re-seeded; refusal tested (NODE_ENV/VERCEL_ENV=production, no Neon branch) · PR below

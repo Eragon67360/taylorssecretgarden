@@ -1,5 +1,7 @@
 # AI moderation before a Post is stored, failing closed
 
+> Superseded in part by [ADR-0007](0007-social-feed-and-stored-moderation.md): refused notes are now stored (author only), a note with no verdict is kept pending instead of refused with 503, and replies are moderated too. The model, policy, prompt handling and fake below still hold; the timeout is 8 s.
+
 Insults and off-topic Posts went straight into Swiftter's feed. There is no one to moderate after the fact (no queue, no admin UI), so each new Post is judged by a small, fast model before it is stored: `anthropic/claude-haiku-4.5` through Vercel AI Gateway, with AI SDK 7's structured output (`allowed`, `insult` or `off_topic`, plus a reason), temperature 0 and a 3-second timeout. The Gateway rather than a provider key: one credential that Vercel supplies to deployments (OIDC), and the model is a string we can change.
 
 - The policy is one plain-language constant (`MODERATION_POLICY` in `service/moderation.ts`) so the owner can adjust it. Off-topic is judged leniently: any fan chatter passes, and "when in doubt, allow".
