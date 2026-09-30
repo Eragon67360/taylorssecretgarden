@@ -38,6 +38,16 @@ Moderated on write, server-side: **Post bodies and reply bodies**. Reshares carr
 - **`is_seed`** on `members`, `posts` and `reshares` marks test fixtures, and only the dev-branch seed writes it. `is_demo` keeps its meaning: the fictional demo content the owner chose to show on the live site, which `npm run db:unseed` removes. They are separate because their lifecycles differ: fixtures must never reach production, and the demo content lives there.
 - Counts (replies, reshares) are computed at read time in the feed query, never stored, so concurrent writes cannot drift them.
 
+## Auth and write-route rules (after the auth debate)
+
+- **One wrapper for every write route** (`memberWrite`): non-GET only; same-origin requests only (`Origin` / `Sec-Fetch-Site`, against CSRF on the custom domain); JSON bodies only; the session checked server-side (401 without one, **503 when Neon Auth itself errors** instead of a false "signed out"); Vercel BotID. The BotID route list includes every write route.
+- **Ownership in the SQL `WHERE`** (404 when it isn't yours, so existence is not revealed); replies and reshares only on a **public** Post (published, not torn up), else 404.
+- **Limits per kind, all counted in Postgres under the per-Member lock:** Posts 5 / 10 min (unchanged), replies 10 / 10 min, reshares 10 / 10 min (soft-deleted ones still count), "check again" at most 3 per note.
+- **The public feed is identical for every visitor** (no per-viewer fields); "you reshared this" comes from a separate, session-only, `no-store` endpoint.
+- **Existing bug fixed:** `redirect_url` on the guestbook pages is an open redirect (`/\t/evil.example` survives the check); it is resolved against the site's origin and must stay same-origin.
+- **Seed users** are real Neon Auth accounts on the `dev` branch (signed up through Neon Auth's API), with one documented, obviously fake password, as the brief asks. Previews sit behind Vercel Authentication, so the password is not usable by the public. Unseed removes exactly the seed's own accounts (a fixed list, not any `@seed.invalid` address) from the dev branch's `neon_auth` schema: a deliberate, guarded exception to ADR-0004's "nothing writes `neon_auth` except through /api/auth", recorded as such.
+- **Known and accepted:** Neon Auth's SDK trusts its signed session cookie for up to 5 minutes, so a revoked session can still write for that long.
+
 ## Backlog
 
 Estimates are rough working time. P0 = must ship for anything to ship; P1 = should ship tonight; P2 = next session.
