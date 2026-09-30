@@ -2,6 +2,8 @@ import type { Page } from "@playwright/test";
 
 import { existsSync } from "node:fs";
 
+import { seedId } from "../scripts/seed-data";
+
 import { PHONE, expectNoAxeViolations, expectNoHorizontalOverflow, expectReducedMotion } from "./checks";
 import { expect, test } from "./fixtures";
 import { MEMBER_STATE, newTestMember, readTestMember, writeGuard } from "./member";
@@ -110,6 +112,19 @@ test("sign-in and sign-up link to each other", async ({ page }) => {
 	await expect(page).toHaveURL(/\/sign-up$/);
 	await page.getByRole("link", { name: "Sign in" }).click();
 	await expect(page).toHaveURL(/\/sign-in$/);
+});
+
+test("sign-in and sign-up keep where the visitor was headed, both ways", async ({ page }) => {
+	const thread = `/sign-in?redirect_url=${encodeURIComponent("/swiftter/p/some-thread")}`;
+
+	await page.goto(thread);
+	await page.getByRole("link", { name: "Sign up" }).click();
+	await expect(page).toHaveURL(/\/sign-up\?redirect_url=%2Fswiftter%2Fp%2Fsome-thread$/);
+	await page.getByRole("link", { name: "Sign in" }).click();
+	await expect(page).toHaveURL(/\/sign-in\?redirect_url=%2Fswiftter%2Fp%2Fsome-thread$/);
+	// Another site is never carried along.
+	await page.goto(`/sign-in?redirect_url=${encodeURIComponent("//evil.example")}`);
+	await expect(page.getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/sign-up");
 });
 
 test("a Google sign-in that went wrong comes back with an explanation", async ({ page }) => {
@@ -255,6 +270,22 @@ test.describe("signing in and out", () => {
 
 		await expect(page).toHaveURL(/\/swiftter$/);
 		await expect(page.getByText("writing as Fresh Swiftie")).toBeVisible();
+	});
+
+	test("a visitor who signs up from a thread's reply link goes back to the thread", async ({ page }) => {
+		const member = newTestMember();
+		const thread = `/swiftter/p/${seedId("p", 1)}`;
+
+		await page.goto(thread);
+		await page.getByRole("link", { name: /sign the guestbook to reply/i }).click();
+		await page.getByRole("link", { name: "Sign up" }).click();
+		await field(page, "Name").fill("Thread Swiftie");
+		await field(page, "Email").fill(member.email);
+		await field(page, "Password").fill(member.password);
+		await page.getByRole("button", { name: "Sign the guestbook" }).click();
+
+		await expect(page).toHaveURL(new RegExp(`${thread}$`));
+		await expect(page.getByRole("button", { name: /^reply to/i }).first()).toBeVisible();
 	});
 
 	test("a Member's Swiftter page asks who is signed in once", async ({ browser }) => {

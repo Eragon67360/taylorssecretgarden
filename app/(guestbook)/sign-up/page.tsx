@@ -1,4 +1,4 @@
-import { Guestbook, guestbookError, type SearchParams } from "@/components/guestbook/guestbook";
+import { Guestbook, guestbookError, guestbookRedirect, type SearchParams } from "@/components/guestbook/guestbook";
 import { GuestbookForm } from "@/components/guestbook/guestbook-form";
 import { pageMetadata } from "@/lib/metadata";
 
@@ -10,11 +10,14 @@ export const metadata = pageMetadata({
   noindex: true,
 });
 
-// A new Member always starts on Swiftter, to pass their first note.
+// A new Member goes back where they were headed (a thread they wanted to reply
+// to), through the same check as sign-in; else to Swiftter, to pass their first note.
 export default async function SignUpPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
+
   return (
     <Guestbook note="New here? Leave your name, then pass a note on Swiftter.">
-      <GuestbookForm initialError={guestbookError(await searchParams)} mode="sign-up" redirectTo="/swiftter" />
+      <GuestbookForm initialError={guestbookError(params)} mode="sign-up" redirectTo={guestbookRedirect(params)} />
     </Guestbook>
   );
 }

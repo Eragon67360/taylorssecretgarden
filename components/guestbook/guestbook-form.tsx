@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useRef, useState } from "react";
 
-import { GOOGLE_ERROR } from "@/components/guestbook/guestbook";
+import { DEFAULT_REDIRECT, GOOGLE_ERROR } from "@/components/guestbook/guestbook";
 import { type AuthFailure, signInEmail, signInSocial, signUpEmail } from "@/lib/auth/client";
 import { BOT_REFUSAL } from "@/lib/botid-routes";
 import { cn } from "@/lib/utils";
@@ -44,6 +44,15 @@ const PAGES = {
     password: { autoComplete: "new-password", minLength: MIN_PASSWORD_LENGTH, hint: `At least ${MIN_PASSWORD_LENGTH} characters.` },
   },
 } as const;
+
+/**
+ * The other guestbook page, still headed for the same place: a visitor who
+ * came to reply to a thread and has no account yet goes back to the thread
+ * once signed up. Swiftter, where both pages go by default, needs no mention.
+ */
+function withRedirect(path: string, redirectTo: string) {
+  return redirectTo === DEFAULT_REDIRECT ? path : `${path}?redirect_url=${encodeURIComponent(redirectTo)}`;
+}
 
 const ALREADY_SIGNED = "That email has already signed the guestbook. Sign in instead.";
 const TOO_MANY_TRIES = "Too many tries in a row. Wait a minute, then try again.";
@@ -253,7 +262,7 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
         {copy.switchText}{" "}
         <Link
           className="text-accent hover:text-ink focus-ring rounded-sm font-bold underline underline-offset-[3px]"
-          href={copy.switchLink.href}
+          href={withRedirect(copy.switchLink.href, redirectTo)}
         >
           {copy.switchLink.label}
         </Link>
