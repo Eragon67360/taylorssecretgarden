@@ -261,6 +261,22 @@ test.describe("Music", () => {
 	});
 
 	test.describe("previews", () => {
+		test("/api/preview redirects to a catalogue track's preview only; any other track is 404", async ({ request }) => {
+			// ...Ready For It?, on reputation.
+			const catalogue = await request.get("/api/preview/435491442", { maxRedirects: 0 });
+
+			expect(catalogue.status()).toBe(307);
+			expect(new URL(catalogue.headers().location).hostname).toMatch(/dzcdn\.net$/);
+
+			// A real Deezer track, not Taylor's; then IDs that are not track IDs at all.
+			for (const id of ["3135556", "1".repeat(13), "0435491442", "abc"]) {
+				const response = await request.get(`/api/preview/${id}`, { maxRedirects: 0 });
+
+				expect(response.status(), id).toBe(404);
+				expect(response.headers()["cache-control"], id).toContain("max-age=300");
+			}
+		});
+
 		test("play one track at a time, with a visible playing state and progress", async ({ page }) => {
 			await page.goto(`/music?album=${IDS.reputation}`);
 			await expectAlbumShown(page, "reputation");
