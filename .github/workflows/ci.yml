@@ -82,6 +82,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Unit tests
+        run: npm test # hermetic: moderation runs against the AI SDK's mock model
+
       - name: Build
         run: npm run build
 
