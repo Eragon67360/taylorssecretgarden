@@ -117,7 +117,7 @@ export function HeldNoteCard({ note, checking, onCheckAgain, onTearUp, inThread 
             {checking === note.id ? "checking…" : "check again"}
           </button>
         )}
-        <DeletePost onDelete={() => onTearUp(note)} />
+        <DeletePost content={note.content} onDelete={() => onTearUp(note)} />
       </div>
     </article>
   );

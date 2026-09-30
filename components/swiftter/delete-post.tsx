@@ -4,20 +4,26 @@ import { useId, useRef } from "react";
 
 import { WashiTape } from "@/components/scrapbook";
 
+import { noteExcerpt } from "./words";
+
 type DeletePostProps = {
-  /** Deletes the Post; resolves once the request is settled. */
+  /** Deletes the note; resolves once the request is settled. */
   onDelete: () => Promise<void>;
+  /** The note's sanitised HTML: its first words name the button and the dialog, so each note's are told apart. */
+  content: string;
 };
 
 /**
- * "tear up", on a Member's own Posts: asks first, in a card taped over the
+ * "tear up", on a Member's own notes: asks first, in a card taped over the
  * page (a native modal dialog, so it traps focus and closes with Escape), then
- * deletes the Post.
+ * deletes the note.
  */
-export function DeletePost({ onDelete }: DeletePostProps) {
+export function DeletePost({ onDelete, content }: DeletePostProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const quoteId = useId();
   const textId = useId();
+  const words = `“${noteExcerpt(content)}”`;
   // Closed first: the note leaves the page at once (use-swiftter.ts), and the
   // page then moves focus to what comes next. Closing after would hand focus
   // back to a button that is gone.
@@ -33,19 +39,22 @@ export function DeletePost({ onDelete }: DeletePostProps) {
         type="button"
         onClick={() => dialog.current?.showModal()}
       >
-        tear up<span className="sr-only"> this Post</span>
+        tear up<span className="sr-only"> your note {words}</span>
       </button>
 
       <dialog
         ref={dialog}
         aria-describedby={textId}
-        aria-labelledby={titleId}
+        aria-labelledby={`${titleId} ${quoteId}`}
         className="bg-card text-ink paper-grain m-auto w-[min(26rem,calc(100vw-2rem))] overflow-visible px-6 pt-9 pb-6 shadow-[0_1px_2px_rgba(0,0,0,.12),0_24px_40px_-16px_rgba(40,20,10,.6)] backdrop:bg-[rgba(43,29,20,.45)]"
       >
         <WashiTape className="-top-3 left-1/2 -translate-x-1/2" rotate={-3} width={96} />
         <h2 className="font-hand text-[30px] leading-none font-bold" id={titleId}>
           Tear up this note?
         </h2>
+        <p className="font-hand mt-2 text-[21px] leading-snug font-bold break-words" id={quoteId}>
+          {words}
+        </p>
         <p className="text-soft mt-3 text-[16px] leading-relaxed" id={textId}>
           It leaves Swiftter for good: no one will see it again, and it can&apos;t be brought back.
         </p>

@@ -203,7 +203,7 @@ test.describe("Swiftter, signed out", () => {
 		// A page has turned once the feed holds more notes than before the click
 		// (a next page is never empty). Waiting on "the button or the last note"
 		// instead matched both once the page had loaded: a strict-mode failure.
-		for (let turn = 0; turn < 5 && !(await cardigan.isVisible()); turn++) {
+		for (let turn = 0; turn < 12 && !(await cardigan.isVisible()); turn++) {
 			const before = await feedPosts(page).count();
 
 			await older.click();
@@ -222,6 +222,9 @@ test.describe("Swiftter, signed out", () => {
 		const first = await feedPosts(page).count();
 
 		expect(first).toBe(20);
+		// A feed: each note says where it sits; how many there are is unknown while older notes remain.
+		await expect(feedPosts(page).nth(1)).toHaveAttribute("aria-posinset", "2");
+		await expect(feedPosts(page).nth(1)).toHaveAttribute("aria-setsize", "-1");
 		await page.getByRole("button", { name: /older notes/ }).focus();
 		await page.keyboard.press("Enter");
 		await expect(page.getByRole("status").filter({ hasText: /more notes loaded/ })).toBeAttached();
@@ -344,7 +347,8 @@ test.describe("Swiftter, signed out", () => {
 		await expect(feedPosts(page).first()).toBeVisible();
 		await expect(page.getByRole("button", { name: /tear up|reshare/ })).toHaveCount(0);
 
-		await feedPosts(page).first().getByRole("link", { name: /^(reply|\d+ repl)/ }).click();
+		// The first note with a thread (a torn-up note, reshared, has none).
+		await feedPosts(page).getByRole("link", { name: /^(reply|\d+ repl)/ }).first().click();
 		await expect(page).toHaveURL(/\/swiftter\/p\//);
 		await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 		await expect(page.getByRole("button", { name: /^reply/ })).toHaveCount(0);
@@ -578,8 +582,11 @@ test.describe("Swiftter, signed in", () => {
 
 		await page.reload();
 		const shown = feedPosts(page).filter({ hasText: text });
-		const tearUp = shown.getByRole("button", { name: "tear up this Post" });
-		const dialog = page.getByRole("dialog", { name: "Tear up this note?" });
+		// Each note's control and dialog are named by its first words; the note by its author and time.
+		const tearUp = shown.getByRole("button", { name: `tear up your note “${text}”` });
+		const dialog = page.getByRole("dialog", { name: `Tear up this note? “${text}”` });
+
+		await expect(shown).toHaveAccessibleName(`${readTestMember()!.name} just now`);
 
 		// Changing their mind, with the button or with Escape, keeps the note.
 		await tearUp.click();
@@ -615,7 +622,7 @@ test.describe("Swiftter, signed in", () => {
 
 		const demo = (await allItems(page.request)).flatMap((item) => (item.kind === "post" && item.post.isDemo ? [item.post] : []))[0];
 
-		for (let turn = 0; turn < 5 && !(await feedPosts(page).filter({ hasText: "Juniper Wells" }).first().isVisible()); turn++) {
+		for (let turn = 0; turn < 12 && !(await feedPosts(page).filter({ hasText: "Juniper Wells" }).first().isVisible()); turn++) {
 			await page.getByRole("button", { name: /older notes/ }).click();
 		}
 		await expect(feedPosts(page).filter({ hasText: "Juniper Wells" }).first()).toBeVisible();
@@ -671,7 +678,7 @@ test.describe("Swiftter, note edge cases", () => {
 
 		await editor.fill("b".repeat(1001));
 		await expect(page.getByText("1001/1000")).toBeVisible();
-		await expect(page.getByText("too long")).toBeVisible();
+		await expect(page.getByText(/: too long/)).toBeVisible();
 		await expect(page.getByRole("button", { name: "Post", exact: true })).toBeDisabled();
 		await editor.press("Backspace");
 		await expect(page.getByText("1000/1000")).toBeVisible();
@@ -804,7 +811,7 @@ test.describe("Swiftter, replies and reshares", () => {
 		await composer.pressSequentially("The one on track five, easily.");
 		await replier.page.getByRole("button", { name: "Reply", exact: true }).click();
 		await expect(replier.page.getByRole("heading", { level: 2, name: "1 reply" })).toBeVisible();
-		await expect(replier.page.getByText("The one on track five, easily.")).toBeVisible();
+		await expect(replier.page.getByText("The one on track five, easily.", { exact: true })).toBeVisible();
 		// The composer closed: the keyboard is on the reply it wrote.
 		await expect(replier.page.getByRole("article").filter({ hasText: "The one on track five, easily." })).toBeFocused();
 
@@ -816,12 +823,12 @@ test.describe("Swiftter, replies and reshares", () => {
 		await nested.pressSequentially("Replying to myself, as one does.");
 		await replier.page.getByRole("button", { name: "Reply", exact: true }).click();
 		await expect(replier.page.getByRole("heading", { level: 2, name: "2 replies" })).toBeVisible();
-		await expect(replier.page.locator("ol ol").getByText("Replying to myself, as one does.")).toBeVisible();
+		await expect(replier.page.locator("ol ol").getByText("Replying to myself, as one does.", { exact: true })).toBeVisible();
 		await expectNoAxeViolations(replier.page);
 
 		// The author sees both, and the feed counts them.
 		await page.goto(`/swiftter/p/${note.id}`);
-		await expect(page.getByText("Replying to myself, as one does.")).toBeVisible();
+		await expect(page.getByText("Replying to myself, as one does.", { exact: true })).toBeVisible();
 		const feed = (await allItems(page.request)).find((item) => item.kind === "post" && item.post.id === note.id);
 
 		expect(feed?.post).toMatchObject({ replyCount: 2 });

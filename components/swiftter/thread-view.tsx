@@ -77,8 +77,8 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
           setReplyingTo(null);
           // The composer closes: the keyboard goes to the reply it wrote.
           focusSoon(noteElementId(note.id));
-          toast.success("Reply passed!");
-          setAnnouncement(`Your reply to ${parent.author.displayName} was passed.`);
+          // Said once: the toast is read out, so no status line as well.
+          toast.success(`Your reply to ${parent.author.displayName} was passed.`);
         },
         held: (note) => {
           setHeld((previous) => [...previous.filter((other) => other.id !== note.id), { ...note, parentId: parent.id }]);

@@ -27,12 +27,12 @@ const noSubscription = () => () => {};
 const onClient = () => true;
 const onServer = () => false;
 
-function RelativeTime({ date, dateTime, className }: { date: Date; dateTime: string; className?: string }) {
+function RelativeTime({ date, dateTime, className, id }: { date: Date; dateTime: string; className?: string; id?: string }) {
   // False while hydrating, true after: the change re-renders the date with the browser's clock.
   useSyncExternalStore(noSubscription, onClient, onServer);
 
   return (
-    <time suppressHydrationWarning className={className} dateTime={dateTime} title={date.toLocaleString("en")}>
+    <time suppressHydrationWarning className={className} dateTime={dateTime} id={id} title={date.toLocaleString("en")}>
       {relativeDate(date)}
     </time>
   );
@@ -52,23 +52,31 @@ type PostNoteProps = {
   banner?: ReactNode;
   /** The article's id: focus is moved to it after an action (use-swiftter.ts). */
   id?: string;
+  /** In the feed: its place (from 1) and how many there are (-1 while more pages remain). */
+  position?: FeedPosition;
 };
+
+export type FeedPosition = { at: number; of: number };
 
 /**
  * One note, passed like a note in class: the Member's avatar pinned in the
  * corner, their name in handwriting, when it was published, then the text on
  * the lines, and what can be done with it underneath.
  */
-export function PostNote({ post, paper, onDelete, footer, banner, id }: PostNoteProps) {
+export function PostNote({ post, paper, onDelete, footer, banner, id, position }: PostNoteProps) {
   const { author } = post;
   const nameId = useId();
+  const timeId = useId();
   const look = PAPERS[paper];
   const when = post.publishedAt ?? post.createdAt;
   const published = new Date(when);
 
   return (
     <article
-      aria-labelledby={nameId}
+      // Named by who wrote it and when ("Juniper Wells, 3 hours ago"): one Member's notes are told apart.
+      aria-labelledby={`${nameId} ${timeId}`}
+      aria-posinset={position?.at}
+      aria-setsize={position?.of}
       className="focus-ring relative drop-shadow-[0_10px_12px_rgba(40,20,10,.18)]"
       style={{ rotate: `${look.tilt}deg`, color: look.ink }}
       id={id}
@@ -91,13 +99,13 @@ export function PostNote({ post, paper, onDelete, footer, banner, id }: PostNote
           )}
           {onDelete && (
             <span className="ml-auto">
-              <DeletePost onDelete={onDelete} />
+              <DeletePost content={post.content} onDelete={onDelete} />
             </span>
           )}
         </div>
         <div className="flex items-baseline justify-between gap-3" style={{ color: look.soft }}>
           {author.username && <p className="min-w-0 truncate text-[13px] font-semibold">@{author.username}</p>}
-          <RelativeTime className="font-hand ml-auto shrink-0 text-[20px] leading-none font-bold whitespace-nowrap" date={published} dateTime={when} />
+          <RelativeTime className="font-hand ml-auto shrink-0 text-[20px] leading-none font-bold whitespace-nowrap" date={published} dateTime={when} id={timeId} />
         </div>
       </header>
 

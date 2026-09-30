@@ -100,7 +100,7 @@ export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
       return;
     }
     setFeed((previous) => (previous.status === "ready" ? { status: "ready", items: [...previous.items, ...page.items], nextCursor: page.nextCursor } : previous));
-    setAnnouncement(`${page.items.length} more notes loaded.`);
+    setAnnouncement(`${page.items.length} more ${page.items.length === 1 ? "note" : "notes"} loaded.`);
     // The button may be gone (last page): the keyboard carries on at the first new note.
     if (page.items[0]) focusSoon(noteElementId(page.items[0].key));
   };
@@ -184,8 +184,8 @@ export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
           showPost(post);
           focusSoon(noteElementId(post.id));
         } else focusAfterHeld(note);
-        setAnnouncement("Your note was checked and passed.");
-        toast.success("Note passed!");
+        // Said once, by the toast (read out as it appears).
+        toast.success("Your note was checked and passed.");
       },
       held: (updated) => {
         addHeld(updated);
@@ -226,9 +226,11 @@ export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
             <div aria-busy={loadingMore} aria-label="Posts" className="flex flex-col gap-9 sm:gap-11" role="feed">
               {feed.items.map((item, index) => {
                 const paper = paperFor(index, feed.items.length);
+                // Where it sits in the feed; how many there are is unknown while older notes remain.
+                const position = { at: index + 1, of: feed.nextCursor ? -1 : feed.items.length };
 
                 if ("tornUp" in item.post) {
-                  return <TornUpNote key={item.key} id={noteElementId(item.key)} paper={paper} resharedBy={item.kind === "reshare" ? item.resharedBy.displayName : undefined} />;
+                  return <TornUpNote key={item.key} id={noteElementId(item.key)} paper={paper} position={position} resharedBy={item.kind === "reshare" ? item.resharedBy.displayName : undefined} />;
                 }
 
                 const post = item.post;
@@ -249,6 +251,7 @@ export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
                     }
                     id={noteElementId(item.key)}
                     paper={paper}
+                    position={position}
                     post={post}
                     onDelete={own && item.kind === "post" ? () => remove(post) : undefined}
                   />

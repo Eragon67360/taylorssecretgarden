@@ -11,6 +11,7 @@ import { characterCount, MAX_NOTE_CHARACTERS } from "@/lib/swiftter";
 import { cn } from "@/lib/utils";
 
 import { NoteSheet, PAPERS, PinnedPhoto, ruling, TEXT_INSET } from "./note-paper";
+import { limitMessage } from "./words";
 
 /** Blank lines left at the end of a Post (pressing Enter once too often). */
 const withoutTrailingBlankLines = (html: string) => html.replace(/(<p><\/p>)+$/, "");
@@ -148,9 +149,12 @@ export default function Composer({
         <p aria-hidden="true" className="font-hand text-[19px] font-bold whitespace-nowrap" style={{ color: PAPERS.lined.soft }}>
           (pass it on ♡)
         </p>
-        {/* Near the limit, how many characters are left, read out politely as it changes. */}
+        {/* Read out only when a threshold is crossed, not at every keystroke. */}
+        <p aria-live="polite" className="sr-only">
+          {limitMessage(characters)}
+        </p>
+        {/* Near the limit, how many characters are left. */}
         <p
-          aria-live="polite"
           className={cn("ml-auto text-[13px] font-bold tabular-nums", tooLong ? "text-pen" : "")}
           id={counterId}
           style={tooLong ? undefined : { color: PAPERS.lined.soft }}
