@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 
 import tours from "../public/json/tours.json";
 
@@ -24,9 +24,27 @@ const pathOf = (url: string) => {
 	return pathname + search;
 };
 
-/** The canonical link of an HTML document, read with the browser's own parser. */
-const canonicalOf = (page: Page, html: string) =>
-	page.evaluate((html) => new DOMParser().parseFromString(html, "text/html").querySelector('link[rel="canonical"]')?.getAttribute("href") ?? null, html);
+/*
+  Most checks read the HTML the server sends, as a crawler does, parsed by the
+  browser's own parser on a blank page. No page scripts run, so they add no
+  session requests to Neon Auth (which rate-limits CI's branch).
+*/
+
+/** A page's HTML as the server sends it (asserting it answers 200). */
+async function htmlOf(request: APIRequestContext, path: string) {
+	const response = await request.get(path);
+
+	expect(response.status(), path).toBe(200);
+
+	return response.text();
+}
+
+/** The first element matching `selector` in an HTML document: one of its attributes. */
+const attributeIn = (page: Page, html: string, selector: string, attribute: string) =>
+	page.evaluate(
+		({ html, selector, attribute }) => new DOMParser().parseFromString(html, "text/html").querySelector(selector)?.getAttribute(attribute) ?? null,
+		{ html, selector, attribute },
+	);
 
 test.describe("outside production", () => {
 	test("robots.txt disallows everything and lists no sitemap", async ({ request }) => {
@@ -51,9 +69,8 @@ test.describe("outside production", () => {
 	});
 
 	for (const path of ["/", "/tours"]) {
-		test(`${path} says noindex, nofollow in its robots meta tag`, async ({ page }) => {
-			await page.goto(path);
-			await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
+		test(`${path} says noindex, nofollow in its robots meta tag`, async ({ page, request }) => {
+			expect(await attributeIn(page, await htmlOf(request, path), 'meta[name="robots"]', "content")).toBe("noindex, nofollow");
 		});
 	}
 });
@@ -99,10 +116,7 @@ test.describe("sitemap.xml", () => {
 
 		expect(locs.length).toBeGreaterThan(INDEXABLE.length);
 		for (const loc of locs) {
-			const response = await request.get(pathOf(loc));
-
-			expect(response.status(), loc).toBe(200);
-			const canonical = await canonicalOf(page, await response.text());
+			const canonical = await attributeIn(page, await htmlOf(request, pathOf(loc)), 'link[rel="canonical"]', "href");
 
 			expect(canonical && new URL(canonical).href, `canonical link of ${pathOf(loc)}`).toBe(new URL(loc).href);
 		}
@@ -139,9 +153,15 @@ test.describe("llms.txt", () => {
 });
 
 test.describe("JSON-LD", () => {
-	/** Every JSON-LD block on the page, parsed; each must be schema.org data with a type. */
-	async function structuredData(page: Page) {
-		const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
+	/** Every JSON-LD block in a page's HTML, parsed; each must be schema.org data with a type. */
+	async function structuredData(page: Page, request: APIRequestContext, path: string) {
+		const blocks = await page.evaluate(
+			(html) =>
+				[...new DOMParser().parseFromString(html, "text/html").querySelectorAll('script[type="application/ld+json"]')].map(
+					(script) => script.textContent ?? "",
+				),
+			await htmlOf(request, path),
+		);
 
 		return blocks.map((block) => {
 			const data = JSON.parse(block) as Record<string, unknown>;
@@ -153,22 +173,19 @@ test.describe("JSON-LD", () => {
 		});
 	}
 
-	test("Home describes the WebSite", async ({ page }) => {
-		await page.goto("/");
-		const [site, ...others] = await structuredData(page);
+	test("Home describes the WebSite", async ({ page, request }) => {
+		const [site, ...others] = await structuredData(page, request, "/");
 
 		expect(others).toEqual([]);
 		expect(site).toMatchObject({ "@type": "WebSite", name: "Taylor's Secret Garden", url: `${SITE}/` });
 	});
 
-	test("Music describes the open Album from the catalogue", async ({ page }) => {
-		await page.goto("/music");
-		expect(await structuredData(page)).toEqual([
+	test("Music describes the open Album from the catalogue", async ({ page, request }) => {
+		expect(await structuredData(page, request, "/music")).toEqual([
 			expect.objectContaining({ "@type": "MusicAlbum", name: "Taylor Swift", datePublished: "2006-10-24", url: `${SITE}/music` }),
 		]);
 
-		await page.goto("/music?album=221543452");
-		expect(await structuredData(page)).toEqual([
+		expect(await structuredData(page, request, "/music?album=221543452")).toEqual([
 			expect.objectContaining({
 				"@type": "MusicAlbum",
 				name: "Fearless (Taylor's Version)",
@@ -179,9 +196,8 @@ test.describe("JSON-LD", () => {
 		]);
 	});
 
-	test("Tours lists every Tour page", async ({ page }) => {
-		await page.goto("/tours");
-		const [list, ...others] = await structuredData(page);
+	test("Tours lists every Tour page", async ({ page, request }) => {
+		const [list, ...others] = await structuredData(page, request, "/tours");
 
 		expect(others).toEqual([]);
 		expect(list["@type"]).toBe("ItemList");
@@ -191,11 +207,10 @@ test.describe("JSON-LD", () => {
 	});
 
 	for (const { tour, slug, date } of tours) {
-		test(`/tours/${slug} describes ${tour} as an EventSeries, with its years only`, async ({ page }) => {
-			await page.goto(`/tours/${slug}`);
+		test(`/tours/${slug} describes ${tour} as an EventSeries, with its years only`, async ({ page, request }) => {
 			const [first, last = first] = date.split("-");
 
-			expect(await structuredData(page)).toEqual([
+			expect(await structuredData(page, request, `/tours/${slug}`)).toEqual([
 				expect.objectContaining({
 					"@type": "EventSeries",
 					name: tour,
@@ -209,7 +224,15 @@ test.describe("JSON-LD", () => {
 	}
 });
 
+// In the browser, once the page has run: an h1 rendered on the client counts too.
 test.describe("one h1 per page", () => {
+	test.beforeEach(async ({ page }) => {
+		// Nobody signs in here: the header's "is anyone signed in?" request is
+		// answered locally, so these page loads add nothing to Neon Auth's
+		// request count on CI's branch (it rate-limits, and a 429 is a console error).
+		await page.route(/\/api\/auth\/get-session(\?|$)/, (route) => route.fulfill({ json: null }));
+	});
+
 	for (const path of [...INDEXABLE, "/music?album=167766152", ...NOINDEX]) {
 		test(`${path} has exactly one h1`, async ({ page }) => {
 			await page.goto(path);
