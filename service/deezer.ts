@@ -4,7 +4,7 @@ import { Album, AlbumDetails } from "@/types";
 
 const API_URL = "https://api.deezer.com";
 
-type DeezerAlbum = {
+export type DeezerAlbum = {
   id: number;
   title: string;
   cover_xl: string;
@@ -38,10 +38,16 @@ type DeezerAlbumDetails = DeezerAlbum & {
 // Until a response is cached, concurrent page views asking for the same path
 // share one request, and "Quota limit exceeded" (error code 4) is retried twice,
 // once the rate limit's window has moved on.
+//
+// Each request gives up after 5 seconds: a hung Deezer would otherwise hold
+// the page's render until the function's time limit. Deezer usually answers
+// well within a second, and the Music page has fallbacks (components/music/catalogue.ts).
 const QUOTA_EXCEEDED = 4;
+const TIMEOUT_MS = 5000;
+const DAY = 86400;
 const inFlight = new Map<string, Promise<unknown>>();
 
-function deezerGet<T>(path: string, revalidate = 86400): Promise<T> {
+export function deezerGet<T>(path: string, revalidate = DAY): Promise<T> {
   return unstable_cache(() => fetchOnce<T>(path), ["deezer", path], { revalidate })();
 }
 
@@ -58,7 +64,7 @@ function fetchOnce<T>(path: string): Promise<T> {
 
 async function fetchDeezer<T>(path: string): Promise<T> {
   for (let attempt = 1; ; attempt++) {
-    const response = await fetch(`${API_URL}${path}`, { cache: "no-store" });
+    const response = await fetch(`${API_URL}${path}`, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
     const data = await response.json();
 
     if (response.ok && !data.error) return data;
@@ -69,9 +75,14 @@ async function fetchDeezer<T>(path: string): Promise<T> {
   }
 }
 
-/** The Albums, in the order asked. Deezer may answer an ID with a regional twin (another ID for the same Album). */
+/** An Album. Deezer may answer its ID with a regional twin (another ID for the same Album). */
+export function getAlbum(albumId: string): Promise<DeezerAlbum> {
+  return deezerGet<DeezerAlbum>(`/album/${albumId}`);
+}
+
+/** The Albums, in the order asked; fails if any of them does. */
 export function getAlbums(albumIds: string[]): Promise<DeezerAlbum[]> {
-  return Promise.all(albumIds.map((id) => deezerGet<DeezerAlbum>(`/album/${id}`)));
+  return Promise.all(albumIds.map((id) => getAlbum(id)));
 }
 
 // `/album/{id}` embeds at most 25 tracks, so tracks are fetched separately.
@@ -85,7 +96,19 @@ export function toAlbum(album: DeezerAlbum): Album {
   return { id: String(album.id), name: album.title, images: [{ url: album.cover_xl }] };
 }
 
-export async function getAlbumDetails(albumId: string): Promise<AlbumDetails> {
+/*
+  An Album's (or a Version's) details and tracklist, cached as one entry: a
+  warm Album page reads it once rather than the Album and its tracks apart.
+  Next skips a cache nested in another, so on a miss the two requests inside
+  go to Deezer directly, still deduplicated and retried by fetchOnce.
+*/
+export function getAlbumDetails(albumId: string): Promise<AlbumDetails> {
+  return cachedAlbumDetails(albumId);
+}
+
+const cachedAlbumDetails = unstable_cache((albumId: string) => fetchAlbumDetails(albumId), ["deezer", "album-details"], { revalidate: DAY });
+
+async function fetchAlbumDetails(albumId: string): Promise<AlbumDetails> {
   const [album, tracks] = await Promise.all([
     deezerGet<DeezerAlbumDetails>(`/album/${albumId}`),
     getAlbumTracks(albumId),

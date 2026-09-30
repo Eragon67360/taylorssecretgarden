@@ -79,14 +79,19 @@ export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
                 }}
               >
                 {active && <Pin className="-top-2 left-1/2 -translate-x-1/2" />}
-                <Image
-                  alt=""
-                  className="aspect-square w-full object-cover"
-                  height={120}
-                  sizes="(min-width: 1024px) 130px, 96px"
-                  src={album.images[0].url}
-                  width={120}
-                />
+                {album.images[0] ? (
+                  <Image
+                    alt=""
+                    className="aspect-square w-full object-cover"
+                    height={120}
+                    sizes="(min-width: 1024px) 130px, 96px"
+                    src={album.images[0].url}
+                    width={120}
+                  />
+                ) : (
+                  // Deezer failed this Album (components/music/catalogue.ts): a blank photo, same size.
+                  <span aria-hidden="true" className="bg-line block aspect-square w-full" />
+                )}
                 <span aria-hidden="true" className="font-hand block truncate py-1 text-center text-[17px] leading-tight font-bold text-[var(--photo-ink)]">
                   {look.short}
                 </span>
