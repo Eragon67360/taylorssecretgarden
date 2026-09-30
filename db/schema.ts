@@ -115,7 +115,7 @@ export const moderationDecisions = pgTable(
 			.notNull()
 			.references(() => posts.id, { onDelete: "cascade" }),
 		outcome: text("outcome", { enum: MODERATION_OUTCOMES }).notNull(),
-		/** For a refusal: insult or off_topic. */
+		/** For a refusal: insult, restricted or off_topic (lib/swiftter.ts RefusalCategory). */
 		category: text("category"),
 		/** The model's one-line reason; erased when the Post is torn up. */
 		reason: text("reason"),

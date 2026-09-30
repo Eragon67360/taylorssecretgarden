@@ -22,6 +22,8 @@ import {
 /** Why a note was refused by moderation. */
 export const REFUSALS: Record<RefusalCategory, string> = {
 	insult: "This note reads as unkind, so it wasn't passed. Swiftter is a gentle corner of the fandom: soften it and try again.",
+	restricted:
+		"This note shares something Swiftter can't keep: someone's personal details, a risky or unofficial ticket link, adult or illegal content, or a song's full lyrics. Take that part out and try again.",
 	off_topic:
 		"This note wanders away from Taylor, so it wasn't passed. Swiftter is for her music, the Eras, the tours and fan life: bring it back to Taylor and try again.",
 };

@@ -75,7 +75,7 @@ export function getAlbums(albumIds: string[]): Promise<DeezerAlbum[]> {
 }
 
 // `/album/{id}` embeds at most 25 tracks, so tracks are fetched separately.
-async function getAlbumTracks(albumId: string | number): Promise<DeezerTrack[]> {
+export async function getAlbumTracks(albumId: string | number): Promise<DeezerTrack[]> {
   const { data } = await deezerGet<{ data: DeezerTrack[] }>(`/album/${albumId}/tracks?limit=200`);
 
   return data;

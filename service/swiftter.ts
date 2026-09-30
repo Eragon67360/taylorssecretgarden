@@ -3,6 +3,7 @@ import "server-only";
 import { sql } from "drizzle-orm";
 
 import { type Database, getDb } from "@/db/client";
+import { allowedAvatarUrl } from "@/lib/avatar";
 import { displayNameOf } from "@/lib/display-name";
 import { members } from "@/db/schema";
 import {
@@ -21,7 +22,7 @@ import {
 	type ThreadNote,
 } from "@/lib/swiftter";
 import { moderatePost, moderationModelName, type ModerationResult } from "@/service/moderation";
-import { postPlainText, postText, sanitisePostHtml } from "@/service/post-html";
+import { postModerationText, postPlainText, postText, sanitisePostHtml } from "@/service/post-html";
 
 /**
  * Swiftter's data: the feed, threads, reshares and the moderation of every
@@ -116,14 +117,16 @@ export type AuthUser = { id: string; name?: string | null; email: string; image?
 
 /**
  * The Member details of a signed-in person. Neon Auth has no usernames, so a
- * Member's handle is left empty.
+ * Member's handle is left empty. Neon Auth stores names and pictures as
+ * given, so the name is cut to 80 graphemes (displayNameOf) and the picture
+ * kept only when next/image may load it (lib/avatar.ts).
  */
 export function memberFromAuthUser(user: AuthUser): MemberDetails {
 	return {
 		id: user.id,
 		displayName: displayNameOf(user),
 		username: null,
-		avatarUrl: user.image || null,
+		avatarUrl: allowedAvatarUrl(user.image),
 	};
 }
 
@@ -249,7 +252,8 @@ async function judge(id: string, content: string, moderate: Moderate): Promise<W
 	let result: ModerationResult | null = null;
 
 	try {
-		result = await moderate(postPlainText(content));
+		// The text with every link's destination spelled out, so a masked link is judged by where it leads.
+		result = await moderate(postModerationText(content));
 	} catch (error) {
 		// Any failure means no verdict: the note stays pending, nothing is lost.
 		// eslint-disable-next-line no-console
@@ -359,11 +363,13 @@ type PostRow = {
 	reshare_count: number;
 };
 
+// Rows stored before avatars were checked may hold a picture next/image
+// refuses (a Clerk avatar): those Members show their initials.
 const authorOf = (row: { author_id: string; display_name: string; username: string | null; avatar_url: string | null }): Author => ({
 	id: row.author_id,
 	displayName: row.display_name,
 	username: row.username,
-	avatarUrl: row.avatar_url,
+	avatarUrl: allowedAvatarUrl(row.avatar_url),
 });
 
 // Every note leaves the server sanitised, including rows written some other

@@ -1,7 +1,7 @@
 "use client";
 
 import type { PublishResult } from "./composer";
-import type { HeldNote, Thread, ThreadNote } from "@/lib/swiftter";
+import type { HeldNote, RefusalCategory, Thread, ThreadNote } from "@/lib/swiftter";
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -25,9 +25,10 @@ const MAX_INDENT = 4;
 /** A reply of the Member's that moderation has not passed (yet): shown to them, under what it answers. */
 type HeldReply = HeldNote & { parentId: string };
 
-const HELD_LABEL: Record<"pending" | "insult" | "off_topic", string> = {
+const HELD_LABEL: Record<"pending" | RefusalCategory, string> = {
   pending: "Only you can see this reply: it's waiting for a check.",
   insult: "Only you can see this reply: it wasn't passed, it reads as unkind.",
+  restricted: "Only you can see this reply: it wasn't passed, it isn't safe to share.",
   off_topic: "Only you can see this reply: it wasn't passed, it's off-topic.",
 };
 

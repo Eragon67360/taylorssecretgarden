@@ -37,8 +37,8 @@ export type FeedPage = { items: FeedItem[]; nextCursor: string | null };
 /** Where a note stands with moderation. Only approved notes are public. */
 export type NoteStatus = "pending" | "approved" | "blocked";
 
-/** Why moderation refused a note. */
-export type RefusalCategory = "insult" | "off_topic";
+/** Why moderation refused a note: unkind, not safe to share (personal details, scams, sexual or illegal content, full lyrics), or off-topic. */
+export type RefusalCategory = "insult" | "restricted" | "off_topic";
 
 /** One of the signed-in Member's own notes that is not public: waiting for a check, or refused. */
 export type HeldNote = {

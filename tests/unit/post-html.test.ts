@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { postPlainText, postText, sanitisePostHtml } from "@/service/post-html";
+import { postModerationText, postPlainText, postText, sanitisePostHtml } from "@/service/post-html";
 
 // Escaping is the XSS defence, independent of moderation: what the model
 // thinks of a Post never decides what HTML reaches the page.
@@ -26,7 +26,7 @@ describe("sanitisePostHtml", () => {
 		expect(clean).toContain("<strong>b</strong>");
 		expect(clean).toContain("<em>i</em>");
 		expect(clean).toContain('href="https://example.com"');
-		expect(clean).toContain('rel="noopener noreferrer nofollow"');
+		expect(clean).toContain('rel="noopener noreferrer nofollow ugc"');
 		expect(clean).toContain("<ul><li><p>one</p></li></ul>");
 	});
 
@@ -49,5 +49,36 @@ describe("postText / postPlainText", () => {
 
 		// A list item's paragraph closes twice (</p></li>): a blank line between items, harmless for the model.
 		expect(text.split("\n").filter(Boolean)).toEqual(["Tom & Jerry <3", "one", "two"]);
+	});
+
+	it("leaves link destinations out: counts and page descriptions read only the text", () => {
+		expect(postPlainText('<p>see <a href="https://example.com/x">this</a></p>')).toBe("see this");
+	});
+});
+
+describe("postModerationText", () => {
+	it("writes a masked link's destination after its text", () => {
+		const html = '<p>tickets on <a href="https://ticketmaster-resale.example/login?next=a&amp;b=1">Ticketmaster</a>, hurry</p>';
+
+		expect(postModerationText(html)).toBe("tickets on Ticketmaster (link: https://ticketmaster-resale.example/login?next=a&b=1), hurry");
+	});
+
+	it("gives every link its destination, formatted text included", () => {
+		const html = '<p><a href="https://a.example/"><strong>one</strong></a> and <a href="mailto:me@example.com">mail me</a></p>';
+
+		expect(postModerationText(html)).toBe("one (link: https://a.example/) and mail me (link: mailto:me@example.com)");
+	});
+
+	it("does not repeat a link whose text is its address", () => {
+		expect(postModerationText('<p><a href="https://example.com">https://example.com</a></p>')).toBe("https://example.com");
+	});
+
+	it("sanitises first: a link it would drop brings no destination, and markup in an address stays text", () => {
+		expect(postModerationText('<p><a href="javascript:alert(1)">x</a></p>')).toBe("x");
+		expect(postModerationText('<p><a href="https://e.example/?q=<b>">x</a></p>')).toBe("x (link: https://e.example/?q=<b>)");
+	});
+
+	it("keeps lines and decoded characters like postPlainText", () => {
+		expect(postModerationText("<p>Tom &amp; Jerry</p><p>two</p>").split("\n").filter(Boolean)).toEqual(["Tom & Jerry", "two"]);
 	});
 });

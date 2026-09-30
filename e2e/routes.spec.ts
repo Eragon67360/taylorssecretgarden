@@ -37,3 +37,21 @@ test("Swiftter shows the feed without an error page", async ({ page }) => {
 	await expect(page.getByRole("feed", { name: "Posts" }).getByRole("article").first()).toBeVisible();
 	await expect(page.getByRole("heading", { name: "Something went wrong on this page." })).toBeHidden();
 });
+
+// Baseline security headers (next.config.ts), on pages, files and API routes
+// alike. /api/preview/abc is refused before any Deezer call.
+const SECURITY_HEADERS = {
+	"content-security-policy": "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
+	"x-content-type-options": "nosniff",
+	"referrer-policy": "strict-origin-when-cross-origin",
+	"permissions-policy": "camera=(), microphone=(), geolocation=()",
+};
+
+test("every response carries the security headers, and none says it is Next.js", async ({ request }) => {
+	for (const path of ["/", "/swiftter", "/sign-in", "/robots.txt", "/api/preview/abc"]) {
+		const headers = (await request.get(path, { maxRedirects: 0 })).headers();
+
+		for (const [name, value] of Object.entries(SECURITY_HEADERS)) expect(headers[name], `${name} on ${path}`).toBe(value);
+		expect(headers["x-powered-by"], `X-Powered-By on ${path}`).toBeUndefined();
+	}
+});

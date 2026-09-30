@@ -1,6 +1,6 @@
 "use client";
 
-import type { HeldNote } from "@/lib/swiftter";
+import type { HeldNote, RefusalCategory } from "@/lib/swiftter";
 
 import Link from "next/link";
 import { useId } from "react";
@@ -12,9 +12,10 @@ import { PostContent } from "./post-content";
 import { relativeDate } from "./relative-date";
 
 /** The status, in words: never colour alone. */
-const STATUS: Record<"pending" | "insult" | "off_topic", string> = {
+const STATUS: Record<"pending" | RefusalCategory, string> = {
   pending: "Waiting for a check",
   insult: "Not passed: reads as unkind",
+  restricted: "Not passed: not safe to share",
   off_topic: "Not passed: off-topic",
 };
 
