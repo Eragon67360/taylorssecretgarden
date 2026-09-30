@@ -1,0 +1,30 @@
+# Deletes the Neon branch ../action.yml created for this job. One API call:
+# Neon's delete-branch-action still runs setup-node on Node 20. Call it with
+# `if: always() && steps.<create step>.outputs.branch_id != ''`, so it also
+# runs after a failed step, and not when no branch was created.
+name: Delete the CI Neon branch
+description: Deletes a Neon branch by ID.
+
+inputs:
+  api_key:
+    description: Neon API key (secrets.NEON_API_KEY)
+    required: true
+  project_id:
+    description: Neon project (vars.NEON_PROJECT_ID)
+    required: true
+  branch_id:
+    description: The branch to delete (the create action's branch_id output)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Delete the Neon branch
+      shell: bash
+      env:
+        NEON_API_KEY: ${{ inputs.api_key }}
+        PROJECT_ID: ${{ inputs.project_id }}
+        BRANCH_ID: ${{ inputs.branch_id }}
+      run: >-
+        curl --fail-with-body -sS -o /dev/null --retry 3 -X DELETE -H "Authorization: Bearer $NEON_API_KEY"
+        "https://console.neon.tech/api/v2/projects/$PROJECT_ID/branches/$BRANCH_ID"
