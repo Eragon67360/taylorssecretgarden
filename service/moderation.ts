@@ -133,6 +133,9 @@ async function askModel(text: string, { model = MODERATION_MODEL, timeoutMs = TI
 */
 const isFake = () => process.env.SWIFTTER_MODERATION === "fake" && !process.env.VERCEL;
 
+/** The model that judges notes here, as moderation_decisions records it. */
+export const moderationModelName = () => (isFake() ? "fake" : MODERATION_MODEL);
+
 function fakeAnswer(text: string): ModelAnswer {
 	if (text.includes("fake-moderation-down")) throw new ModerationUnavailableError("Fake moderation is down");
 	if (text.includes("fake-insult")) return { decision: "insult", reason: "Fake: marked as an insult." };

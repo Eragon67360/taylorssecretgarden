@@ -233,6 +233,13 @@
     text-underline-offset: 2px;
 }
 
+/* Each paragraph takes its own direction from its first letter: a Hebrew or
+   Arabic line in an English note reads right to left, and the other way round. */
+.post-content :is(p, li, h1, h2, h3, blockquote) {
+    unicode-bidi: plaintext;
+    text-align: start;
+}
+
 /* The composer's placeholder (Tiptap's Placeholder extension). */
 .post-content p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);

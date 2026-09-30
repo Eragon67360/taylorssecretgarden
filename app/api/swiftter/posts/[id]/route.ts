@@ -1,31 +1,29 @@
 import { NextResponse } from "next/server";
 
-import { getSessionUser } from "@/lib/auth/server";
-import { deletePost, PostNotFoundError } from "@/service/swiftter";
+import { memberWrite } from "@/lib/member-write";
+import { errorResponse } from "@/lib/swiftter-responses";
+import { deletePost } from "@/service/swiftter";
+
+type Context = { params: Promise<{ id: string }> };
 
 /**
- * Deletes one of the signed-in Member's own Posts: 204. 401 when signed out;
- * 404 when the Post is not theirs, whether or not it exists, so a Member cannot
- * probe for other Members' Posts. No BotID check: it only ever removes the
- * Member's own writing, and costs nothing.
+ * Tears up one of the signed-in Member's own notes (a Post or a reply, public
+ * or held): 204. After memberWrite's checks (403/401/503), 404 when the note
+ * is not theirs, whether or not it exists, so a Member cannot probe for other
+ * Members' notes.
  */
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-	const user = await getSessionUser();
+export function DELETE(request: Request, { params }: Context) {
+	return memberWrite(
+		request,
+		async (writer) => {
+			try {
+				await deletePost(writer.id, (await params).id);
 
-	if (!user) return NextResponse.json({ error: "Sign in to delete your Posts." }, { status: 401 });
-
-	const { id } = await params;
-
-	try {
-		await deletePost(user.id, id);
-
-		return new NextResponse(null, { status: 204 });
-	} catch (error) {
-		if (error instanceof PostNotFoundError) return NextResponse.json({ error: "There is no such Post of yours." }, { status: 404 });
-
-		// eslint-disable-next-line no-console
-		console.error("Deleting a Post failed", error);
-
-		return NextResponse.json({ error: "The Post could not be deleted right now." }, { status: 500 });
-	}
+				return new NextResponse(null, { status: 204 });
+			} catch (error) {
+				return errorResponse(error, "Tearing up your note");
+			}
+		},
+		{ body: false },
+	);
 }

@@ -14,7 +14,8 @@ export const metadata = pageMetadata({
 export default function SwiftterLayout({ children }: { children: React.ReactNode }) {
 	return (
 		<>
-			<Toaster richColors position="bottom-center" />
+			{/* Sonner's default colours: its "rich" palette fails WCAG AA contrast on success toasts. */}
+			<Toaster position="bottom-center" />
 			{children}
 		</>
 	);

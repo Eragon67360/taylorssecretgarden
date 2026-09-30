@@ -25,9 +25,26 @@ export function getAuth(): NeonAuth {
   return instance;
 }
 
-/** The person signed in on this request, or null. */
+/** Neon Auth could not say who is signed in (down, or unreachable): not the same as signed out. */
+export class AuthUnavailableError extends Error {}
+
+/**
+ * The person signed in on this request, or null. Throws AuthUnavailableError
+ * when Neon Auth itself fails (a 5xx or no answer), so an outage is not
+ * mistaken for being signed out.
+ */
 export async function getSessionUser() {
-  const { data } = await getAuth().getSession();
+  let result: Awaited<ReturnType<NeonAuth["getSession"]>>;
+
+  try {
+    result = await getAuth().getSession();
+  } catch (error) {
+    throw new AuthUnavailableError("Neon Auth did not answer", { cause: error });
+  }
+
+  const { data, error } = result;
+
+  if (error && (!error.status || error.status >= 500)) throw new AuthUnavailableError(`Neon Auth failed: ${error.status ?? "no status"}`);
 
   return data?.user ?? null;
 }

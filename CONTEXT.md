@@ -33,6 +33,18 @@ _Avoid_: Forum
 A single rich-text message a Member publishes on Swiftter. Its Member can delete it ("tear up" in the interface); Posts cannot be edited.
 _Avoid_: Tweet, message, swift
 
+**Reply**:
+A Post answering another Post or reply, in the thread of the first Post. Moderated like a Post.
+_Avoid_: Comment
+
+**Reshare**:
+A Member passing someone else's public Post on to the feed, credited to its author. It has no text of its own.
+_Avoid_: Retweet, repost, share
+
+**Held note**:
+A Post or reply that is not public: waiting for a moderation check (pending), or refused (blocked). Only its author sees it.
+_Avoid_: Draft, hidden post
+
 **Member**:
 A signed-in person who can publish Posts on Swiftter.
 _Avoid_: User, account, profile

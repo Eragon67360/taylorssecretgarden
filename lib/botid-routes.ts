@@ -2,13 +2,16 @@
  * The routes Vercel BotID guards: the ones a script would abuse. The browser
  * attaches BotID's token to requests matching these (instrumentation-client.ts)
  * and the routes refuse requests without a valid one (lib/bot-protection.ts):
- * publishing a Post, and signing up or signing in (email or Google), checked
- * in front of Neon Auth in app/api/auth/[...path].
+ * every Swiftter write (lib/member-write.ts), and signing up or signing in
+ * (email or Google), checked in front of Neon Auth in app/api/auth/[...path].
  *
  * `*` matches the rest of the path, as BotID's client reads it.
  */
 export const BOTID_PROTECTED_ROUTES = [
 	{ path: "/api/swiftter/posts", method: "POST" },
+	// Tearing up, resharing and undoing it, "check again": every other Swiftter write (lib/member-write.ts).
+	{ path: "/api/swiftter/posts/*", method: "POST" },
+	{ path: "/api/swiftter/posts/*", method: "DELETE" },
 	{ path: "/api/auth/sign-up/*", method: "POST" },
 	{ path: "/api/auth/sign-in/*", method: "POST" },
 ];
