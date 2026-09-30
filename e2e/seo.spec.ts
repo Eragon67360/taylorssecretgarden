@@ -1,5 +1,7 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 
+import { request as httpRequest } from "node:http";
+
 import tours from "../public/json/tours.json";
 
 import { expect, test } from "./fixtures";
@@ -250,4 +252,31 @@ test.describe("one h1 per page", () => {
 			await expect(page.locator("h1")).toHaveCount(1);
 		});
 	}
+});
+
+test.describe("the old production address", () => {
+	/** Status and Location of a request to this server as if sent to `host` (browsers can't set Host; Node can). */
+	const asHost = (baseURL: string, host: string, path: string) =>
+		new Promise<{ status: number; location: string | undefined }>((resolve, reject) => {
+			const { hostname, port } = new URL(baseURL);
+
+			httpRequest({ hostname, port, path, headers: { host } }, (response) => {
+				response.resume();
+				resolve({ status: response.statusCode ?? 0, location: response.headers.location });
+			})
+				.on("error", reject)
+				.end();
+		});
+
+	test("taylorssecretgarden.vercel.app pages move permanently to www, path and query kept", async ({ baseURL }) => {
+		for (const path of ["/", "/music?album=52612062", "/swiftter/p/5eed0000-0000-4000-8000-000000000001"]) {
+			expect(await asHost(baseURL!, "taylorssecretgarden.vercel.app", path), path).toEqual({ status: 308, location: `${SITE}${path}` });
+		}
+	});
+
+	test("its API routes keep answering (cron, tabs left open), and other hosts are not redirected", async ({ baseURL }) => {
+		expect((await asHost(baseURL!, "taylorssecretgarden.vercel.app", "/api/swiftter/posts")).status).toBe(200);
+		expect((await asHost(baseURL!, "taylorssecretgarden.vercel.app", "/api/cron/moderation")).status).toBe(401);
+		expect((await asHost(baseURL!, "taylorssecretgarden-git-dev-le-bon-temperament.vercel.app", "/music")).status).toBe(200);
+	});
 });

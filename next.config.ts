@@ -43,8 +43,20 @@ const nextConfig: NextConfig = {
 		],
 	},
 	async redirects() {
-		// Swiftter used to live at /forum.
-		return [{ source: "/forum", destination: "/swiftter", permanent: true }];
+		return [
+			// Swiftter used to live at /forum.
+			{ source: "/forum", destination: "/swiftter", permanent: true },
+			// The old production address sends people to the canonical www host,
+			// path and query kept. Pages only: API routes keep answering there, so
+			// Vercel Cron and a tab left open on the old address still work. Neon
+			// Auth trusts www (SEO-STRATEGY.md, pre-launch checklist).
+			{
+				source: "/:path((?!api/).*)",
+				has: [{ type: "host", value: "taylorssecretgarden.vercel.app" }],
+				destination: "https://www.taylorssecretgarden.com/:path",
+				permanent: true,
+			},
+		];
 	},
 	async headers() {
 		// Outside production, every response (pages, files, API) says noindex (lib/indexing.ts).
