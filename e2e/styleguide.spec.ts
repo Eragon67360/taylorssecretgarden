@@ -88,7 +88,7 @@ test.describe("Styleguide", () => {
 		await expect(table.getByRole("row", { name: /221543452 Fearless/ })).toBeVisible();
 	});
 
-	test("passes axe (WCAG 2.1 AA), every Era palette included", async ({ page }) => {
+	test("passes axe (WCAG 2.2 AA), every Era palette included", async ({ page }) => {
 		await page.goto("/styleguide");
 		await expectNoAxeViolations(page);
 	});

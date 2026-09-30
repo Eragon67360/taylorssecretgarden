@@ -14,6 +14,8 @@ const SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9";
 const TOUR_PAGES = tours.map(({ slug }) => `/tours/${slug}`);
 /** Every page that may be indexed in production. */
 const INDEXABLE = ["/", "/music", "/tours", ...TOUR_PAGES, "/swiftter"];
+/** A seeded Swiftter thread (scripts/seed-data.ts): a page of its own, not indexed (seed content). */
+const SEEDED_THREAD = "/swiftter/p/5eed0000-0000-4000-8000-000000000001";
 /** Pages kept out of search results everywhere. */
 const NOINDEX = ["/sign-in", "/sign-up", "/styleguide"];
 
@@ -108,6 +110,15 @@ test.describe("sitemap.xml", () => {
 		// Every other Album has a page of its own: a Taylor's Version, for one.
 		expect(paths).toContain("/music?album=221543452");
 		for (const path of [...NOINDEX, "/sign-in?redirect_url=%2Fswiftter"]) expect(paths).not.toContain(path);
+	});
+
+	test("lists Swiftter threads, never seed or demo ones", async ({ request }) => {
+		const sitemap = await (await request.get("/sitemap.xml")).text();
+		const threads = [...sitemap.matchAll(/<loc>[^<]*\/swiftter\/p\/([^<]+)<\/loc>/g)].map(([, id]) => id);
+
+		for (const id of threads) expect(id, "a thread's id").toMatch(/^[0-9a-f-]{36}$/);
+		// Development fixtures (scripts/seed-data.ts) and the demo Posts (db/seed.ts) are never listed.
+		expect(threads.filter((id) => id.startsWith("5eed0000-") || id.startsWith("5d1c0a3e-"))).toEqual([]);
 	});
 
 	test("lists each page at the address the page itself calls canonical", async ({ page, request }) => {
@@ -233,7 +244,7 @@ test.describe("one h1 per page", () => {
 		await page.route(/\/api\/auth\/get-session(\?|$)/, (route) => route.fulfill({ json: null }));
 	});
 
-	for (const path of [...INDEXABLE, "/music?album=167766152", ...NOINDEX]) {
+	for (const path of [...INDEXABLE, "/music?album=167766152", ...NOINDEX, SEEDED_THREAD]) {
 		test(`${path} has exactly one h1`, async ({ page }) => {
 			await page.goto(path);
 			await expect(page.locator("h1")).toHaveCount(1);

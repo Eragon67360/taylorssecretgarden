@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { ThreadView } from "@/components/swiftter/thread-view";
 import { siteConfig } from "@/config/site";
+import { isIndexable } from "@/lib/indexing";
 import { postPlainText } from "@/service/post-html";
 import { getThread } from "@/service/swiftter";
 
@@ -31,8 +32,9 @@ export async function generateMetadata({ params }: ThreadPageProps): Promise<Met
 		title,
 		description,
 		alternates: { canonical },
-		// Demo, seed and torn-up notes are never indexed (docs/adr/0007).
-		robots: thread.indexable ? undefined : { index: false, follow: true },
+		// Demo, seed and torn-up notes are never indexed (docs/adr/0007); outside
+		// production the layout already keeps everything out (lib/indexing.ts).
+		robots: isIndexable() && !thread.indexable ? { index: false, follow: true } : undefined,
 		openGraph: { type: "article", title, description, url: canonical, publishedTime: root.publishedAt },
 		twitter: { card: "summary_large_image", title, description },
 	};

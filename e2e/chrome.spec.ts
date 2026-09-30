@@ -10,7 +10,7 @@ const routes = ["/", "/music", "/tours", ...tours.map(({ slug }) => `/tours/${sl
 
 for (const path of routes) {
 	test.describe(`chrome on ${path}`, () => {
-		test("passes axe (WCAG 2.1 AA)", async ({ page }) => {
+		test("passes axe (WCAG 2.2 AA)", async ({ page }) => {
 			await page.goto(path);
 			await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
 			await expectNoAxeViolations(page, CHROME);

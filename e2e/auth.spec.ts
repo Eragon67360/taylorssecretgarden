@@ -78,7 +78,7 @@ for (const { path, title, submit, fields } of pages) {
 			expect(gradients, "gradient backgrounds on the page").toEqual([]);
 		});
 
-		test("passes axe (WCAG 2.1 AA)", async ({ page }) => {
+		test("passes axe (WCAG 2.2 AA)", async ({ page }) => {
 			await page.goto(path);
 			await expectNoAxeViolations(page);
 		});
