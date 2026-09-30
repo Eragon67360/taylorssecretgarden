@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { IntentLink } from "@/components/intent-link";
+import { JsonLd, TAYLOR_SWIFT } from "@/components/json-ld";
 import { Bracelet, PressedFlower, RuledList, RuledListItem, StickyNote } from "@/components/scrapbook";
 import { TourGallery } from "@/components/tours/tour-gallery";
 import { TourPoster } from "@/components/tours/tour-poster";
@@ -10,7 +11,7 @@ import { TourScope } from "@/components/tours/tour-scope";
 import { TourNote, TourStub } from "@/components/tours/tour-stub";
 import { TourVideo } from "@/components/tours/tour-video";
 import { ERA_LOOKS } from "@/lib/eras";
-import { pageMetadata } from "@/lib/metadata";
+import { absoluteUrl, pageMetadata } from "@/lib/metadata";
 import { TOURS, getTour, tourEraLabel, tourLook, tourYears } from "@/lib/tours";
 
 type TourPageProps = { params: Promise<{ tour: string }> };
@@ -36,9 +37,24 @@ export default async function TourPage({ params }: TourPageProps) {
   if (!tour) notFound();
   const look = tourLook(tour);
   const era = tour.era ? ERA_LOOKS[tour.era] : undefined;
+  // "2013-2014", or "2018" for a Tour within one year.
+  const [firstYear, lastYear = firstYear] = tour.date.split("-");
 
   return (
     <TourScope aria-labelledby="tour-title" className="relative overflow-x-clip" tour={tour}>
+      {/* A Tour is a series of shows: only what the Tours data says (years, not dates). */}
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "EventSeries",
+          name: tour.tour,
+          url: absoluteUrl(`/tours/${tour.slug}`),
+          description: tour.facts.join(" "),
+          startDate: firstYear,
+          endDate: lastYear,
+          performer: TAYLOR_SWIFT,
+        }}
+      />
       <div className="mx-auto max-w-[1180px] px-4 pt-8 pb-20 sm:px-8 sm:pt-10">
         <IntentLink className="focus-ring font-hand text-soft hover:text-ink inline-block text-2xl font-bold" href="/tours">
           <span aria-hidden="true">←</span> back to the Tours

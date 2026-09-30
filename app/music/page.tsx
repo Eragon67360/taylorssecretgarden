@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import { getShelf, getVersions, pickAlbum, pickVersion } from "@/components/music/catalogue";
 import { formatReleaseDate } from "@/components/music/format";
 import { MusicJournal } from "@/components/music/music-journal";
+import { JsonLd, TAYLOR_SWIFT } from "@/components/json-ld";
 import { CATALOGUE, albumName, findAlbum } from "@/lib/catalogue";
-import { musicPath, pageMetadata } from "@/lib/metadata";
+import { absoluteUrl, albumPath, musicPath, pageMetadata } from "@/lib/metadata";
 import { getAlbumDetails } from "@/service/deezer";
 
 type MusicProps = { searchParams: Promise<{ album?: string | string[] }> };
@@ -55,6 +56,25 @@ export default async function Music({ searchParams }: MusicProps) {
   const selected = pickAlbum(shelf, wanted);
   const versionId = selected && pickVersion(selected, wanted);
   const [details, versions] = selected && versionId ? await Promise.all([getAlbumDetails(versionId), getVersions(selected)]) : [undefined, []];
+  const album = findAlbum(selected?.catalogueId);
 
-  return <MusicJournal albumId={selected?.id} details={details} shelf={shelf} versionId={versionId} versions={versions} />;
+  return (
+    <>
+      {album && (
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "MusicAlbum",
+            name: albumName(album),
+            byArtist: TAYLOR_SWIFT,
+            datePublished: album.released,
+            // Every catalogue Album is a studio Album or a Taylor's Version (lib/catalogue.ts).
+            albumProductionType: "https://schema.org/StudioAlbum",
+            url: absoluteUrl(albumPath(album)),
+          }}
+        />
+      )}
+      <MusicJournal albumId={selected?.id} details={details} shelf={shelf} versionId={versionId} versions={versions} />
+    </>
+  );
 }
