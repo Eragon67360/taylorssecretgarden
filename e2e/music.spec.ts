@@ -196,6 +196,12 @@ test.describe("Music", () => {
 
 		await expect(list.getByRole("link")).toHaveCount(3);
 		await expect(list.getByRole("link", { name: /The Til Dawn Edition/ })).toHaveAttribute("aria-current", "true");
+		// The open one is outlined in ink, not the Era accent, and ticked: not colour alone (WCAG 1.4.11, 1.4.1).
+		const open = list.locator("[aria-current=true]");
+
+		expect(await open.evaluate((link) => getComputedStyle(link).outlineColor)).toBe(await open.evaluate((link) => getComputedStyle(link).color));
+		await expect(open.locator("[data-selected-mark]")).toBeVisible();
+		await expect(list.locator("[data-selected-mark]")).toHaveCount(1);
 
 		await list.getByRole("link", { name: /3am Edition/ }).click();
 		await expect(page).toHaveURL(`/music?album=${IDS.midnights3am}`);

@@ -88,7 +88,10 @@ function TrackLine({ track, player }: { track: Track; player: PreviewPlayer }) {
   );
 }
 
-/** How far into the 30-second preview the player is: a pencil line under the title. */
+/**
+ * How far into the 30-second preview the player is: a pencil line under the
+ * title, in ink (the Era accent is too faint against the track on some papers).
+ */
 function PreviewProgress({ name, position, length }: { name: string; position: number; length: number }) {
   const seconds = Math.floor(position);
 
@@ -103,7 +106,7 @@ function PreviewProgress({ name, position, length }: { name: string; position: n
       role="progressbar"
     >
       <span
-        className="bg-accent block h-full origin-left rounded-full motion-safe:transition-[scale] motion-safe:duration-300 motion-safe:ease-linear"
+        className="bg-ink block h-full origin-left rounded-full motion-safe:transition-[scale] motion-safe:duration-300 motion-safe:ease-linear"
         style={{ scale: `${Math.min(position / length, 1)} 1` }}
       />
     </span>
