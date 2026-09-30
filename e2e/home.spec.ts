@@ -142,7 +142,7 @@ test.describe("Home", () => {
 		await expect(tourWall(page).getByRole("link", { name: /every Tour/i })).toHaveAttribute("href", "/tours");
 	});
 
-	test("passes axe (WCAG 2.1 AA)", async ({ page }) => {
+	test("passes axe (WCAG 2.2 AA)", async ({ page }) => {
 		await page.goto("/");
 		await expectNoAxeViolations(page);
 	});

@@ -332,7 +332,7 @@ test.describe("Swiftter, signed out", () => {
 		await expect(page).toHaveURL(/\/sign-in/);
 	});
 
-	test("passes axe (WCAG 2.1 AA)", async ({ page }) => {
+	test("passes axe (WCAG 2.2 AA)", async ({ page }) => {
 		await page.goto("/swiftter");
 		await expect(feedPosts(page).first()).toBeVisible();
 		await expectNoAxeViolations(page);

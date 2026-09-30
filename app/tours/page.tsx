@@ -1,17 +1,31 @@
-import type { Metadata } from "next";
-
+import { JsonLd } from "@/components/json-ld";
 import { Scribble, StickyNote } from "@/components/scrapbook";
 import { TourEntry } from "@/components/tours/tour-entry";
+import { absoluteUrl, pageMetadata } from "@/lib/metadata";
 import { TOURS, tourYears } from "@/lib/tours";
 
-export const metadata: Metadata = {
+export const metadata = pageMetadata({
   title: "Tours",
   description: "Every Taylor Swift Tour, from Fearless to the Eras Tour, kept in a fan's scrapbook: tickets, posters and footage.",
-};
+  path: "/tours",
+});
 
 export default function ToursPage() {
   return (
     <>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          name: "Taylor Swift's Tours",
+          itemListElement: TOURS.map((tour, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: tour.tour,
+            url: absoluteUrl(`/tours/${tour.slug}`),
+          })),
+        }}
+      />
       <header className="relative overflow-x-clip">
         <div className="mx-auto grid max-w-[1180px] gap-10 px-4 pt-12 pb-16 sm:px-8 sm:pt-16 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-7">

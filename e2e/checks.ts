@@ -20,11 +20,11 @@ export const CHROME: Scope = ["#site-header", "#site-footer"];
 /** A 390px-wide phone viewport (iPhone 12-15 class). */
 export const PHONE = { width: 390, height: 844 };
 
-const WCAG_21_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
+const WCAG_22_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
-/** No axe violations at WCAG 2.1 AA, in the scope or the whole page. */
+/** No axe violations at WCAG 2.2 AA, in the scope or the whole page. */
 export async function expectNoAxeViolations(page: Page, scope?: Scope) {
-	let builder = new AxeBuilder({ page }).withTags(WCAG_21_AA);
+	let builder = new AxeBuilder({ page }).withTags(WCAG_22_AA);
 
 	for (const selector of scope ?? []) builder = builder.include(selector);
 
@@ -33,7 +33,7 @@ export async function expectNoAxeViolations(page: Page, scope?: Scope) {
 		({ id, impact, help, nodes }) => `${id} (${impact}): ${help}\n    ${nodes.map((node) => node.target.join(" ")).join("\n    ")}`,
 	);
 
-	expect(summary, "axe WCAG 2.1 AA violations").toEqual([]);
+	expect(summary, "axe WCAG 2.2 AA violations").toEqual([]);
 }
 
 /**
