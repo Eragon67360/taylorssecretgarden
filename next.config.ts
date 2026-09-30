@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 import { withBotId } from "botid/next/config";
+import { HTML_LIMITED_BOT_UA_RE } from "next/dist/shared/lib/router/utils/html-bots";
 
 // Relative imports: the app's path aliases do not apply to this file.
 import { AVATAR_REMOTE_PATTERNS } from "./lib/avatar";
@@ -22,9 +23,37 @@ const SECURITY_HEADERS = [
 	{ key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
 ];
 
+/*
+  Next streams metadata a page awaits (a thread's, from the database) into the
+  <body> for every user agent outside its "HTML-limited" list, Googlebot and
+  the AI crawlers included: the canonical link and robots tag could land after
+  the footer. These crawlers get it in the <head>, as before streaming: Next's
+  default list, plus Google's and Bing's main crawlers and the AI assistants'
+  (OpenAI, Anthropic, Perplexity, Common Crawl, Apple).
+*/
+const HEAD_METADATA_BOTS = new RegExp(
+	[
+		HTML_LIMITED_BOT_UA_RE.source,
+		"Googlebot",
+		"Bingbot",
+		"GPTBot",
+		"OAI-SearchBot",
+		"ChatGPT-User",
+		"ClaudeBot",
+		"Claude-User",
+		"Claude-SearchBot",
+		"PerplexityBot",
+		"Perplexity-User",
+		"CCBot",
+		"Applebot",
+	].join("|"),
+	"i",
+);
+
 const nextConfig: NextConfig = {
 	// No "X-Powered-By: Next.js": it tells visitors nothing and scanners the stack.
 	poweredByHeader: false,
+	htmlLimitedBots: HEAD_METADATA_BOTS,
 	images: {
 		// AVIF first (roughly a third smaller than WebP for photos and covers);
 		// 60 is the quality of the large, above-the-fold pictures (home photo,
