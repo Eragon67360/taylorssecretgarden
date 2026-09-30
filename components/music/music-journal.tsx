@@ -4,6 +4,7 @@ import type { AlbumVersionCard, ShelfAlbum } from "./catalogue";
 import type { AlbumDetails } from "@/types";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
@@ -29,7 +30,12 @@ type MusicJournalProps = {
   versions: AlbumVersionCard[];
   /** The version's details, fetched on the server. */
   details: AlbumDetails | undefined;
+  /** Each Album's links to its original or Taylor's Version and its Era's Tour, by catalogue ID. */
+  links: Record<string, AlbumLink[]>;
 };
+
+/** A link from an Album's page: "a re-recording of" + "Fearless (2008)". */
+export type AlbumLink = { lead: string; href: string; text: string };
 
 /**
  * The music journal: a shelf of Album polaroids over a two-page spread for
@@ -38,7 +44,7 @@ type MusicJournalProps = {
  * from the server. Under the Album's title, its other versions switch the
  * tracklist the same way.
  */
-export function MusicJournal({ shelf, albumId, versionId, versions, details }: MusicJournalProps) {
+export function MusicJournal({ shelf, albumId, versionId, versions, details, links }: MusicJournalProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [selection, setSelection] = useOptimistic({ albumId, versionId });
@@ -71,6 +77,8 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details }: M
   const selectVersion = (next: AlbumVersionCard) => album && open({ albumId: album.id, versionId: next.id, path: next.path });
 
   const title = album?.title ?? look.name;
+  // "(Taylor's Version), Deluxe Edition": what the h2 adds to the title, unseen.
+  const fullNameSuffix = album && `${album.taylorsVersion ? " (Taylor's Version)" : ""}${version || album.edition ? `, ${version?.name ?? album.edition}` : ""}`;
   const eraNumber = String(ERA_SLUGS.indexOf(era) + 1).padStart(2, "0");
   const braceletWord = look.short === "rep" ? look.name : look.short;
 
@@ -151,6 +159,8 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details }: M
           </p>
           <h2 className={title.length > 18 ? "font-display mt-2 text-[clamp(2rem,4.6vw,3.6rem)] leading-[1.05] break-words" : "font-display mt-2 text-[clamp(2.5rem,6.5vw,5.2rem)] leading-[1.02] break-words"}>
             {title}
+            {/* The release's full name, for search results and screen readers; the handwritten line below shows it. */}
+            {album && fullNameSuffix && <span className="sr-only">{fullNameSuffix}</span>}
           </h2>
           {(album?.taylorsVersion || album?.edition || version) && (
             <div className="font-hand mt-1 flex -rotate-2 flex-wrap items-baseline gap-x-5 text-[26px] leading-tight font-bold">
@@ -184,6 +194,19 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details }: M
               </div>
             ))}
           </dl>
+
+          {album && (links[album.catalogueId]?.length ?? 0) > 0 && (
+            <ul aria-label={`More about ${album.name}`} className="font-hand mt-4 flex max-w-[640px] flex-wrap gap-x-6 gap-y-1 text-[21px] leading-tight font-bold">
+              {links[album.catalogueId].map(({ lead, href, text }) => (
+                <li key={href}>
+                  <span className="text-soft">{lead}</span>{" "}
+                  <Link className="focus-ring text-ink rounded-sm underline decoration-1 underline-offset-4 hover:decoration-2" href={href}>
+                    {text}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {album && shownVersions.length > 0 && (
             <AlbumVersions selectedId={selectedVersionId} title={album.name} versions={shownVersions} onSelect={selectVersion} />

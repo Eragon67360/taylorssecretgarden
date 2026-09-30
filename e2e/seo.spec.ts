@@ -214,20 +214,72 @@ test.describe("JSON-LD", () => {
 		expect(site).toMatchObject({ "@type": "WebSite", name: "Taylor's Secret Garden", url: `${SITE}/` });
 	});
 
-	test("Music describes the open Album from the catalogue", async ({ page, request }) => {
-		expect(await structuredData(page, request, "/music")).toEqual([
-			expect.objectContaining({ "@type": "MusicAlbum", name: "Taylor Swift", datePublished: "2006-10-24", url: `${SITE}/music` }),
-		]);
+	/** Taylor Swift, tied to her Wikipedia and Wikidata entries and official site. */
+	const TAYLOR_SWIFT = expect.objectContaining({
+		"@type": "MusicGroup",
+		name: "Taylor Swift",
+		sameAs: expect.arrayContaining(["https://en.wikipedia.org/wiki/Taylor_Swift", "https://www.wikidata.org/wiki/Q26876"]),
+	});
+	const ISO_DURATION = /^PT(\d+H)?(\d+M)?(\d+S)?$/;
 
-		expect(await structuredData(page, request, "/music?album=221543452")).toEqual([
-			expect.objectContaining({
-				"@type": "MusicAlbum",
-				name: "Fearless (Taylor's Version)",
-				byArtist: { "@type": "Person", name: "Taylor Swift" },
-				datePublished: "2021-04-09",
-				url: `${SITE}/music?album=221543452`,
-			}),
-		]);
+	/** A MusicAlbum's tracks: an ItemList of MusicRecordings, each with an ISO 8601 duration. */
+	function expectTracks(album: Record<string, unknown>) {
+		const track = album.track as { "@type": string; numberOfItems: number; itemListElement: { "@type": string; position: number; item: Record<string, unknown> }[] };
+
+		expect(track["@type"]).toBe("ItemList");
+		expect(track.numberOfItems).toBe(album.numTracks);
+		expect(track.itemListElement).toHaveLength(album.numTracks as number);
+		for (const [index, { position, item }] of track.itemListElement.entries()) {
+			expect(position).toBe(index + 1);
+			expect(item).toMatchObject({ "@type": "MusicRecording", name: expect.any(String), duration: expect.stringMatching(ISO_DURATION) });
+		}
+	}
+
+	test("Music describes the open Album from the catalogue, with its tracks and label", async ({ page, request }) => {
+		const [debut, ...others] = await structuredData(page, request, "/music");
+
+		expect(others).toEqual([]);
+		expect(debut).toMatchObject({ "@type": "MusicAlbum", name: "Taylor Swift", datePublished: "2006-10-24", url: `${SITE}/music`, byArtist: TAYLOR_SWIFT });
+
+		const [album] = await structuredData(page, request, "/music?album=221543452");
+
+		expect(album).toMatchObject({
+			"@type": "MusicAlbum",
+			name: "Fearless (Taylor's Version)",
+			byArtist: TAYLOR_SWIFT,
+			datePublished: "2021-04-09",
+			url: `${SITE}/music?album=221543452`,
+			image: expect.stringMatching(/^https:\/\//),
+			albumProductionType: "https://schema.org/StudioAlbum",
+			albumReleaseType: "https://schema.org/AlbumRelease",
+			// A Taylor's Version is based on its original.
+			isBasedOn: { "@type": "MusicAlbum", name: "Fearless", url: `${SITE}/music?album=426350` },
+			albumRelease: {
+				"@type": "MusicRelease",
+				recordLabel: { "@type": "Organization", name: expect.any(String) },
+				releaseOf: expect.objectContaining({ "@type": "MusicAlbum", url: `${SITE}/music?album=221543452` }),
+			},
+		});
+		expect(album.numTracks).toBeGreaterThanOrEqual(26);
+		expectTracks(album);
+	});
+
+	test("a Version's page describes the Version itself, as a release of its Album", async ({ page, request }) => {
+		const [version] = await structuredData(page, request, "/music?album=188803732");
+
+		expect(version).toMatchObject({
+			"@type": "MusicAlbum",
+			name: "folklore, The Long Pond Studio Sessions",
+			datePublished: "2020-11-25",
+			url: `${SITE}/music?album=188803732`,
+			albumProductionType: "https://schema.org/LiveAlbum",
+			albumRelease: { "@type": "MusicRelease", releaseOf: expect.objectContaining({ name: "folklore", url: `${SITE}/music?album=167766152` }) },
+		});
+		expectTracks(version);
+
+		const [chapter] = await structuredData(page, request, "/music?album=289970772");
+
+		expect(chapter).toMatchObject({ name: "Red (Taylor's Version), From The Vault Chapter", albumProductionType: "https://schema.org/CompilationAlbum" });
 	});
 
 	test("Tours lists every Tour page", async ({ page, request }) => {
@@ -251,11 +303,47 @@ test.describe("JSON-LD", () => {
 					url: `${SITE}/tours/${slug}`,
 					startDate: first,
 					endDate: last,
-					performer: { "@type": "Person", name: "Taylor Swift" },
+					performer: expect.objectContaining({ "@type": "MusicGroup", name: "Taylor Swift" }),
 				}),
 			]);
 		});
 	}
+});
+
+test.describe("links between clusters", () => {
+	/** Every link in a page's HTML: its href and text. */
+	const linksOf = async (page: Page, request: APIRequestContext, path: string) =>
+		page.evaluate(
+			(html) =>
+				[...new DOMParser().parseFromString(html, "text/html").querySelectorAll("main a[href]")].map((link) => ({
+					href: link.getAttribute("href"),
+					text: link.textContent?.replace(/\s+/g, " ").trim(),
+				})),
+			await htmlOf(request, path),
+		);
+
+	test("a Tour page links its Era's Albums, named, at their canonical addresses", async ({ page, request }) => {
+		expect(await linksOf(page, request, "/tours/the-red-tour")).toEqual(
+			expect.arrayContaining([
+				{ href: "/music?album=68491961", text: "Red tracklist · 2012" },
+				{ href: "/music?album=272247412", text: "Red (Taylor's Version) tracklist · 2021" },
+			]),
+		);
+		// The Eras Tour spans every Era: it links the Music shelf.
+		expect(await linksOf(page, request, "/tours/the-eras-tour")).toEqual(expect.arrayContaining([{ href: "/music", text: "Taylor Swift's Albums, on the Music shelf" }]));
+	});
+
+	test("a Taylor's Version links its original and back, and each Album its Era's Tour", async ({ page, request }) => {
+		const taylorsVersion = await linksOf(page, request, "/music?album=221543452");
+
+		expect(taylorsVersion).toEqual(
+			expect.arrayContaining([
+				{ href: "/music?album=426350", text: "Fearless (2008)" },
+				{ href: "/tours/fearless-tour", text: "Fearless Tour (2009–2010)" },
+			]),
+		);
+		expect(await linksOf(page, request, "/music?album=426350")).toEqual(expect.arrayContaining([{ href: "/music?album=221543452", text: "Fearless (Taylor's Version)" }]));
+	});
 });
 
 // In the browser, once the page has run: an h1 rendered on the client counts too.
