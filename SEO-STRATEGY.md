@@ -17,7 +17,7 @@ In place (the visibility foundations, V1 to V8 of the roadmap):
 
 Known gaps:
 
-- `taylorssecretgarden.vercel.app` still serves production without redirecting (blocker B1, see the checklist). Its pages name www as canonical, which helps, but the redirect is what settles it.
+- `taylorssecretgarden.vercel.app` redirects its pages to www permanently (308, path and query kept); its API routes keep answering there (`next.config.ts`).
 - Music's h1 is the journal's playful line ("pick an Era. the page changes outfits."), the same on every Album page. The Album's title is only an h2.
 - Album pages are query-string URLs (`/music?album=<Deezer ID>`). They work and are canonical, but the ID says nothing to a reader of search results.
 - Nothing on the site links an Album to its Era's Tour, or the other way round.
@@ -117,7 +117,7 @@ Anchor text names the destination ("Red (Taylor's Version) tracklist", "The Red 
 
 Do these in this order. Steps 2 and 3 must not be swapped: redirecting to www before Neon Auth trusts it breaks signing in.
 
-1. **Ship the foundations to production.** Merge the visibility PR into `dev`, then release `dev` → `main`. On production, check:
+1. ✅ (v0.1.0, 2026-09-30) **Ship the foundations to production.** Merge the visibility PR into `dev`, then release `dev` → `main`. On production, check:
    - `curl -sI https://www.taylorssecretgarden.com/ | grep -i x-robots-tag` prints nothing.
    - `curl -s https://www.taylorssecretgarden.com/robots.txt` shows `Allow: /` and `Sitemap: https://www.taylorssecretgarden.com/sitemap.xml`.
    - `https://www.taylorssecretgarden.com/sitemap.xml` lists only `https://www.taylorssecretgarden.com/...` URLs.
@@ -125,8 +125,8 @@ Do these in this order. Steps 2 and 3 must not be swapped: redirecting to www be
    - `/sign-in` still says `noindex`.
    - A preview deployment answers `X-Robots-Tag: noindex, nofollow`, and its `robots.txt` says `Disallow: /`.
    - These signals are decided at build time, from `VERCEL_ENV`. After any promotion or rollback, check the header again.
-2. **Add www and the apex to Neon Auth's trusted domains.** In the Neon console, on the production branch's Auth settings, add `https://www.taylorssecretgarden.com` and `https://taylorssecretgarden.com`. If Google sign-in uses its own OAuth client, add the www origin and callback URL there too. Then, on www, test signing up, signing in (email and Google) and signing out.
-3. **Only then, redirect `taylorssecretgarden.vercel.app` to www.** Use a permanent (308) redirect that keeps the path and query. Either use a `redirects()` rule in `next.config.ts` with `has: [{ type: "host", value: "taylorssecretgarden.vercel.app" }]`, which lives in the repo and can be tested, or use Vercel's domain settings if they offer it for that domain. Check that `/api/auth/*` and the Google callback still work after the redirect.
+2. ✅ (2026-09-30) **Add www and the apex to Neon Auth's trusted domains.** In the Neon console, on the production branch's Auth settings, add `https://www.taylorssecretgarden.com` and `https://taylorssecretgarden.com`. If Google sign-in uses its own OAuth client, add the www origin and callback URL there too. Then, on www, test signing up, signing in (email and Google) and signing out.
+3. ✅ (in `next.config.ts`, pages only) **Only then, redirect `taylorssecretgarden.vercel.app` to www.** Use a permanent (308) redirect that keeps the path and query. Either use a `redirects()` rule in `next.config.ts` with `has: [{ type: "host", value: "taylorssecretgarden.vercel.app" }]`, which lives in the repo and can be tested, or use Vercel's domain settings if they offer it for that domain. Check that `/api/auth/*` and the Google callback still work after the redirect.
 4. **Check deployment protection.** Confirm that Vercel's Deployment Protection covers the generated deployment URLs (`taylorssecretgarden-<hash>-….vercel.app`). Production builds are indexable wherever they are served; their canonical links point to www either way.
 5. **Google Search Console.** Add the site: a Domain property for `taylorssecretgarden.com` (DNS TXT record, an owner action), or a URL-prefix property for `https://www.taylorssecretgarden.com/`. `public/googlea23a831c6a4ad51a.html` is already served from every host, so check which property it verifies.
 6. **Submit the sitemap:** `https://www.taylorssecretgarden.com/sitemap.xml`, under Sitemaps.
