@@ -1,9 +1,11 @@
-// CommonJS, like the rest of this file.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { withBotId } = require("botid/next/config");
+import type { NextConfig } from "next";
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import { withBotId } from "botid/next/config";
+
+// A relative import: the app's path aliases do not apply to this file.
+import { NOINDEX_HEADER, isIndexable } from "./lib/indexing";
+
+const nextConfig: NextConfig = {
 	images: {
 		// AVIF first (roughly a third smaller than WebP for photos and covers);
 		// 60 is the quality of the large, above-the-fold pictures (home photo,
@@ -44,7 +46,11 @@ const nextConfig = {
 		// Swiftter used to live at /forum.
 		return [{ source: "/forum", destination: "/swiftter", permanent: true }];
 	},
+	async headers() {
+		// Outside production, every response (pages, files, API) says noindex (lib/indexing.ts).
+		return isIndexable() ? [] : [{ source: "/:path*", headers: [NOINDEX_HEADER] }];
+	},
 };
 
 // BotID: proxies its challenge script and API through this origin (lib/botid-routes.ts).
-module.exports = withBotId(nextConfig);
+export default withBotId(nextConfig);

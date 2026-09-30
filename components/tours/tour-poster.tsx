@@ -9,7 +9,7 @@ type TourPosterProps = {
   tilt?: number;
   /** Rendered width on a wide screen, for the image's `sizes`. */
   width: number;
-  /** The page's lead picture: fetched first, and at the lower quality of above-the-fold pictures (next.config.js). */
+  /** The page's lead picture: fetched first, and at the lower quality of above-the-fold pictures (next.config.ts). */
   priority?: boolean;
   className?: string;
 };
