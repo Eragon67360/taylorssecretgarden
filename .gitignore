@@ -48,3 +48,6 @@ next-env.d.ts
 # Chrome profiles Lighthouse leaves behind under WSL (chrome-launcher turns the
 # Windows LOCALAPPDATA path into a literal folder name in the working directory)
 /C:*lighthouse.*/
+
+# Claude Code's agent worktrees (were only in .git/info/exclude)
+/.claude/worktrees/
