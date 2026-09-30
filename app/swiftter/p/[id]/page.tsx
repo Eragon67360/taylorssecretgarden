@@ -59,7 +59,8 @@ export default async function ThreadPage({ params }: ThreadPageProps) {
 		url,
 		headline: thread.root.tornUp ? "A torn-up note" : excerpt(thread.root.content, 110),
 		text: thread.root.tornUp ? undefined : postPlainText(thread.root.content),
-		author: person(thread.root.author.displayName),
+		// A torn-up note has no author any more (NO_AUTHOR).
+		author: thread.root.tornUp ? undefined : person(thread.root.author.displayName),
 		datePublished: thread.root.publishedAt,
 		isPartOf: { "@type": "WebPage", url: `${siteConfig.url}/swiftter`, name: "Swiftter" },
 		commentCount: thread.replies.filter((reply) => !reply.tornUp).length,

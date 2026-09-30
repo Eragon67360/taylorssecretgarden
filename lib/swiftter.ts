@@ -7,6 +7,13 @@
 /** A Member as a note shows them. */
 export type Author = { id: string; displayName: string; username: string | null; avatarUrl: string | null };
 
+/**
+ * A torn-up note's author, as a thread shows it: nobody. Tearing a note up
+ * takes the Member's name off it too, in the page, its structured data and
+ * the thread's JSON alike.
+ */
+export const NO_AUTHOR: Author = { id: "", displayName: "", username: null, avatarUrl: null };
+
 /** A public Post, as the feed and a thread show it. */
 export type FeedPost = {
 	id: string;
@@ -66,6 +73,7 @@ export type HeldNote = {
 export type ThreadNote = {
 	id: string;
 	parentId: string | null;
+	/** NO_AUTHOR once torn up. */
 	author: Author;
 	/** Sanitised HTML; empty when torn up. */
 	content: string;

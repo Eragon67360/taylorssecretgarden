@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { getDb } from "@/db/client";
-import { LIMITS, MAX_MODERATION_ATTEMPTS } from "@/lib/swiftter";
+import { LIMITS, MAX_MODERATION_ATTEMPTS, NO_AUTHOR } from "@/lib/swiftter";
 import {
 	AlreadyResharedError,
 	checkAgain,
@@ -15,6 +15,7 @@ import {
 	NoMoreChecksError,
 	PostingLimitError,
 	PostNotFoundError,
+	purgeExpired,
 	recheckPending,
 	reshare,
 	SelfReshareError,
@@ -165,6 +166,80 @@ describe.skipIf(!!skipReason)("Swiftter service against Postgres", () => {
 		});
 	});
 
+	describe("retention", () => {
+		const exists = async (postId: string) =>
+			(await getDb().execute<{ n: number }>(sql`select count(*)::int as n from posts where id = ${postId}`)).rows[0].n === 1;
+		const backdate = (postId: string, interval: string) =>
+			getDb().execute(sql`update posts set created_at = created_at - ${interval}::interval where id = ${postId}`);
+
+		it("removes tombstones nothing refers to, keeps those replies or reshares still show", async () => {
+			const [alice, bob] = [await newMember(), await newMember()];
+			const { note: lone } = await writeNote(alice, note("lone"), null, allow);
+			const { note: answered } = await writeNote(alice, note("answered"), null, allow);
+			const { note: undone } = await writeNote(alice, note("reshared, undone"), null, allow);
+			const { note: kept } = await writeNote(alice, note("reshared"), null, allow);
+			const { note: chainRoot } = await writeNote(alice, note("chain root"), null, allow);
+			const { note: chainReply } = await writeNote(alice, note("chain reply"), chainRoot.id, allow);
+
+			await writeNote(bob, note("an answer"), answered.id, allow);
+			await reshare(bob, undone.id);
+			await unreshare(bob, undone.id);
+			await reshare(bob, kept.id);
+			for (const { id } of [lone, answered, undone, kept, chainReply, chainRoot]) {
+				await deletePost(alice, id);
+				await backdate(id, "1 hour");
+			}
+
+			await purgeExpired();
+
+			expect(await exists(lone.id)).toBe(false);
+			expect(await exists(undone.id)).toBe(false);
+			expect(await exists(chainReply.id)).toBe(false);
+			expect(await exists(chainRoot.id)).toBe(false);
+			expect(await exists(answered.id)).toBe(true);
+			expect(await exists(kept.id)).toBe(true);
+		});
+
+		it("removes refused notes and notes given up on after 30 days, not sooner, nor anything public", async () => {
+			const alice = await newMember();
+			const { note: oldRefused } = await writeNote(alice, note("old refused"), null, refuse());
+			const { note: newRefused } = await writeNote(alice, note("new refused"), null, refuse());
+			const { note: givenUp } = await writeNote(alice, note("given up"), null, unavailable);
+			const { note: stillTrying } = await writeNote(alice, note("still pending"), null, unavailable);
+			const { note: published } = await writeNote(alice, note("public"), null, allow);
+
+			await backdate(oldRefused.id, "31 days");
+			await backdate(published.id, "31 days");
+			// Given up: its last check came after its week was over.
+			await backdate(givenUp.id, "31 days");
+			await backdate(stillTrying.id, "31 days");
+			await getDb().execute(sql`update moderation_decisions set created_at = now() - interval '23 days' where post_id = ${givenUp.id}`);
+			// Never checked since it was written (the re-check did not run): not given up on, so kept.
+			await getDb().execute(sql`update moderation_decisions set created_at = now() - interval '31 days' where post_id = ${stillTrying.id}`);
+
+			await purgeExpired();
+
+			expect(await exists(oldRefused.id)).toBe(false);
+			expect(await decisions(oldRefused.id)).toEqual([]);
+			expect(await exists(givenUp.id)).toBe(false);
+			expect(await exists(newRefused.id)).toBe(true);
+			expect(await exists(stillTrying.id)).toBe(true);
+			expect(await exists(published.id)).toBe(true);
+		});
+
+		it("clears the model's reason on approved decisions after 30 days, keeping the outcome", async () => {
+			const alice = await newMember();
+			const { note: old } = await writeNote(alice, note("old approved"), null, allow);
+			const { note: recent } = await writeNote(alice, note("recent approved"), null, allow);
+
+			await getDb().execute(sql`update moderation_decisions set created_at = now() - interval '31 days' where post_id = ${old.id}`);
+			await purgeExpired();
+
+			expect(await decisions(old.id)).toEqual([{ outcome: "approved", category: null, reason: null }]);
+			expect(await decisions(recent.id)).toEqual([{ outcome: "approved", category: null, reason: "Test: allowed." }]);
+		});
+	});
+
 	describe("replies", () => {
 		it("threads nest, every reply keeps its thread's root, and the root counts its public replies", async () => {
 			const [alice, bob, cleo] = [await newMember(), await newMember(), await newMember()];
@@ -273,6 +348,28 @@ describe.skipIf(!!skipReason)("Swiftter service against Postgres", () => {
 
 			expect(thread?.root).toMatchObject({ id: post.id, tornUp: true, content: "" });
 			expect(thread?.replies[0]).toMatchObject({ id: reply.id, tornUp: false });
+		});
+
+		it("a torn-up note in a thread names nobody: no author name, id or avatar", async () => {
+			const [alice, bob] = [await newMember("Alice Vanishing"), await newMember("Bob Staying")];
+
+			await getDb().execute(sql`update members set avatar_url = 'https://example.com/alice.png' where id = ${alice}`);
+			const { note: post } = await writeNote(alice, note("root to tear up"), null, allow);
+			const { note: reply } = await writeNote(alice, note("reply to tear up"), post.id, allow);
+
+			await writeNote(bob, note("still here"), reply.id, allow);
+			await deletePost(alice, post.id);
+			await deletePost(alice, reply.id);
+
+			const thread = await getThread(post.id);
+
+			expect(thread?.root.author).toEqual(NO_AUTHOR);
+			expect(thread?.replies[0]).toMatchObject({ id: reply.id, tornUp: true, author: NO_AUTHOR });
+			expect(thread?.replies[1].author.displayName).toBe("Bob Staying");
+			// The whole payload, as the page hands it to the browser.
+			const payload = JSON.stringify(thread);
+
+			for (const leak of [alice, "Alice Vanishing", "alice.png"]) expect(payload).not.toContain(leak);
 		});
 	});
 

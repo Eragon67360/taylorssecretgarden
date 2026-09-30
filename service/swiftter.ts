@@ -18,6 +18,7 @@ import {
 	MAX_MODERATION_ATTEMPTS,
 	MAX_NOTE_CHARACTERS,
 	MODERATION_RETRY,
+	NO_AUTHOR,
 	type RefusalCategory,
 	type Thread,
 	type ThreadNote,
@@ -334,8 +335,8 @@ const dueForCheck = sql`(
 	or (p.created_at <= now() - make_interval(days => ${MODERATION_RETRY.days}) and d.last_at < p.created_at + make_interval(days => ${MODERATION_RETRY.days}))
 )`;
 
-/** A pending note whose last check came after its week was up: given up on. */
-const givenUp = sql`(p.status = 'pending' and d.last_at >= p.created_at + make_interval(days => ${MODERATION_RETRY.days}))`;
+/** A pending note `p` whose last check (`lastAt`) came after its week was up: given up on. */
+const givenUp = (lastAt = sql`d.last_at`) => sql`(p.status = 'pending' and ${lastAt} >= p.created_at + make_interval(days => ${MODERATION_RETRY.days}))`;
 
 /** Consecutive notes left without a verdict after which a run stops: the Gateway is down, the rest keep their turn. */
 const STOP_AFTER_NO_VERDICTS = 3;
@@ -530,8 +531,8 @@ type ThreadRow = {
 
 /**
  * The thread a note belongs to: its first Post and every reply that is public
- * or torn up (kept, text erased, so the replies under it still read), oldest
- * first. Null when the note is not public (never was, or does not exist).
+ * or torn up (kept, text and author erased, so the replies under it still
+ * read), oldest first. Null when the note is not public (never was, or does not exist).
  */
 export async function getThread(id: string): Promise<Thread | null> {
 	if (!isUuid(id)) return null;
@@ -548,7 +549,7 @@ export async function getThread(id: string): Promise<Thread | null> {
 		(row): ThreadNote & { reshareCount: number } => ({
 			id: row.id,
 			parentId: row.parent_id,
-			author: authorOf(row),
+			author: row.deleted_at ? NO_AUTHOR : authorOf(row),
 			content: row.deleted_at ? "" : sanitisePostHtml(row.content),
 			tornUp: !!row.deleted_at,
 			isDemo: row.is_demo,
@@ -585,7 +586,7 @@ type HeldRow = {
 
 async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 	const { rows } = await getDb().execute<HeldRow>(sql`
-		select p.id, p.content, p.status, p.root_id, p.created_at, d.attempts, coalesce(${givenUp}, false) as given_up, last.category, last.reason
+		select p.id, p.content, p.status, p.root_id, p.created_at, d.attempts, coalesce(${givenUp()}, false) as given_up, last.category, last.reason
 		from posts p
 		join lateral (select count(*)::int as attempts, max(created_at) as last_at from moderation_decisions where post_id = p.id) d on true
 		left join lateral (
@@ -720,4 +721,54 @@ async function purgeTombstones(memberId: string) {
 		// eslint-disable-next-line no-console
 		console.warn("Tombstone purge skipped", error instanceof Error ? error.message : error);
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Retention
+
+/** How long Swiftter keeps what is not public, in days (docs/adr/0007). */
+export const RETENTION_DAYS = 30;
+
+/** Deepest chain of tombstones removed in one purge: a reply's tombstone goes first, then the one it answered. */
+const MAX_TOMBSTONE_DEPTH = 50;
+
+/**
+ * The daily purge (app/api/cron/moderation), so nothing is kept longer than
+ * it is needed:
+ * - tombstones nothing refers to any more (undone reshares of a torn-up note
+ *   go first: they can never be restored), once past the write limits' window;
+ * - refused notes, and notes given up on, after RETENTION_DAYS (their author
+ *   is told so in their margin), with their moderation history;
+ * - the model's reasons on approved notes' decisions after RETENTION_DAYS
+ *   (the outcome, category and model stay, for the audit).
+ * Returns how many rows each step removed or cleared.
+ */
+export async function purgeExpired(db: Executor = getDb()) {
+	const window = Math.max(LIMITS.post.minutes, LIMITS.reply.minutes);
+	const unreferenced = sql`not exists (select 1 from posts c where c.parent_id = p.id) and not exists (select 1 from reshares r where r.post_id = p.id)`;
+
+	const undoneReshares = await db.execute(sql`
+		delete from reshares r using posts p
+		where p.id = r.post_id and r.deleted_at is not null and p.deleted_at is not null`);
+	let tombstones = 0;
+
+	// One level of a thread at a time: a tombstone answered only by tombstones goes once they have.
+	for (let depth = 0; depth < MAX_TOMBSTONE_DEPTH; depth++) {
+		const { rowCount } = await db.execute(sql`
+			delete from posts p
+			where p.deleted_at is not null and p.created_at <= now() - make_interval(mins => ${window}) and ${unreferenced}`);
+
+		if (!rowCount) break;
+		tombstones += rowCount;
+	}
+
+	const held = await db.execute(sql`
+		delete from posts p
+		where p.deleted_at is null and p.created_at < now() - make_interval(days => ${RETENTION_DAYS})
+			and (p.status = 'blocked' or ${givenUp(sql`(select max(created_at) from moderation_decisions where post_id = p.id)`)}) and ${unreferenced}`);
+	const reasons = await db.execute(sql`
+		update moderation_decisions set reason = null
+		where outcome = 'approved' and reason is not null and created_at < now() - make_interval(days => ${RETENTION_DAYS})`);
+
+	return { undoneReshares: undoneReshares.rowCount ?? 0, tombstones, heldNotes: held.rowCount ?? 0, reasons: reasons.rowCount ?? 0 };
 }

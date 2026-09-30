@@ -394,9 +394,18 @@ test.describe("Swiftter threads, signed out", () => {
 		const reshare = (await allItems(request)).find((item) => item.kind === "reshare" && item.post.id === SEEDED.tornUp);
 
 		expect(reshare?.post).toEqual({ id: SEEDED.tornUp, tornUp: true });
-		await page.goto(`/swiftter/p/${SEEDED.tornUp}`);
+		const response = await page.goto(`/swiftter/p/${SEEDED.tornUp}`);
+
 		await expect(page.getByRole("heading", { level: 1, name: "A torn-up note" })).toBeVisible();
 		await expect(page.getByText("This note was torn up by its author.")).toBeVisible();
+
+		// Its author is gone too: not in the page, its structured data or the thread's payload.
+		expect(await response?.text()).not.toContain("Sunny Okafor");
+		const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
+		const structured = blocks.map((block) => JSON.parse(block) as Record<string, unknown>).find((data) => data["@type"] === "DiscussionForumPosting");
+
+		expect(structured).toBeDefined();
+		expect(structured).not.toHaveProperty("author");
 	});
 
 	test("a note moderation refused has no public page and is not in the feed", async ({ page, request }) => {
