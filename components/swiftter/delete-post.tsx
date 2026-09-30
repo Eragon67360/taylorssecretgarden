@@ -33,7 +33,7 @@ export function DeletePost({ onDelete }: DeletePostProps) {
   return (
     <>
       <button
-        className="font-hand focus-ring text-pen shrink-0 rounded-sm px-1 text-[20px] leading-none font-bold underline decoration-[1.5px] underline-offset-[4px]"
+        className="font-hand focus-ring text-pen inline-flex min-h-8 shrink-0 items-center rounded-sm px-1 text-[20px] leading-none font-bold underline decoration-[1.5px] underline-offset-[4px]"
         type="button"
         onClick={() => dialog.current?.showModal()}
       >
