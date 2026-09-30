@@ -16,8 +16,14 @@ type TracklistProps = {
 
 /** An Album's tracks on a notebook page, each with a 30-second preview. */
 export function Tracklist({ tracks, player }: TracklistProps) {
+  const failedTrack = player.lastFailed ? tracks?.find(({ id }) => id === player.lastFailed) : undefined;
+
   return (
     <div className="relative">
+      {/* Always on the page, so a screen reader hears a failed preview when its message is put in. */}
+      <p aria-live="polite" className="sr-only" role="status">
+        {failedTrack && `Preview of ${failedTrack.name} unavailable.`}
+      </p>
       <WashiTape className="-top-3 right-10" rotate={4} width={90} />
       <p aria-hidden="true" className="text-soft absolute top-7 right-5 z-10 hidden text-[10.5px] font-bold tracking-[.2em] uppercase sm:block">
         ▶ 30-sec previews
@@ -44,6 +50,7 @@ function TrackLine({ track, player }: { track: Track; player: PreviewPlayer }) {
   const loaded = player.trackId === track.id;
   const playing = loaded && player.playing;
   const canPlay = !!track.preview_url;
+  const failed = !playing && player.failed.has(track.id);
 
   return (
     <RuledListItem>
@@ -77,6 +84,12 @@ function TrackLine({ track, player }: { track: Track; player: PreviewPlayer }) {
               // On a phone the title keeps the room; the pencil line and the pause button show it is playing.
               <span className="font-hand text-soft ml-2 hidden shrink-0 text-[18px] font-bold sm:inline">
                 <span aria-hidden="true">← </span>now playing
+              </span>
+            )}
+            {failed && (
+              // Kept on a phone too: without it the button just flips back to Play.
+              <span className="font-hand text-soft ml-2 shrink-0 text-[17px] leading-none font-bold sm:text-[18px]" data-preview-unavailable="">
+                preview unavailable
               </span>
             )}
           </span>
