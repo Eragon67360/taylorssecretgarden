@@ -33,7 +33,7 @@ export type CatalogueAlbum = {
   /** Its other versions on Deezer, in release order. */
   versions?: AlbumVersion[];
   /**
-   * Other Deezer IDs for the Album (regional twins and regional editions), so an old or
+   * Other Deezer IDs for the Album (regional twins, same barcode, and regional editions), so an old or
    * regional link still finds it.
    */
   aliases?: string[];
@@ -56,7 +56,7 @@ export const CATALOGUE: readonly CatalogueAlbum[] = [
     edition: "Deluxe Edition",
     released: "2006-10-24",
     versions: [{ id: "874936972", name: "Standard Edition", released: "2006-10-24" }],
-    aliases: ["81389452"],
+    aliases: ["81389452", "72093192", "321177137"],
   },
   {
     id: "426350",
@@ -65,10 +65,12 @@ export const CATALOGUE: readonly CatalogueAlbum[] = [
     edition: "Platinum Edition",
     released: "2008-11-11",
     versions: [
+      // The US release, seen from Deezer's US catalogue only.
+      { id: "130714702", name: "Standard Edition", released: "2008-11-11" },
       { id: "283925", name: "International Version", released: "2009-03-09" },
       { id: "142920532", name: "Live From Clear Channel Stripped 2008", released: "2020-04-24" },
     ],
-    aliases: ["81389432", "272284"],
+    aliases: ["81389432", "272284", "130714712"],
   },
   {
     id: "221543452",
@@ -88,6 +90,7 @@ export const CATALOGUE: readonly CatalogueAlbum[] = [
       { id: "689148", name: "Standard Edition", released: "2010-10-25" },
       { id: "320370867", name: "Speak Now World Tour Live", released: "2011-11-21" },
     ],
+    aliases: ["130716982", "130716972"],
   },
   { id: "461146065", era: "speak-now", title: "Speak Now", released: "2023-07-07", reRecords: "689149" },
   {
@@ -97,7 +100,7 @@ export const CATALOGUE: readonly CatalogueAlbum[] = [
     edition: "Deluxe Edition",
     released: "2012-10-22",
     versions: [{ id: "68496491", name: "Standard Edition", released: "2012-10-22" }],
-    aliases: ["130721292"],
+    aliases: ["130721292", "130716962"],
   },
   {
     id: "272247412",
@@ -120,6 +123,7 @@ export const CATALOGUE: readonly CatalogueAlbum[] = [
     edition: "Deluxe Edition",
     released: "2014-10-27",
     versions: [{ id: "9007779", name: "Standard Edition", released: "2014-10-27" }],
+    aliases: ["72335572", "302068167"],
   },
   {
     id: "505316961",
