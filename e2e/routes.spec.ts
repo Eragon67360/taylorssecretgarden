@@ -35,5 +35,5 @@ test("Swiftter shows the feed without an error page", async ({ page }) => {
 
 	expect(response?.status()).toBe(200);
 	await expect(page.getByRole("feed", { name: "Posts" }).getByRole("article").first()).toBeVisible();
-	await expect(page.getByRole("heading", { name: "Something went wrong!" })).toBeHidden();
+	await expect(page.getByRole("heading", { name: "Something went wrong on this page." })).toBeHidden();
 });
