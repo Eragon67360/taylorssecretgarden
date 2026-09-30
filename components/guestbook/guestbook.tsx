@@ -17,12 +17,15 @@ const firstParam = (value: string | string[] | undefined) => (Array.isArray(valu
 /** Shown when a Google sign-in comes back with an error, or cannot start. */
 export const GOOGLE_ERROR = "Google sign-in didn't go through. Try again, or use your email.";
 
+/** Where signing in or up goes when nothing asked for somewhere else: Swiftter, to pass a note. */
+export const DEFAULT_REDIRECT = "/swiftter";
+
 /**
- * Where to go once signed in: `redirect_url` when it is a path on this site
- * (never another origin), else Swiftter.
+ * Where to go once signed in or up: `redirect_url` when it is a path on this
+ * site (never another origin), else Swiftter.
  */
 export function guestbookRedirect(params: SearchParams): string {
-  return safeRedirect(firstParam(params.redirect_url), "/swiftter");
+  return safeRedirect(firstParam(params.redirect_url), DEFAULT_REDIRECT);
 }
 
 /** The explanation to show when Google sent the visitor back with `?error=…`. */
