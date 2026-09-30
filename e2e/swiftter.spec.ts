@@ -923,8 +923,12 @@ test.describe("Swiftter, replies and reshares", () => {
 		await expect(page.getByText(text)).toHaveCount(0);
 
 		await held.getByRole("button", { name: /tear up your note/ }).click();
+		// The note leaves the page at once; the reload below must wait for the server to have torn it up.
+		const tornUp = replier.page.waitForResponse((response) => response.request().method() === "DELETE" && response.ok());
+
 		await replier.page.getByRole("dialog").getByRole("button", { name: "Tear it up" }).click();
 		await expect(held).toHaveCount(0);
+		await tornUp;
 		// The keyboard goes back to the note it answered.
 		await expect(replier.page.locator(`[id="note-${note.id}"]`)).toBeFocused();
 		await replier.page.reload();

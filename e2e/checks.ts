@@ -24,6 +24,18 @@ const WCAG_22_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
 /** No axe violations at WCAG 2.2 AA, in the scope or the whole page. */
 export async function expectNoAxeViolations(page: Page, scope?: Scope) {
+	// Whatever is still fading in or out (a toast stacking behind another) is
+	// judged once it has settled: mid-transition, its text is briefly fainter
+	// than it will ever be at rest. Endless animations are not waited for.
+	await page.evaluate(() =>
+		Promise.all(
+			document
+				.getAnimations()
+				.filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+				.map((animation) => animation.finished.catch(() => undefined)),
+		),
+	);
+
 	let builder = new AxeBuilder({ page }).withTags(WCAG_22_AA);
 
 	for (const selector of scope ?? []) builder = builder.include(selector);
