@@ -4,9 +4,12 @@ import { TourEntry } from "@/components/tours/tour-entry";
 import { absoluteUrl, pageMetadata } from "@/lib/metadata";
 import { TOURS, tourYears } from "@/lib/tours";
 
+// Newest first (lib/tours.ts): the first Tour is the last one listed.
+const [first, last] = [TOURS.at(-1)!, TOURS[0]];
+
 export const metadata = pageMetadata({
-  title: "Tours",
-  description: "Every Taylor Swift Tour, from Fearless to the Eras Tour, kept in a fan's scrapbook: tickets, posters and footage.",
+  title: "Taylor Swift's Tours",
+  description: `Taylor Swift's ${TOURS.length} Tours, from the ${first.tour} (${tourYears(first)}) to ${last.tour} (${tourYears(last)}): years, shows, legs and facts, with tickets, posters and footage.`,
   path: "/tours",
 });
 

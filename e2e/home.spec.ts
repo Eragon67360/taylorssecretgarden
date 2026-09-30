@@ -129,7 +129,8 @@ test.describe("Home", () => {
 
 		await expect(eras).toHaveCount(12);
 		for (let index = 0; index < 12; index++) {
-			await expect(eras.nth(index)).toHaveAttribute("href", /^\/music\?album=\d+$/);
+			// At its canonical address: the debut's is /music itself.
+			await expect(eras.nth(index)).toHaveAttribute("href", index === 0 ? "/music" : /^\/music\?album=\d+$/);
 		}
 		// Taylor's Version Albums stand for their original's Era.
 		await expect(gallery(page).getByRole("link", { name: /Fearless/ })).toHaveAttribute("href", "/music?album=221543452");

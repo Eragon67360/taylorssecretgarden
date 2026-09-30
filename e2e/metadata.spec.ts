@@ -1,6 +1,7 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 
 import tours from "../public/json/tours.json";
+import { seedId } from "../scripts/seed-data";
 
 import { expect, test } from "./fixtures";
 
@@ -25,7 +26,7 @@ test.describe("site metadata", () => {
 		await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /scrapbook of every Taylor Swift Era/);
 
 		await page.goto("/music");
-		await expect(page).toHaveTitle("Music · Taylor's Secret Garden");
+		await expect(page).toHaveTitle("Taylor Swift's Albums and tracklists · Taylor's Secret Garden");
 	});
 
 	test("links an icon and a home-screen icon that load", async ({ page, request }) => {
@@ -89,19 +90,24 @@ async function metadataOf(page: Page, request: APIRequestContext, path: string) 
 	}, await response.text());
 }
 
+/** A seeded Swiftter thread (scripts/seed-data.ts), loaded on every test branch. */
+const SEEDED_THREAD = seedId("p", 1);
+
 const canonicalPages = [
-	{ path: "/", canonical: "/", title: "Taylor's Secret Garden: a Swiftie's scrapbook" },
-	{ path: "/music", canonical: "/music", title: "Music · Taylor's Secret Garden" },
+	{ path: "/", canonical: "/", title: "Taylor's Secret Garden: a Taylor Swift fan scrapbook" },
+	{ path: "/music", canonical: "/music", title: "Taylor Swift's Albums and tracklists · Taylor's Secret Garden" },
 	// An Album's own page; a regional twin or another ID of it points there.
 	{ path: "/music?album=221543452", canonical: "/music?album=221543452", title: "Fearless (Taylor's Version) tracklist · Taylor's Secret Garden" },
-	{ path: "/music?album=272284", canonical: "/music?album=426350", title: "Fearless tracklist · Taylor's Secret Garden" },
+	{ path: "/music?album=272284", canonical: "/music?album=426350", title: "Fearless tracklist (Taylor Swift) · Taylor's Secret Garden" },
 	// The first Album is the one /music opens on.
-	{ path: "/music?album=81389452", canonical: "/music", title: "Music · Taylor's Secret Garden" },
+	{ path: "/music?album=81389452", canonical: "/music", title: "Taylor Swift's Albums and tracklists · Taylor's Secret Garden" },
 	// A Version (its own tracklist) is its own page.
-	{ path: "/music?album=188803732", canonical: "/music?album=188803732", title: "folklore, The Long Pond Studio Sessions tracklist · Taylor's Secret Garden" },
-	{ path: "/tours", canonical: "/tours", title: "Tours · Taylor's Secret Garden" },
-	...tours.map(({ slug, tour }) => ({ path: `/tours/${slug}`, canonical: `/tours/${slug}`, title: `${tour} · Taylor's Secret Garden` })),
+	{ path: "/music?album=188803732", canonical: "/music?album=188803732", title: "folklore, The Long Pond Studio Sessions tracklist (Taylor Swift) · Taylor's Secret Garden" },
+	{ path: "/tours", canonical: "/tours", title: "Taylor Swift's Tours · Taylor's Secret Garden" },
+	...tours.map(({ slug, tour, date }) => ({ path: `/tours/${slug}`, canonical: `/tours/${slug}`, title: `${tour}: Taylor Swift's ${date.replace("-", "–")} tour · Taylor's Secret Garden` })),
 	{ path: "/swiftter", canonical: "/swiftter", title: "Swiftter · Taylor's Secret Garden" },
+	// A thread (seeded, scripts/seed-data.ts): the site's card and name, its title under the layout's template.
+	{ path: `/swiftter/p/${SEEDED_THREAD}`, canonical: `/swiftter/p/${SEEDED_THREAD}`, title: "Wren Holloway's note on Swiftter · Taylor's Secret Garden" },
 	{ path: "/sign-in?redirect_url=%2Fswiftter", canonical: "/sign-in", title: "Sign in · Taylor's Secret Garden" },
 	{ path: "/sign-up", canonical: "/sign-up", title: "Sign up · Taylor's Secret Garden" },
 ];
@@ -124,6 +130,28 @@ test.describe("per-route metadata", () => {
 			expect(metadata.twitterImage).toBe(metadata.ogImage);
 		});
 	}
+
+	test("Music and Tour descriptions answer first, in a search snippet's length", async ({ page, request }) => {
+		const describe = async (path: string) => (await metadataOf(page, request, path)).description ?? "";
+
+		// /music opens on the debut, and says so.
+		expect(await describe("/music")).toMatch(/^Taylor Swift's 16 Albums in Era order, opening on her debut, Taylor Swift \(October 24, 2006\)/);
+		expect(await describe("/music?album=221543452")).toMatch(/^Fearless \(Taylor's Version\), Taylor Swift's re-recording of Fearless, released April 9, 2021/);
+		for (const { slug, tour, shows } of tours) {
+			const description = await describe(`/tours/${slug}`);
+
+			expect(description, slug).toMatch(new RegExp(`^${tour}, Taylor Swift's \\d{4}(–\\d{4})? tour .*: ${shows} shows in `));
+			expect(description.length, slug).toBeLessThanOrEqual(160);
+		}
+		for (const path of ["/", "/music", "/music?album=426350", "/music?album=188803732", "/tours"]) expect((await describe(path)).length, path).toBeLessThanOrEqual(165);
+	});
+
+	test("a thread's card is an article's, with when it was published", async ({ request }) => {
+		const html = await (await request.get(`/swiftter/p/${SEEDED_THREAD}`)).text();
+
+		expect(html).toContain('<meta property="og:type" content="article"/>');
+		expect(html).toMatch(/<meta property="article:published_time" content="\d{4}-\d{2}-\d{2}T/);
+	});
 
 	test("the guestbook pages are noindex", async ({ page, request }) => {
 		for (const path of ["/sign-in", "/sign-up"]) {

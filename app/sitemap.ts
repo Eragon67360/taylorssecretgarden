@@ -19,7 +19,8 @@ export const revalidate = 3600;
 
 /**
  * Swiftter's public threads (real Members' Posts: no seed or demo content, no
- * replies, nothing held or torn up), newest first. A build without a database
+ * replies, nothing held or torn up) that meet the indexing bar (a first Post
+ * of 140 visible characters, or a public reply), newest first. A build without a database
  * (locally) lists none rather than failing; the hourly revalidation adds them.
  */
 async function threadPaths(): Promise<MetadataRoute.Sitemap> {

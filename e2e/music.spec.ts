@@ -138,7 +138,8 @@ test.describe("Music", () => {
 			await polaroid(page, tv.name).click();
 			await expect(page).toHaveURL(`/music?album=${tv.id}`);
 			await expect(eraPage(page)).toHaveAttribute("data-era", original.era);
-			await expect(page.getByText("(Taylor's Version)", { exact: true })).toBeVisible();
+			// The handwritten tag (the h2 also holds the full name, for screen readers and search engines).
+			await expect(page.getByText("the one we stream")).toBeVisible();
 			await expect.poll(() => background(eraPage(page))).toBe(paper);
 		}
 	});

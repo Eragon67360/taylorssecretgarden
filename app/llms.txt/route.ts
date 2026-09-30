@@ -1,6 +1,7 @@
 import tours from "@/public/json/tours.json";
 import { siteConfig } from "@/config/site";
 import { formatReleaseDate } from "@/components/music/format";
+import { type AlbumFacts, getAlbumFacts, tracklistFacts } from "@/lib/album-facts";
 import { CATALOGUE, type CatalogueAlbum, albumName, albumYear } from "@/lib/catalogue";
 import { absoluteUrl, albumPath } from "@/lib/metadata";
 
@@ -26,11 +27,12 @@ const ALBUMS_BY_ERA = [...Map.groupBy(CATALOGUE, (album) => album.era).values()]
 /** An Era's name: its first Album's title ("Fearless", "reputation"). */
 const eraName = (era: string) => CATALOGUE.find((album) => album.era === era)?.title;
 
-/** One Album: its page, release date, what it re-records, the edition shown, its other Versions. */
-function albumLine(album: CatalogueAlbum): string {
+/** One Album: its page, release date, its tracklist's facts, what it re-records, the edition shown, its other Versions. */
+function albumLine(album: CatalogueAlbum, tracklist: AlbumFacts | undefined): string {
   const original = album.reRecords ? CATALOGUE.find(({ id }) => id === album.reRecords) : undefined;
   const facts = [
     `released ${formatReleaseDate(album.released)}`,
+    tracklist && tracklistFacts(tracklist),
     original && `Taylor Swift's re-recording of ${albumName(original)} (${albumYear(original)})`,
     album.edition && `edition shown: ${album.edition}`,
     album.versions?.length &&
@@ -47,9 +49,10 @@ function tourLine(tour: TourData): string {
   return `- [${tour.tour}](${absoluteUrl(`/tours/${tour.slug}`)}): ${tour.date.replace("-", "–")}, ${tour.shows} shows, ${era}; legs: ${tour.legs.join(", ")}. ${tour.facts.join(" ")}`;
 }
 
-export function GET() {
+export async function GET() {
+  const tracklists = await getAlbumFacts();
   const albumsByEra = ALBUMS_BY_ERA.map(([first, ...others]) =>
-    [`### ${first.title} Era (${albumYear(first)})`, "", ...[first, ...others].map(albumLine)].join("\n"),
+    [`### ${first.title} Era (${albumYear(first)})`, "", ...[first, ...others].map((album) => albumLine(album, tracklists.get(album.id)))].join("\n"),
   );
 
   const text = `# ${siteConfig.name}
@@ -59,7 +62,7 @@ export function GET() {
 - The site is organised by Era: one album cycle of Taylor Swift's career (Fearless, Red, 1989...), each with its own colours and typeface. There are ${ALBUMS_BY_ERA.length} Eras.
 - An Album belongs to exactly one Era. A Taylor's Version (a re-recording of an earlier Album) is a separate Album in the same Era as the original.
 - Each Album is shown in its most complete edition; its other Versions (other editions, live and acoustic albums, "Chapter" compilations) open on the same page.
-- Covers, tracklists, running times, labels and 30-second previews come from Deezer's public API.
+- Covers, tracklists, running times, labels and 30-second previews come from Deezer's public API. Song counts, running times and labels below are those of the edition each page shows; every tracklist is in [llms-full.txt](${absoluteUrl("/llms-full.txt")}).
 
 ## Sections
 

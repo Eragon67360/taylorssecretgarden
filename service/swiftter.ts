@@ -483,6 +483,19 @@ export async function listFeed(cursor?: string | null, pageSize = PAGE_SIZE, db:
 	return { items, nextCursor: rows.length > pageSize && last ? encodeCursor(last.at_text, last.item_id) : null };
 }
 
+/** A thread's first Post needs this many visible characters to be indexed, unless someone replied. */
+export const INDEXING_BAR_CHARACTERS = 140;
+
+/**
+ * Whether a thread is worth a search result: its first Post has at least
+ * INDEXING_BAR_CHARACTERS visible characters, or at least one public reply.
+ * A one-liner nobody answered would be a thin page. The same rule decides a
+ * thread page's robots tag and its place in the sitemap.
+ */
+export function meetsIndexingBar(rootHtml: string, publicReplies: number): boolean {
+	return publicReplies > 0 || characterCount(postPlainText(rootHtml).replace(/\s+/g, " ").trim()) >= INDEXING_BAR_CHARACTERS;
+}
+
 type ThreadRow = {
 	id: string;
 	parent_id: string | null;
@@ -536,7 +549,8 @@ export async function getThread(id: string): Promise<Thread | null> {
 		root,
 		replies: notes.filter((note) => note.parentId !== null).map(({ reshareCount: _count, ...note }) => note),
 		reshareCount,
-		indexable: !root.tornUp && !root.isDemo && !rows[rootIndex].is_seed,
+		indexable:
+			!root.tornUp && !root.isDemo && !rows[rootIndex].is_seed && meetsIndexingBar(root.content, notes.filter((note) => note.parentId !== null && !note.tornUp).length),
 	};
 }
 
@@ -586,14 +600,25 @@ export async function listOwnReshares(memberId: string): Promise<string[]> {
 	return rows.map((row) => row.post_id);
 }
 
-/** Public, real Posts for the sitemap: no replies, demo or seed content. */
+/**
+ * Public, real Posts for the sitemap: no replies, demo or seed content, and
+ * only threads that meet the indexing bar (meetsIndexingBar), like their pages.
+ */
 export async function listSitemapPosts(limit = 5000): Promise<{ id: string; publishedAt: string }[]> {
-	const { rows } = await getDb().execute<{ id: string; published_at: Date | string }>(sql`
-		select id, published_at from posts
-		where parent_id is null and published_at is not null and deleted_at is null and not is_demo and not is_seed
-		order by published_at desc limit ${limit}`);
+	// A note's stored HTML is never shorter than its visible text: the length
+	// check in SQL only skips notes that cannot meet the bar.
+	const { rows } = await getDb().execute<{ id: string; published_at: Date | string; content: string; reply_count: number }>(sql`
+		select p.id, p.published_at, p.content,
+			(select count(*)::int from posts c where c.root_id = p.id and c.published_at is not null and c.deleted_at is null) as reply_count
+		from posts p
+		where p.parent_id is null and p.published_at is not null and p.deleted_at is null and not p.is_demo and not p.is_seed
+			and (char_length(p.content) >= ${INDEXING_BAR_CHARACTERS}
+				or exists (select 1 from posts c where c.root_id = p.id and c.published_at is not null and c.deleted_at is null))
+		order by p.published_at desc limit ${limit}`);
 
-	return rows.map((row) => ({ id: row.id, publishedAt: iso(row.published_at) }));
+	return rows
+		.filter((row) => meetsIndexingBar(sanitisePostHtml(row.content), row.reply_count))
+		.map((row) => ({ id: row.id, publishedAt: iso(row.published_at) }));
 }
 
 // ---------------------------------------------------------------------------

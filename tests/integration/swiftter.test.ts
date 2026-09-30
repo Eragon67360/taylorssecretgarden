@@ -286,15 +286,29 @@ describe.skipIf(!!skipReason)("Swiftter service against Postgres", () => {
 
 		it("the sitemap lists only real public Posts: no seed, demo, replies or held notes", async () => {
 			const alice = await newMember();
-			const { note: real } = await writeNote(alice, note("real"), null, allow);
-			const { note: held } = await writeNote(alice, note("held"), null, refuse());
+			const long = (text: string) => note(`${text} ${"a real thought, long enough to index. ".repeat(4)}`);
+			const { note: real } = await writeNote(alice, long("real"), null, allow);
+			const { note: held } = await writeNote(alice, long("held"), null, refuse());
 			const { rows } = await getDb().execute<{ id: string }>(sql`
-				insert into posts (member_id, content, status, published_at, is_seed) values (${alice}, '<p>seed</p>', 'approved', now(), true) returning id`);
+				insert into posts (member_id, content, status, published_at, is_seed) values (${alice}, ${long("seed")}, 'approved', now(), true) returning id`);
 			const ids = (await listSitemapPosts()).map((post) => post.id);
 
 			expect(ids).toContain(real.id);
 			expect(ids).not.toContain(held.id);
 			expect(ids).not.toContain(rows[0].id);
+			expect((await getThread(real.id))?.indexable).toBe(true);
+		});
+
+		it("a short Post is out of the sitemap and not indexable until someone replies", async () => {
+			const alice = await newMember();
+			const { note: short } = await writeNote(alice, note("so good"), null, allow);
+
+			expect((await listSitemapPosts()).map((post) => post.id)).not.toContain(short.id);
+			expect((await getThread(short.id))?.indexable).toBe(false);
+
+			await writeNote(await newMember(), note("agreed"), short.id, allow);
+			expect((await listSitemapPosts()).map((post) => post.id)).toContain(short.id);
+			expect((await getThread(short.id))?.indexable).toBe(true);
 		});
 	});
 });

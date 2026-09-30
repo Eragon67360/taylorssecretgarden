@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { IntentLink } from "@/components/intent-link";
@@ -10,9 +11,10 @@ import { TourPoster } from "@/components/tours/tour-poster";
 import { TourScope } from "@/components/tours/tour-scope";
 import { TourNote, TourStub } from "@/components/tours/tour-stub";
 import { TourVideo } from "@/components/tours/tour-video";
+import { albumName, albumPath, albumYear, eraAlbums } from "@/lib/catalogue";
 import { ERA_LOOKS } from "@/lib/eras";
 import { absoluteUrl, pageMetadata } from "@/lib/metadata";
-import { TOURS, getTour, tourEraLabel, tourLook, tourYears } from "@/lib/tours";
+import { TOURS, type Tour, getTour, tourEraLabel, tourLook, tourYears } from "@/lib/tours";
 
 type TourPageProps = { params: Promise<{ tour: string }> };
 
@@ -23,11 +25,31 @@ export function generateStaticParams() {
   return TOURS.map(({ slug }) => ({ tour: slug }));
 }
 
+/** Longest a description should run: search results cut them near here. */
+const DESCRIPTION_LENGTH = 160;
+
+/**
+ * A Tour's description, answer first: whose tour it was, when, its Era, how
+ * many shows and where; then as many of its facts as fit.
+ */
+function tourDescription(tour: Tour): string {
+  const era = tour.era ? `of the ${ERA_LOOKS[tour.era].name} Era` : "spanning every Era";
+  const legs = new Intl.ListFormat("en", { type: "conjunction" }).format(tour.legs);
+  let description = `${tour.tour}, Taylor Swift's ${tourYears(tour)} tour ${era}: ${tour.shows} shows in ${legs}.`;
+
+  for (const fact of tour.facts) {
+    if (`${description} ${fact}`.length > DESCRIPTION_LENGTH) break;
+    description = `${description} ${fact}`;
+  }
+
+  return description;
+}
+
 export async function generateMetadata({ params }: TourPageProps): Promise<Metadata> {
   const tour = getTour((await params).tour);
 
   return tour
-    ? pageMetadata({ title: tour.tour, description: `${tour.tour} (${tourYears(tour)}): ${tour.facts.join(" ")}`, path: `/tours/${tour.slug}` })
+    ? pageMetadata({ title: `${tour.tour}: Taylor Swift's ${tourYears(tour)} tour`, description: tourDescription(tour), path: `/tours/${tour.slug}` })
     : {};
 }
 
@@ -136,9 +158,46 @@ export default async function TourPage({ params }: TourPageProps) {
           </div>
         </div>
 
+        <EraAlbums tour={tour} />
+
         {tour.gallery && <TourGallery photos={tour.gallery} />}
       </div>
     </TourScope>
+  );
+}
+
+/**
+ * The Albums of the Tour's Era, each linking its page on Music (canonical, by
+ * catalogue ID), named for what it opens. The Eras Tour spans every Era: it
+ * links the Music shelf.
+ */
+function EraAlbums({ tour }: { tour: Tour }) {
+  const albums = tour.era ? eraAlbums(tour.era) : [];
+  const chip = "bg-card border-line focus-ring inline-block rounded-full border px-3 py-1 text-[15px] font-semibold underline decoration-1 underline-offset-4 hover:decoration-2";
+
+  return (
+    <section aria-labelledby="era-albums" className="mt-20">
+      <h2 className="font-serif text-[clamp(2rem,4vw,2.6rem)] leading-tight font-semibold" id="era-albums">
+        {tour.era ? "Albums of this Era" : "Every Era's Albums"}
+      </h2>
+      <p className="font-hand text-soft mt-1 text-[22px] font-bold">{tour.era ? "the records this Tour was built on" : "every Era, one night: the whole shelf"}</p>
+      <ul className="mt-5 flex flex-wrap gap-2.5">
+        {albums.map((album) => (
+          <li key={album.id}>
+            <Link className={chip} href={albumPath(album)}>
+              {albumName(album)} tracklist <span className="font-normal">· {albumYear(album)}</span>
+            </Link>
+          </li>
+        ))}
+        {!tour.era && (
+          <li>
+            <Link className={chip} href="/music">
+              Taylor Swift&apos;s Albums, on the Music shelf
+            </Link>
+          </li>
+        )}
+      </ul>
+    </section>
   );
 }
 
