@@ -36,7 +36,8 @@ export default defineConfig({
 		],
 		coverage: {
 			provider: "v8",
-			include: ["service/**", "lib/**", "db/**", "app/api/**"],
+			// components/music/catalogue.ts is server code too: the Music shelf and its id resolution.
+			include: ["service/**", "lib/**", "db/**", "app/api/**", "components/music/catalogue.ts"],
 			reporter: ["text-summary", "json-summary"],
 		},
 	},
