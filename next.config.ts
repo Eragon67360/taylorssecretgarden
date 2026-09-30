@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 import { withBotId } from "botid/next/config";
 
-// A relative import: the app's path aliases do not apply to this file.
+// Relative imports: the app's path aliases do not apply to this file.
+import { AVATAR_REMOTE_PATTERNS } from "./lib/avatar";
 import { NOINDEX_HEADER, isIndexable } from "./lib/indexing";
 
 /**
@@ -44,20 +45,10 @@ const nextConfig: NextConfig = {
 				port: "",
 				pathname: "/dluezegi8/**",
 			},
-			// Member avatars: Google profile photos (Neon Auth's Google sign-in).
-			{
-				protocol: "https",
-				hostname: "lh3.googleusercontent.com",
-				port: "",
-				pathname: "/**",
-			},
-			// Avatars stored for Members who signed in with Clerk, before Neon Auth (ADR-0004).
-			{
-				protocol: "https",
-				hostname: "img.clerk.com",
-				port: "",
-				pathname: "/**",
-			},
+			// Member avatars: Google account photos only (lib/avatar.ts). Clerk's
+			// avatars (before ADR-0004) are gone: Members still holding one show
+			// their initials instead.
+			...AVATAR_REMOTE_PATTERNS,
 		],
 	},
 	async redirects() {
