@@ -22,6 +22,13 @@
       "when": 1790727282876,
       "tag": "0002_swiftter_social",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790776931733,
+      "tag": "0003_posts_thread_id_idx",
+      "breakpoints": true
     }
   ]
 }

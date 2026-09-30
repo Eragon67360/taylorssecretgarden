@@ -9,11 +9,16 @@ import { CATALOGUE, albumPath } from "@/lib/catalogue";
 */
 const TWINS: Record<string, number> = { "426350": 130714712, "227786": 81389452 };
 
+const deezerAlbum = (id: string) => ({ id: TWINS[id] ?? Number(id), title: "Deezer's title", cover_xl: `https://cdn-images.dzcdn.net/images/cover/${id}/1000x1000.jpg`, release_date: "", record_type: "album" });
+
 vi.mock("@/service/deezer", () => ({
-	getAlbums: async (ids: string[]) =>
-		ids.map((id) => ({ id: TWINS[id] ?? Number(id), title: "Deezer's title", cover_xl: `https://cdn-images.dzcdn.net/images/cover/${id}/1000x1000.jpg`, release_date: "", record_type: "album" })),
+	getAlbum: async (id: string) => deezerAlbum(id),
+	getAlbums: async (ids: string[]) => ids.map(deezerAlbum),
 	toAlbum: (album: { id: number; title: string; cover_xl: string }) => ({ id: String(album.id), name: album.title, images: [{ url: album.cover_xl }] }),
 }));
+
+// The shelf's caches (components/music/catalogue.ts), in memory.
+vi.mock("next/cache", () => import("../stubs/next-cache"));
 
 // The Era looks (lib/eras.ts) load their faces with next/font, which only runs in a Next build.
 vi.mock("next/font/local", () => ({ default: () => ({ className: "", variable: "", style: { fontFamily: "serif" } }) }));

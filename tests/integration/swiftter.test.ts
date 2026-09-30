@@ -344,6 +344,23 @@ describe.skipIf(!!skipReason)("Swiftter service against Postgres", () => {
 			expect((await getThread(root.id))?.replies).toHaveLength(8);
 			expect((await listFeed()).items.find((item) => item.post.id === root.id)).toMatchObject({ post: { replyCount: 8 } });
 		});
+
+		it("a thread's public notes are read through their own index, not a scan of every Post", async () => {
+			const alice = await newMember();
+			const { note: root } = await writeNote(alice, note("indexed"), null, allow);
+			// A test database holds too few Posts for the planner to prefer an index on its own.
+			const plan = await getDb().transaction(async (tx) => {
+				await tx.execute(sql`set local enable_seqscan = off`);
+
+				return (await tx.execute<{ "QUERY PLAN": string }>(sql`
+					explain select id from posts
+					where thread_id = ${root.id} and published_at is not null
+					order by created_at, id`)).rows.map((row) => row["QUERY PLAN"]).join("\n");
+			});
+
+			expect(plan).toContain("posts_thread_id_idx");
+			expect(plan).not.toContain("Sort");
+		});
 	});
 
 	describe("reshares", () => {

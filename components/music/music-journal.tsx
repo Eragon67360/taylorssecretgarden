@@ -61,6 +61,8 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details, lin
   const shownVersions = albumId === selectedId ? versions : [];
   // The version open, when it is not the shelf's own edition.
   const version = selectedVersionId !== album?.id ? shownVersions.find(({ id }) => id === selectedVersionId) : undefined;
+  // None when Deezer failed the Album (components/music/catalogue.ts): the polaroid stays blank.
+  const cover = version?.cover ?? album?.images[0]?.url;
 
   // Another Album or version: whatever was playing stops.
   useEffect(() => stop(), [selectedVersionId, stop]);
@@ -124,7 +126,8 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details, lin
                   transition={{ type: "spring", stiffness: 170, damping: 18 }}
                 >
                   <Polaroid taped caption={`${title.toLowerCase()}, ${album?.year ?? look.year}`} tilt={-2.5}>
-                    {album && (
+                    {album && !cover && <span aria-hidden="true" className="bg-line block aspect-square w-full" />}
+                    {album && cover && (
                       <Image
                         priority
                         alt={`${album.name}${version ? `, ${version.name},` : ""} Album cover`}
@@ -132,7 +135,7 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details, lin
                         height={440}
                         quality={60}
                         sizes="(min-width: 1024px) 400px, 80vw"
-                        src={version?.cover ?? album.images[0].url}
+                        src={cover}
                         width={440}
                       />
                     )}
