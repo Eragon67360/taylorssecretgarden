@@ -20,9 +20,13 @@ export default defineConfig({
 	expect: { timeout: 15_000 },
 	fullyParallel: true,
 	forbidOnly: isCI,
+	// One retry in CI, so an outside hiccup (Neon Auth, a cold branch) does not
+	// block a release. It also hides flakes, so CI lists every test that passed
+	// only on its retry in the run summary and as a warning on the pull request
+	// (scripts/playwright-summary.ts, from the JSON report), without failing.
 	retries: isCI ? 1 : 0,
 	workers: isCI ? 2 : undefined,
-	reporter: isCI ? [["github"], ["html", { open: "never" }]] : [["list"], ["html", { open: "never" }]],
+	reporter: isCI ? [["github"], ["html", { open: "never" }], ["json", { outputFile: "playwright-results.json" }]] : [["list"], ["html", { open: "never" }]],
 	use: {
 		baseURL,
 		trace: "retain-on-failure",

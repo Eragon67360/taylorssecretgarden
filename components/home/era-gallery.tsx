@@ -44,7 +44,7 @@ function PressedEra({ look, album, number, tilt }: { look: EraLook; album: EraAl
         "group focus-ring relative block h-full rounded-[2px]",
         "transition-[translate,rotate] duration-300 ease-[cubic-bezier(.22,1,.36,1)] motion-safe:hover:-translate-y-1.5 motion-safe:hover:rotate-0!",
       )}
-      href={`/music?album=${album.id}`}
+      href={album.path}
       style={{ rotate: `${tilt}deg` }}
     >
       <EraScope

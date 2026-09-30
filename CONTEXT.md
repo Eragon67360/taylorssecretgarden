@@ -31,6 +31,7 @@ _Avoid_: Forum
 
 **Post**:
 A single rich-text message a Member publishes on Swiftter. Its Member can delete it ("tear up" in the interface); Posts cannot be edited.
+In the interface a Post (and a Reply) is a **note**, passed like a note in class: "Pass a note", "older notes", "Tear up this note?". "Post" is the domain term, for the code, the API and these docs; the pages never say it.
 _Avoid_: Tweet, message, swift
 
 **Reply**:
@@ -48,3 +49,15 @@ _Avoid_: Draft, hidden post
 **Member**:
 A signed-in person who can publish Posts on Swiftter.
 _Avoid_: User, account, profile
+
+**Guestbook**:
+The sign-up and sign-in pages, styled as a book fans sign. Signing it (email and password, or Google) makes a visitor a Member.
+_Avoid_: Login, registration (in the interface)
+
+**Demo content**:
+The fictional demo Members and their Posts (`is_demo`), shown on the live site on purpose and labelled "Demo", so the feed is never empty. `npm run db:seed` adds them, `npm run db:unseed` removes them.
+_Avoid_: Fake posts
+
+**Seed content**:
+The development fixtures (`is_seed`): fictional accounts and notes in every state, loaded by `npm run seed` into development and CI branches only, never production. Not the Demo content.
+_Avoid_: Test data (when meaning these)

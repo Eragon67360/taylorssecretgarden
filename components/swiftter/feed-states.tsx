@@ -21,7 +21,7 @@ export function FeedLoading() {
   return (
     <div className="flex flex-col gap-9">
       <p className="sr-only" role="status">
-        Loading Posts…
+        Loading notes…
       </p>
       <BlankNote lines={3} paper="lined" />
       <BlankNote lines={2} paper="sticky" />
@@ -62,8 +62,11 @@ export function FeedEmpty({ action }: { action?: ReactNode }) {
 export function FeedError({ onRetry }: { onRetry: () => void }) {
   return (
     <DrawnState flower="leaf" tilt={0.6}>
-      <p className="font-hand text-[30px] font-bold">Hm, the note got lost on its way.</p>
-      <p className="mt-7 text-[16.5px]">Swiftter can&apos;t reach its Posts right now.</p>
+      {/* Read out as it appears (it replaces the loading notes), the button left out. */}
+      <div role="alert">
+        <p className="font-hand text-[30px] font-bold">Hm, the note got lost on its way.</p>
+        <p className="mt-7 text-[16.5px]">Swiftter can&apos;t reach its notes right now.</p>
+      </div>
       <button
         className="bg-accent text-on-accent focus-ring mt-7 inline-flex min-h-11 items-center rounded-[4px] px-5 text-[15px] font-bold tracking-wide shadow-[0_2px_0_rgba(0,0,0,.15)]"
         type="button"

@@ -10,19 +10,18 @@ In place (the visibility foundations, V1 to V8 of the roadmap):
 
 - **One address.** `https://www.taylorssecretgarden.com` is the canonical origin (`config/site.ts`). The apex already redirects to www. Every route declares its canonical URL, and `og:url`, Open Graph and X cards (`pageMetadata`, `lib/metadata.ts`).
 - **Indexing only in production** (`lib/indexing.ts`). On Vercel production, `robots.txt` allows everything and lists the sitemap. Everywhere else (previews, local, CI), `robots.txt` disallows everything, pages say `noindex, nofollow`, and every response carries `X-Robots-Tag: noindex, nofollow`. The guestbook (`/sign-in`, `/sign-up`) and the styleguide are `noindex` everywhere.
-- **A generated sitemap** (`app/sitemap.ts`): Home, Music and each Album's page, Tours and each Tour's page, Swiftter. There is a marked extension point for Swiftter's Post pages.
-- **Structured data** (`components/json-ld.tsx`): `WebSite` on Home, `MusicAlbum` for the open Album on Music, an `ItemList` of Tours, and an `EventSeries` per Tour (its years only, because the data holds no show dates).
-- **`/llms.txt`**, generated from the catalogue, the Tours data and the site config: what the site is, its sections, every Album by Era, every Tour.
+- **A generated sitemap** (`app/sitemap.ts`): Home, Music and each Album's page, Tours and each Tour's page, Swiftter, and the Swiftter threads that meet the indexing bar (below).
+- **Structured data** (`components/json-ld.tsx`): `WebSite` on Home; on Music, a `MusicAlbum` for the page's own release (the Album, or the Version on a Version's page) with its tracks, label and cover; an `ItemList` of Tours; an `EventSeries` per Tour (its years only, because the data holds no show dates); a `DiscussionForumPosting` per Swiftter thread. Taylor Swift is a `MusicGroup` with `sameAs` her Wikipedia and Wikidata entries and official site.
+- **`/llms.txt`**, generated from the catalogue, the Tours data and the site config: what the site is, its sections, every Album by Era (with its song count, running time and label), every Tour. `/llms-full.txt` adds every Album's tracklist.
+- **Crawlers get metadata in the `<head>`.** `htmlLimitedBots` (`next.config.ts`) extends Next's list with Googlebot, Bingbot and the AI assistants' crawlers, so a thread's canonical link and robots tag are never streamed into the body.
 - **Accessibility gate.** axe runs at WCAG 2.2 AA, every page has exactly one h1, and Lighthouse CI covers the guestbook too.
 
 Known gaps:
 
 - `taylorssecretgarden.vercel.app` redirects its pages to www permanently (308, path and query kept); its API routes keep answering there (`next.config.ts`).
-- Music's h1 is the journal's playful line ("pick an Era. the page changes outfits."), the same on every Album page. The Album's title is only an h2.
+- Music's h1 is the journal's playful line ("pick an Era. the page changes outfits."), the same on every Album page. The release's full name (Album, Taylor's Version, edition or Version) is the h2.
 - Album pages are query-string URLs (`/music?album=<Deezer ID>`). They work and are canonical, but the ID says nothing to a reader of search results.
-- Nothing on the site links an Album to its Era's Tour, or the other way round.
 - The Tour facts carry no sources on the page.
-- Swiftter Posts have no pages of their own yet, so there is nothing of Swiftter to index beyond the feed.
 
 ## Topic clusters
 
@@ -61,14 +60,14 @@ Each cluster has a hub, which is the page that should rank for the broad topic, 
 - **Hub:** `/tours`
 - **Spokes:** each Tour's page (`/tours/<slug>`), with its years, number of shows, legs, facts, poster and footage.
 - **Query themes:** "<Tour> years", "how many shows was <Tour>", "<Tour> opening acts", "Eras Tour facts".
-- **Gap:** the facts carry no sources, and no Tour page links to its Era's Albums.
+- **Gap:** the facts carry no sources.
 
 ### 6. The fan feed (Swiftter)
 
 - **Hub:** `/swiftter`
-- **Spokes:** Post pages, once they exist.
+- **Spokes:** each thread's page (`/swiftter/p/<id>`).
 - **Query themes:** fan theories, easter eggs, reactions to a release. The Members write this content, not the site.
-- **Risk:** short, user-written Posts make thin pages. Only public Posts (published, not torn up, not seed fixtures) should be indexable, and only once a quality bar is agreed (see the backlog).
+- **Risk:** short, user-written Posts make thin pages. **The indexing bar:** a thread is indexable, and in the sitemap, only when its first Post is public, real (not demo or seed content), not torn up, and has at least 140 visible characters or at least one public reply (`meetsIndexingBar`, `service/swiftter.ts`). Below it, its page says `noindex, follow`. The bar is the audit's recommendation; the owner can move it.
 
 ## Content architecture
 
@@ -77,14 +76,14 @@ Each cluster has a hub, which is the page that should rank for the broad topic, 
 | `/` | Hub of hubs | yes | itself | `WebSite` |
 | `/music` | Albums hub; opens on the first Album | yes | itself | `MusicAlbum` (the open Album) |
 | `/music?album=<Album ID>` | An Album | yes | the Album's catalogue ID (regional twins and old IDs point here) | `MusicAlbum` |
-| `/music?album=<Version ID>` | A Version of an Album | yes, not in the sitemap | itself | `MusicAlbum` (its Album) |
+| `/music?album=<Version ID>` | A Version of an Album | yes, not in the sitemap | itself | `MusicAlbum` (the Version, a release of its Album) |
 | `/tours` | Tours hub | yes | itself | `ItemList` of Tours |
 | `/tours/<slug>` | A Tour | yes | itself | `EventSeries` |
 | `/swiftter` | The fan feed | yes | itself | none yet |
-| `/swiftter/<post>` (future) | A Post | public Posts only | itself (it must set its own; the Swiftter layout's canonical is the feed's) | `DiscussionForumPosting` |
+| `/swiftter/p/<id>` | A thread | public, real threads meeting the indexing bar | itself (it sets its own; the Swiftter layout's canonical is the feed's) | `DiscussionForumPosting` |
 | `/sign-in`, `/sign-up` | The guestbook | no (`noindex`) | itself, without `redirect_url` | none |
 | `/styleguide` | Development only; 404 in production | no | itself | none |
-| `/robots.txt`, `/sitemap.xml`, `/llms.txt` | For crawlers and assistants | n/a | n/a | n/a |
+| `/robots.txt`, `/sitemap.xml`, `/llms.txt`, `/llms-full.txt` | For crawlers and assistants | n/a | n/a | n/a |
 
 Rules that keep this consistent:
 
@@ -94,15 +93,12 @@ Rules that keep this consistent:
 
 ## Internal linking plan
 
-Links today: the four-tab nav on every page; Home to Music, Tours and Swiftter, each Era's pressed flower to its Album, and each Tour poster to its page; the Music shelf to every Album, and an Album to its Versions; Tours to each Tour page, and back.
+Links today: the four-tab nav on every page; Home to Music, Tours and Swiftter, each Era's pressed flower to its Album, and each Tour poster to its page; the Music shelf to every Album, and an Album to its Versions; Tours to each Tour page, and back; each Tour page to its Era's Albums ("Albums of this Era"; the Eras Tour to the Music shelf); each Album page to its Era's Tour, and a Taylor's Version to its original and back ("a re-recording of Fearless (2008)", "re-recorded as Fearless (Taylor's Version)"). Every link to an Album uses its catalogue ID (`albumPath`), never the regional twin Deezer may answer with.
 
 To add, in order of value:
 
-1. **Tour page → its Era's Albums.** For example, the Red Tour links to Red and to Red (Taylor's Version). The Eras Tour, which spans every Era, links to the Music shelf. The data is already there: `tour.era`, then `CATALOGUE`.
-2. **Album page → its Era's Tour**, when there is one (the reverse of 1).
-3. **Taylor's Version ↔ original,** in text: "a re-recording of Fearless (2008)" and "re-recorded as Fearless (Taylor's Version)", each linking to the other's page.
-4. **Era hub pages**, once they exist (backlog): Home's pressed flowers, each Album and each Tour link to their Era.
-5. **Swiftter Posts → the Albums and Tours they mention,** once Post pages exist, only where a Post names one exactly.
+1. **Era hub pages**, once they exist (backlog): Home's pressed flowers, each Album and each Tour link to their Era.
+2. **Swiftter Posts → the Albums and Tours they mention,** only where a Post names one exactly.
 
 Anchor text names the destination ("Red (Taylor's Version) tracklist", "The Red Tour"), never "click here". Every link stays a real `<a href>` (`Link` and `IntentLink` render one), so crawlers can follow it.
 
@@ -142,9 +138,9 @@ Do these in this order. Steps 2 and 3 must not be swapped: redirecting to www be
 | --- | --- | --- | --- |
 | P0 | The checklist above | Nothing is found until production is indexable at one address | Search Console shows the sitemap read, and the key URLs indexable with the declared canonical |
 | P1 | Answer-first intros on Music and Tours (V9) | Search snippets and assistants quote the first factual sentence | Each Album page opens with a sentence naming the Album, its release date and its edition; Tours with one naming the Tours |
-| P1 | Internal links: Tour ↔ Era's Albums, Taylor's Version ↔ original | Connects clusters 1, 2 and 5; passes crawl paths between hubs | Every Tour page links its Era's Albums, and every re-recording links its original and back (tested) |
-| P1 | Swiftter Post pages: own canonical, `DiscussionForumPosting` JSON-LD, sitemap entries for public Posts only | Makes cluster 6 indexable without leaking pending, refused or torn-up notes | The sitemap extension point is filled; a test proves non-public Posts are absent and `noindex` |
-| P1 | A quality bar for indexing Posts | Avoids thin pages | The owner sets the rule (e.g. a minimum length, or no seed and demo content); Posts below it are `noindex` |
+| ✅ | Internal links: Tour ↔ Era's Albums, Taylor's Version ↔ original | Connects clusters 1, 2 and 5; passes crawl paths between hubs | Done: every Tour page links its Era's Albums, and every re-recording links its original and back (e2e/seo.spec.ts) |
+| ✅ | Swiftter thread pages: own canonical, `DiscussionForumPosting` JSON-LD, sitemap entries for public threads only | Makes cluster 6 indexable without leaking pending, refused or torn-up notes | Done (`/swiftter/p/<id>`) |
+| ✅ | A quality bar for indexing threads | Avoids thin pages | Done: 140 visible characters or one public reply (recommended; the owner can change `INDEXING_BAR_CHARACTERS`) |
 | P2 | Era hub pages (`/eras/<slug>`) from `lib/eras.ts` and the catalogue | Gives cluster 4 a page; links Albums and Tours by Era | Every Era has a page with its Albums, its Tour and its fan note, in the sitemap and `llms.txt` |
 | P2 | A Taylor's Versions page generated from `reRecords` | Hub for cluster 2 | Lists each re-recording beside its original, with release dates |
 | P2 | Sources for the Tour facts | Trust and checkability, for readers and assistants | Each fact in `tours.json` has a source URL, shown on its Tour page |

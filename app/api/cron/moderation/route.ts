@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 
-import { recheckPending } from "@/service/swiftter";
+import { feedChanged } from "@/service/feed-cache";
+import { purgeExpired, recheckPending } from "@/service/swiftter";
+
+/** The hour (UTC) of the run that also purges what Swiftter no longer keeps: once a day, at night in Europe. */
+const PURGE_HOUR_UTC = 3;
 
 /**
- * The scheduled re-check of notes moderation gave no verdict for (vercel.json
- * `crons`, every 15 minutes). Vercel Cron calls it with
- * `Authorization: Bearer $CRON_SECRET`; anything else is refused. Attempts are
- * capped and backed off (service/swiftter.ts); a note still pending after an
- * hour is logged as an error, the alert to act on.
+ * Swiftter's scheduled work (vercel.json `crons`, hourly), in one cron job:
+ * - the re-check of notes moderation gave no verdict for, retried for a week
+ *   with a backoff (MODERATION_RETRY); a note given up on is logged as an
+ *   error once, in the run that gave up on it, the alert to act on;
+ * - once a day, the retention purge (purgeExpired).
+ * Vercel Cron calls it with `Authorization: Bearer $CRON_SECRET`; anything
+ * else is refused.
  */
 export async function GET(request: Request) {
 	const secret = process.env.CRON_SECRET;
@@ -18,10 +24,18 @@ export async function GET(request: Request) {
 
 	const result = await recheckPending();
 
-	if (result.stillPendingOverAnHour > 0) {
+	// Notes it passed are public now: the cached first page of the feed is out of date.
+	if (result.approved > 0) feedChanged();
+
+	if (result.gaveUp > 0) {
 		// eslint-disable-next-line no-console
-		console.error(`ALERT: ${result.stillPendingOverAnHour} Swiftter note(s) pending moderation for over an hour`);
+		console.error(`ALERT: ${result.gaveUp} Swiftter note(s) given up on: moderation gave no verdict for a week`);
 	}
 
-	return NextResponse.json(result);
+	const purged = new Date().getUTCHours() === PURGE_HOUR_UTC ? await purgeExpired() : null;
+
+	// Anything removed may have been on the cached first page (a reshare, a torn-up note).
+	if (purged && Object.values(purged).some((count) => count > 0)) feedChanged();
+
+	return NextResponse.json({ ...result, purged });
 }

@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import Image from "next/image";
 
 import { Pin, WashiTape } from "@/components/scrapbook";
+import { allowedAvatarUrl } from "@/lib/avatar";
 
 /** Height of one ruled line; text on a note sits on the lines. */
 export const LINE = 28;
@@ -72,6 +73,8 @@ export function NoteSheet({ paper }: { paper: NotePaper }) {
 
 /** A Member's avatar as a tiny photo pinned to the top-left corner of their note. */
 export function PinnedPhoto({ name, src }: { name: string; src: string | null }) {
+  // A picture next/image may not load (it would throw) gives way to the initials.
+  const photo = allowedAvatarUrl(src);
   const initials = name
     .split(/\s+/)
     .map((word) => word[0])
@@ -81,8 +84,8 @@ export function PinnedPhoto({ name, src }: { name: string; src: string | null })
 
   return (
     <span className="bg-photo absolute top-3 left-2.5 z-10 block -rotate-6 p-1 pb-3 shadow-[0_1px_1px_rgba(0,0,0,.1),0_8px_12px_-6px_rgba(40,20,10,.5)]">
-      {src ? (
-        <Image alt={`${name}'s avatar`} className="block size-11 object-cover" height={44} src={src} width={44} />
+      {photo ? (
+        <Image alt={`${name}'s avatar`} className="block size-11 object-cover" height={44} src={photo} width={44} />
       ) : (
         <span aria-hidden="true" className="bg-accent text-on-accent flex size-11 items-center justify-center text-sm font-bold">
           {initials}

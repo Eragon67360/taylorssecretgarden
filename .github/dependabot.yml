@@ -1,0 +1,30 @@
+# Weekly dependency updates, as pull requests into dev (releases go dev → main).
+# Minor and patch npm updates arrive as one pull request; majors one by one.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+        # Neon Auth's SDK is a beta pinned exactly (README): its updates come on their own.
+        exclude-patterns: ["@neondatabase/auth"]
+    ignore:
+      # docs/adr/0001-toolchain-holdbacks.md: ESLint stays on 9 and TypeScript on 6.0.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    # The workflows, and the local composite actions that use third-party actions.
+    directories: [/, /.github/actions/neon-branch]
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday

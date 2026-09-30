@@ -1,5 +1,7 @@
 # Roadmap: overnight session 2026-09-30
 
+> **Session record, 2026-09-30** (the overnight session; moved here from the repository root on 2026-09-30). It describes the project as it was that night and is not kept up to date. Since then, release PR [#59](https://github.com/Eragon67360/taylorssecretgarden/pull/59) was merged into `main` and tagged [v0.1.0](https://github.com/Eragon67360/taylorssecretgarden/releases/tag/v0.1.0) (2026-09-30), followed by release PR [#73](https://github.com/Eragon67360/taylorssecretgarden/pull/73). The current state is in the [README](../../../README.md).
+
 Two workstreams: **Swiftter** (a real social feed: replies, reshares, pagination, stored moderation decisions) and **visibility foundations** (SEO, GEO, accessibility) for www.taylorssecretgarden.com. Written before any feature code; progress is logged in `SESSION-LOG.md`, and the owner's summary is `WAKE-UP-REPORT.md`.
 
 ## What the scan found

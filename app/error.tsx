@@ -2,30 +2,38 @@
 
 import { useEffect } from "react";
 
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error;
-  reset: () => void;
-}) {
+import { TornPage, WayOut } from "@/components/torn-page";
+
+/**
+ * A page that broke while rendering, inside the site's header and footer.
+ * Server errors reach the browser without their message (Next keeps it in
+ * the server logs); the digest shown here is what finds it there. No message
+ * or stack is shown to visitors.
+ */
+export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
-    // Log the error to an error reporting service
-    /* eslint-disable no-console */
+    // The browser's console keeps the details for whoever is debugging.
+    /* eslint-disable-next-line no-console */
     console.error(error);
   }, [error]);
 
   return (
-    <div>
-      <h2>Something went wrong!</h2>
-      <button
-        onClick={
-          // Attempt to recover by trying to re-render the segment
-          () => reset()
-        }
-      >
-        Try again
-      </button>
-    </div>
+    <TornPage aside="the tape gave way. it happens to the best scrapbooks." kicker="Error · page came loose" title="Something went wrong on this page.">
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-5">
+        <button
+          className="bg-accent text-on-accent focus-ring inline-flex min-h-11 items-center rounded-[4px] px-5 text-[15px] font-bold tracking-wide shadow-[0_2px_0_rgba(0,0,0,.15)]"
+          type="button"
+          onClick={() => retry()}
+        >
+          Try again
+        </button>
+        <WayOut label="Back to the journal" links={[{ href: "/", name: "Home" }]} />
+      </div>
+      {error.digest && (
+        <p className="text-soft mt-7 text-[14px]">
+          If it keeps happening, this reference helps find it: <code className="text-ink font-semibold">{error.digest}</code>
+        </p>
+      )}
+    </TornPage>
   );
 }

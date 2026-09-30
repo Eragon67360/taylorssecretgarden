@@ -20,7 +20,8 @@ const POLICY: sanitizeHtml.IOptions = {
 	allowedAttributes: { a: ["href", "target", "rel"], li: ["data-list"] },
 	allowedSchemes: ["http", "https", "mailto"],
 	allowProtocolRelative: false,
-	transformTags: { a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer nofollow" }) },
+	// `ugc`: links Members wrote, which the site vouches for no more than `nofollow` says.
+	transformTags: { a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer nofollow ugc" }) },
 };
 
 export function sanitisePostHtml(html: string): string {
@@ -34,13 +35,54 @@ export function postText(html: string): string {
 
 const ENTITIES: Record<string, string> = { "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&amp;": "&" };
 
+const decodeEntities = (text: string) => text.replace(/&(lt|gt|quot|#39|amp);/g, (entity) => ENTITIES[entity]);
+
 /**
- * A Post as someone would read it, for AI moderation: postText with each
- * paragraph, list item and line break on a line of its own, and characters as
- * typed rather than HTML entities.
+ * A Post as someone would read it (character counts, page descriptions):
+ * postText with each paragraph, list item and line break on a line of its
+ * own, and characters as typed rather than HTML entities.
  */
 export function postPlainText(html: string): string {
 	const text = postText(html.replace(/<br\s*\/?>|<\/(p|li|h[1-6]|blockquote|pre)>/gi, "$&\n"));
 
-	return text.replace(/&(lt|gt|quot|#39|amp);/g, (entity) => ENTITIES[entity]).replace(/\n{3,}/g, "\n\n");
+	return decodeEntities(text).replace(/\n{3,}/g, "\n\n");
+}
+
+/** An opening or closing link tag in sanitised HTML (sanitize-html writes attributes double-quoted). */
+const LINK_TAG = /<a\b[^>]*>|<\/a\s*>/gi;
+const HREF = /\bhref="([^"]*)"/i;
+
+/**
+ * A Post as AI moderation reads it: postPlainText, with every link's
+ * destination written after its text, `label (link: https://host/path)`, so
+ * a link labelled "Ticketmaster" that leads elsewhere is judged by where it
+ * leads. A link whose text is its address is left as it is. For moderation
+ * only: the stored and displayed HTML is unchanged.
+ */
+export function postModerationText(html: string): string {
+	const clean = sanitisePostHtml(html);
+	// Open links, innermost last, each with where its text starts; a stack, in case links arrive nested.
+	// Hrefs stay entity-encoded while they sit in the HTML: postPlainText decodes everything at the end.
+	const open: { href: string; start: number }[] = [];
+	let out = "";
+	let last = 0;
+
+	for (const match of clean.matchAll(LINK_TAG)) {
+		out += clean.slice(last, match.index);
+		last = match.index + match[0].length;
+
+		if (!match[0].startsWith("</")) {
+			open.push({ href: match[0].match(HREF)?.[1] ?? "", start: out.length });
+			continue;
+		}
+
+		const link = open.pop();
+
+		if (link?.href && postPlainText(out.slice(link.start)).trim() !== decodeEntities(link.href)) out += ` (link: ${link.href})`;
+	}
+	out += clean.slice(last);
+	// Links left open at the end (sanitize-html closes them, but a stray one would lose its destination).
+	for (const link of open.reverse()) if (link.href) out += ` (link: ${link.href})`;
+
+	return postPlainText(out);
 }

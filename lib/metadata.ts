@@ -3,7 +3,10 @@ import type { Metadata } from "next";
 import { alt as cardAlt, contentType as cardType, size as cardSize } from "@/app/opengraph-image";
 import { siteConfig } from "@/config/site";
 
-import { CATALOGUE, type CatalogueAlbum, findAlbum } from "./catalogue";
+import { albumPath, findAlbum, versionPath } from "./catalogue";
+
+// Album and Version paths live with the catalogue, so client components can build links without this module.
+export { albumPath, versionPath };
 
 /*
   Every page's metadata: its canonical URL and the Open Graph card link
@@ -31,18 +34,20 @@ type PageMetadataOptions = {
   path: string;
   /** Kept out of search results (the guestbook, the styleguide). */
   noindex?: boolean;
+  /** An article (a Swiftter thread): its Open Graph type is "article", with when it was published. */
+  article?: { publishedTime: string };
 };
 
 /**
  * A page's metadata: title, description, canonical link and Open Graph card.
  * og:title and og:description follow the page's own title and description.
  */
-export function pageMetadata({ title, description, path, noindex }: PageMetadataOptions): Metadata {
+export function pageMetadata({ title, description, path, noindex, article }: PageMetadataOptions): Metadata {
   return {
     ...(title && { title }),
     ...(description && { description }),
     alternates: { canonical: path },
-    openGraph: { ...OPEN_GRAPH, url: path, images: [CARD] },
+    openGraph: article ? { ...OPEN_GRAPH, type: "article", publishedTime: article.publishedTime, url: path, images: [CARD] } : { ...OPEN_GRAPH, url: path, images: [CARD] },
     ...(noindex && { robots: { index: false, follow: false } }),
   };
 }
@@ -50,11 +55,6 @@ export function pageMetadata({ title, description, path, noindex }: PageMetadata
 /** A path as an absolute URL on the site: "/tours" → "https://www.taylorssecretgarden.com/tours". */
 export function absoluteUrl(path: string): string {
   return new URL(path, siteConfig.url).href;
-}
-
-/** An Album's page on Music. The first Album is the one /music opens on, so its page is /music. */
-export function albumPath(album: CatalogueAlbum): string {
-  return album === CATALOGUE[0] ? "/music" : `/music?album=${album.id}`;
 }
 
 /**
@@ -69,5 +69,5 @@ export function musicPath(wanted: string | undefined): string {
   if (!album) return "/music";
   const version = album.versions?.find(({ id }) => id === wanted);
 
-  return version ? `/music?album=${version.id}` : albumPath(album);
+  return version ? versionPath(version) : albumPath(album);
 }

@@ -1,34 +1,48 @@
 name: CI
 
-# Two jobs on every pull request and on pushes to dev, each on its own
-# production build under `next start`:
-#   smoke       lint, typecheck, build, then the Playwright smoke suite
+# Two jobs on every pull request, each on its own
+# production build under `next start`, unless only documentation changed
+# (see the `changes` job):
+#   smoke       lint, typecheck, unit and integration tests, build, then the
+#               Playwright smoke suite
 #   lighthouse  build, then Lighthouse CI (lighthouserc.js): mobile, median of
 #               3 runs; Accessibility under 0.9 fails, Performance under 0.9 warns
 #
 # Each job runs on its own Neon branch (database + Neon Auth, docs/adr/0004),
 # created from production for the run, migrated and seeded, and deleted at the
-# end (it also expires after two hours, should the deletion not run). The
-# production branch itself is never written to: the tests that sign up or
-# publish refuse to run on it (e2e/member.ts).
+# end (it also expires after two hours, should the deletion not run); see
+# .github/actions/neon-branch. The production branch itself is never written
+# to: the tests that sign up or publish refuse to run on it (e2e/member.ts).
 #
 # Required repository settings (values are never committed):
 #   secrets.NEON_API_KEY             Neon API key (project-scoped), creates and deletes the branches
 #   vars.NEON_PROJECT_ID             the Neon project
-#   secrets.NEON_AUTH_COOKIE_SECRET  signs Neon Auth's session cookies (32+ characters)
+#   secrets.NEON_AUTH_COOKIE_SECRET  signs Neon Auth's session cookies (32+ characters); given
+#                                    only to the steps that run the app or its write guard
 
+# Pull requests only. Every change reaches dev through a pull request this
+# already tested, and the release pull request (dev → main) tests dev again.
+# A run on pushes to dev as well tested the same commit twice, and cancelling
+# one of the two (to stay under Neon's branch cap) left `cancelled` smoke and
+# lighthouse checks on the release's head, which main's ruleset counts as
+# failed (#144).
 on:
   pull_request:
-  push:
-    branches: [dev]
 
+# The GITHUB_TOKEN only reads the repository: the jobs talk to Neon with their
+# own key and upload artifacts, neither of which needs a write permission.
+permissions:
+  contents: read
+
+# One run at a time per pull request branch, the newest push winning: an
+# outdated run would only hold two Neon branches for nothing. A fork's branch
+# of the same name gets a group of its own, so it cannot cancel ours.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 env:
   NEXT_TELEMETRY_DISABLED: 1
-  NEON_AUTH_COOKIE_SECRET: ${{ secrets.NEON_AUTH_COOKIE_SECRET }}
   # Builds and serves the development styleguide (/styleguide) for its tests;
   # production (Vercel) leaves it unset and answers 404.
   ENABLE_STYLEGUIDE: 1
@@ -37,7 +51,42 @@ env:
   SWIFTTER_MODERATION: fake
 
 jobs:
+  # Whether anything besides documentation changed: Markdown files, docs/,
+  # LICENSE, .vscode/ and dependabot.yml neither build nor run. A pull request
+  # is compared with its base (from where they part).
+  # When only documentation changed, smoke and lighthouse are skipped (no Neon
+  # branch, no build) and, skipped, still count as passed for the required
+  # checks. Anything uncertain (a failed diff, this job failing) runs both.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # both ends of the comparison and where they part
+          filter: blob:none # file names only: no need for the old contents
+
+      - name: Anything besides documentation?
+        id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if ! files=$(git diff --name-only "$BASE...$HEAD"); then
+            echo "::warning::Could not compare $HEAD with $BASE: running every check"
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          code=$(printf '%s\n' "$files" | grep -Ev '(^|/)[^/]*\.md$|^docs/|^LICENSE$|^\.vscode/|^\.github/dependabot\.yml$' | grep -c . || true)
+          echo "$code file(s) besides documentation changed"
+          if [ "$code" -gt 0 ]; then echo "code=true"; else echo "code=false"; fi >> "$GITHUB_OUTPUT"
+
   smoke:
+    needs: changes
+    # Runs unless the changes job said "documentation only" (so also when it failed).
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -50,33 +99,14 @@ jobs:
 
       - run: npm ci
 
-      - name: Branch expiry
-        id: expiry
-        run: echo "at=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
-
-      - name: Create a Neon branch for this run
+      - name: A Neon branch for this run
         id: branch
-        uses: neondatabase/create-branch-action@v6
+        uses: ./.github/actions/neon-branch
         with:
           api_key: ${{ secrets.NEON_API_KEY }}
           project_id: ${{ vars.NEON_PROJECT_ID }}
           branch_name: ci/${{ github.run_id }}-${{ github.run_attempt }}-smoke
-          expires_at: ${{ steps.expiry.outputs.at }}
-          get_auth_url: true
-
-      - name: Point the app at the branch
-        env:
-          DB_URL: ${{ steps.branch.outputs.db_url_pooled }}
-          AUTH_URL: ${{ steps.branch.outputs.auth_url }}
-        run: |
-          test -n "$AUTH_URL" || { echo "::error::Neon Auth is not enabled on the CI branch"; exit 1; }
-          echo "DATABASE_URL=$DB_URL" >> "$GITHUB_ENV"
-          echo "NEON_AUTH_BASE_URL=$AUTH_URL" >> "$GITHUB_ENV"
-
-      - name: Migrate and seed the branch
-        # The demo content, then the development fixtures (scripts/seed.ts: accounts,
-        # three feed pages, threads, reshares, every moderation state).
-        run: npm run db:migrate && npm run db:seed && npm run seed
+          cookie_secret: ${{ secrets.NEON_AUTH_COOKIE_SECRET }}
 
       - name: Lint
         run: npm run lint
@@ -88,16 +118,45 @@ jobs:
         run: npm test # hermetic: moderation runs against the AI SDK's mock model
 
       - name: Integration tests
+        env:
+          NEON_AUTH_COOKIE_SECRET: ${{ secrets.NEON_AUTH_COOKIE_SECRET }} # the write guard wants it
         run: npm run test:integration # the Swiftter service against this run's Neon branch
 
+      - name: Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          # A new key whenever the lockfile or a source changes; restoring the
+          # closest older one still saves most of the work.
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx', '**/*.mjs', '**/*.css', '!node_modules/**', '!.next/**', '!portfolio-hover/**') }}
+          restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
       - name: Build
-        run: npm run build
+        run: npm run build # Neon Auth is set up on first use, not at build time (lib/auth/server.ts)
+
+      - name: Playwright's version
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Playwright browser cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
       - name: Install Playwright browser
+        # From the cache when it hit; the system libraries are installed either way.
         run: npx playwright install --with-deps chromium
 
       - name: Smoke tests
+        env:
+          NEON_AUTH_COOKIE_SECRET: ${{ secrets.NEON_AUTH_COOKIE_SECRET }} # signs the app's session cookies
         run: npm run test:e2e # the Playwright web server runs `next start` on the build above
+
+      - name: Flaky tests
+        # Counts in the run summary, and a warning per test that passed only on its retry.
+        if: always() && hashFiles('playwright-results.json') != ''
+        run: npx tsx scripts/playwright-summary.ts
 
       - name: Upload Playwright report and traces
         if: failure()
@@ -111,16 +170,15 @@ jobs:
 
       - name: Delete the Neon branch
         if: always() && steps.branch.outputs.branch_id != ''
-        # One API call; Neon's delete-branch-action still runs setup-node on Node 20.
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
-          BRANCH_ID: ${{ steps.branch.outputs.branch_id }}
-        run: >-
-          curl --fail-with-body -sS -o /dev/null -X DELETE -H "Authorization: Bearer $NEON_API_KEY"
-          "https://console.neon.tech/api/v2/projects/$PROJECT_ID/branches/$BRANCH_ID"
+        uses: ./.github/actions/neon-branch/delete
+        with:
+          api_key: ${{ secrets.NEON_API_KEY }}
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_id: ${{ steps.branch.outputs.branch_id }}
 
   lighthouse:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -133,38 +191,30 @@ jobs:
 
       - run: npm ci
 
-      - name: Branch expiry
-        id: expiry
-        run: echo "at=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
-
-      - name: Create a Neon branch for this run
+      - name: A Neon branch for this run
         id: branch
-        uses: neondatabase/create-branch-action@v6
+        uses: ./.github/actions/neon-branch
         with:
           api_key: ${{ secrets.NEON_API_KEY }}
           project_id: ${{ vars.NEON_PROJECT_ID }}
           branch_name: ci/${{ github.run_id }}-${{ github.run_attempt }}-lighthouse
-          expires_at: ${{ steps.expiry.outputs.at }}
-          get_auth_url: true
+          cookie_secret: ${{ secrets.NEON_AUTH_COOKIE_SECRET }}
 
-      - name: Point the app at the branch
-        env:
-          DB_URL: ${{ steps.branch.outputs.db_url_pooled }}
-          AUTH_URL: ${{ steps.branch.outputs.auth_url }}
-        run: |
-          test -n "$AUTH_URL" || { echo "::error::Neon Auth is not enabled on the CI branch"; exit 1; }
-          echo "DATABASE_URL=$DB_URL" >> "$GITHUB_ENV"
-          echo "NEON_AUTH_BASE_URL=$AUTH_URL" >> "$GITHUB_ENV"
-
-      - name: Migrate and seed the branch
-        # The demo content, then the development fixtures (scripts/seed.ts: accounts,
-        # three feed pages, threads, reshares, every moderation state).
-        run: npm run db:migrate && npm run db:seed && npm run seed
+      - name: Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          # A new key whenever the lockfile or a source changes; restoring the
+          # closest older one still saves most of the work.
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx', '**/*.mjs', '**/*.css', '!node_modules/**', '!.next/**', '!portfolio-hover/**') }}
+          restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
       - name: Build
         run: npm run build
 
       - name: Lighthouse CI
+        env:
+          NEON_AUTH_COOKIE_SECRET: ${{ secrets.NEON_AUTH_COOKIE_SECRET }} # signs the app's session cookies
         run: npm run lighthouse # starts `next start` itself (lighthouserc.js); uses the runner's Chrome
 
       - name: Scores
@@ -181,11 +231,8 @@ jobs:
 
       - name: Delete the Neon branch
         if: always() && steps.branch.outputs.branch_id != ''
-        # One API call; Neon's delete-branch-action still runs setup-node on Node 20.
-        env:
-          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
-          BRANCH_ID: ${{ steps.branch.outputs.branch_id }}
-        run: >-
-          curl --fail-with-body -sS -o /dev/null -X DELETE -H "Authorization: Bearer $NEON_API_KEY"
-          "https://console.neon.tech/api/v2/projects/$PROJECT_ID/branches/$BRANCH_ID"
+        uses: ./.github/actions/neon-branch/delete
+        with:
+          api_key: ${{ secrets.NEON_API_KEY }}
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_id: ${{ steps.branch.outputs.branch_id }}

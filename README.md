@@ -47,10 +47,12 @@ npm run dev                  # http://localhost:3000
 ## Checks
 
 ```bash
-npm run lint        # ESLint 9, flat config (eslint.config.mjs)
-npm run typecheck   # tsc --noEmit
-npm run test:e2e    # Playwright smoke suite
-npm run lighthouse  # Lighthouse CI on a production build (run `npm run build` first)
+npm run lint              # ESLint 9, flat config (eslint.config.mjs)
+npm run typecheck         # tsc --noEmit
+npm test                  # unit tests (Vitest), hermetic
+npm run test:integration  # integration tests, against a disposable Neon branch only
+npm run test:e2e          # Playwright smoke suite
+npm run lighthouse        # Lighthouse CI on a production build (run `npm run build` first)
 ```
 
 `npm test` runs the unit tests (Vitest, `tests/unit/`): hermetic, no network or database. AI moderation runs against the AI SDK's mock model (`MockLanguageModelV4`): allowed, both refusals, timeout, Gateway error and malformed answers, prompt injection and unicode. The sanitiser and the database guards are covered too. `npm run test:integration` runs `tests/integration/` against a disposable Neon branch only (the same guard as below), and `npm run test:coverage` reports coverage.
@@ -61,23 +63,39 @@ The tests read `.env.local` like the app does. Everything that writes (signing u
 
 ## CI
 
-[GitHub Actions](.github/workflows/ci.yml) runs two jobs on every pull request and on pushes to `dev`, each on a production build under `next start`:
+[GitHub Actions](.github/workflows/ci.yml) runs two jobs on every pull request, each on a production build under `next start`:
 
-- **smoke**: lint, typecheck, build and the Playwright suite. On failure the Playwright report and traces are uploaded as an artifact.
-- **lighthouse**: [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) ([`lighthouserc.js`](lighthouserc.js)) audits Home, Music, Tours, the Eras Tour page, Swiftter and the sign-in page with Lighthouse's mobile emulation, three runs each: the median run must score at least 0.9 for Accessibility (an error) and should for Performance (a warning, since shared runners swing it by up to 0.3 between runs; check it on the Vercel preview). The scores table lands in the run summary and the full reports are uploaded as an artifact.
+- **smoke**: lint, typecheck, unit and integration tests, build and the Playwright suite. A failed test gets one retry; the run summary counts passed, flaky (passed only on the retry), failed and skipped tests, and each flaky test is a warning on the pull request. On failure the Playwright report and traces are uploaded as an artifact.
+- **lighthouse**: [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) ([`lighthouserc.js`](lighthouserc.js)) audits Home, Music, Tours, the Eras Tour page, Swiftter, the sign-in page and a seeded eight-reply thread with Lighthouse's mobile emulation, three runs each: the median run must score at least 0.9 for Accessibility (an error) and should for Performance (a warning, since shared runners swing it by up to 0.3 between runs; check it on the Vercel preview). The scores table lands in the run summary and the full reports are uploaded as an artifact.
 
-Each job creates its own Neon branch from production with [`create-branch-action`](https://github.com/neondatabase/create-branch-action) (database and Neon Auth URL), migrates and seeds it (so Lighthouse audits a real feed), and deletes it at the end, even when a step fails (it also expires after two hours). They need the `NEON_API_KEY` and `NEON_AUTH_COOKIE_SECRET` repository secrets and the `NEON_PROJECT_ID` variable.
+A first job, **changes**, compares the pull request with its base (a push to `dev` with `main`): when only documentation changed (Markdown, `docs/`, `LICENSE`, `.vscode/`, `dependabot.yml`), both jobs are skipped, which still counts as passing for the required checks. One run at a time per branch: a push to `dev` and the open release pull request share one, the newer cancelling the older.
+
+Each job creates its own Neon branch from production (database and Neon Auth URL) with the local action [`.github/actions/neon-branch`](.github/actions/neon-branch/action.yml), which wraps [`create-branch-action`](https://github.com/neondatabase/create-branch-action) (pinned by commit) and retries for up to three and a half minutes while the project is at the free plan's branch limit. It migrates and seeds the branch (so Lighthouse audits a real feed), and the job deletes it at the end, even when a step fails (it also expires after two hours). They need the `NEON_API_KEY` and `NEON_AUTH_COOKIE_SECRET` repository secrets and the `NEON_PROJECT_ID` variable; the cookie secret goes only to the steps that run the app or its write guard.
+
+[Dependabot](.github/dependabot.yml) opens weekly update pull requests into `dev`: npm minor and patch updates as one, majors one by one (ESLint and TypeScript majors held back, [ADR-0001](docs/adr/0001-toolchain-holdbacks.md)), and the GitHub Actions.
 
 To run Lighthouse locally, build first, then `npm run lighthouse` (it starts `next start` on port 3180; set `LHCI_PORT` to change it, and `CHROME_PATH` if Chrome is not found, e.g. Playwright's Chromium).
+
+## Releasing
+
+`main` is production (Vercel deploys it); everything reaches it from `dev`.
+
+1. Work lands on `dev` through pull requests, each with CI green.
+2. A release is one pull request from `dev` into `main`. If it brings migrations, run **Migrate production** on `dev` first (see [Database](#database)).
+3. The owner says when to merge; nobody else merges into `main`. Merge it with a merge commit (not squash), so `dev` and `main` keep one history.
+4. Tag the merge commit `vX.Y.Z` and publish a GitHub release with plain-language notes (`gh release create vX.Y.Z --target main`), and set the same version in `package.json` on `dev`.
+
+Session reports and plans from past working sessions are kept in [`docs/sessions/`](docs/sessions/).
 
 ## Search engines and AI assistants
 
 The site's address is `https://www.taylorssecretgarden.com` (`config/site.ts`; a preview uses its own URL). The plan and the pre-launch checklist are in [`SEO-STRATEGY.md`](SEO-STRATEGY.md).
 
 - **Only production is indexed** ([`lib/indexing.ts`](lib/indexing.ts), decided at build time from `VERCEL_ENV`). Everywhere else (previews, `next start`, CI), `/robots.txt` disallows everything, pages say `noindex, nofollow`, and every response carries `X-Robots-Tag: noindex, nofollow` (`next.config.ts`).
-- **Every page's metadata** comes from `pageMetadata` ([`lib/metadata.ts`](lib/metadata.ts)): title, description, canonical link, `og:url` and the link-preview card. An Album's page on Music is `/music?album=<catalogue ID>`; a Version's is its own ID. `noindex: true` keeps a page out of search results (the guestbook, the styleguide). A page under `/swiftter` must set its own canonical link, or it inherits the feed's.
-- **Generated files:** `/sitemap.xml` ([`app/sitemap.ts`](app/sitemap.ts); Swiftter's Post pages go at its marked extension point) and `/llms.txt` ([`app/llms.txt/route.ts`](app/llms.txt/route.ts)), both built from the catalogue and the Tours data. A new Album or Tour appears in both without touching them.
-- **JSON-LD** through `<JsonLd>` ([`components/json-ld.tsx`](components/json-ld.tsx)), which escapes `<`: `WebSite` on Home, `MusicAlbum` on Music, `ItemList` on Tours, and `EventSeries` on each Tour page.
+- **Every page's metadata** comes from `pageMetadata` ([`lib/metadata.ts`](lib/metadata.ts)): title, description, canonical link, `og:url` and the link-preview card. An Album's page on Music is `/music?album=<catalogue ID>` (`albumPath`, `lib/catalogue.ts`; every link uses it, never the regional twin Deezer may answer with); a Version's is its own ID. `noindex: true` keeps a page out of search results (the guestbook, the styleguide). A page under `/swiftter` must set its own canonical link, or it inherits the feed's.
+- **Generated files:** `/sitemap.xml` ([`app/sitemap.ts`](app/sitemap.ts); it lists the Swiftter threads that meet the indexing bar: a first Post of at least 140 visible characters, or one public reply, `meetsIndexingBar` in `service/swiftter.ts`; the others' pages say `noindex`), `/llms.txt` ([`app/llms.txt/route.ts`](app/llms.txt/route.ts)) and `/llms-full.txt` (every tracklist), built from the catalogue, the Tours data and the pages' cached Deezer data. A new Album or Tour appears in all of them without touching them.
+- **Crawlers get metadata in the `<head>`:** `htmlLimitedBots` in `next.config.ts` adds Googlebot, Bingbot and the AI crawlers to Next's list, so a thread's canonical link is never streamed into the body.
+- **JSON-LD** through `<JsonLd>` ([`components/json-ld.tsx`](components/json-ld.tsx)), which escapes `<`: `WebSite` on Home, `MusicAlbum` on Music (the page's own release, with its tracks and label), `ItemList` on Tours, `EventSeries` on each Tour page, and `DiscussionForumPosting` on each Swiftter thread.
 
 Neither a metadata route nor a route handler can load next/font faces, and `lib/eras.ts` and `lib/tours.ts` bring them in with the Era looks. So `app/sitemap.ts` and `/llms.txt` read the Tours from `public/json/tours.json`, and the Eras from the catalogue.
 
@@ -86,9 +104,9 @@ Neither a metadata route nor a route handler can load next/font faces, and `lib/
 Why these two, and how they behave off Vercel: [ADR-0005](docs/adr/0005-botid-and-posting-limit.md).
 
 - **Vercel BotID** ([`botid`](https://vercel.com/docs/botid), invisible, no puzzle) guards signing up, signing in (email and Google) and publishing a Post. The routes are listed once in [`lib/botid-routes.ts`](lib/botid-routes.ts): `instrumentation-client.ts` attaches BotID's token to those requests (its challenge script loads only when one is made), and the publish route and `app/api/auth/[...path]` (in front of Neon Auth's proxy) refuse a bot with 403 ([`lib/bot-protection.ts`](lib/bot-protection.ts)). `withBotId` in `next.config.ts` proxies BotID through this origin. It runs in Basic mode (free); Deep Analysis is a Firewall setting in the Vercel dashboard. Off Vercel (`next dev`, `next start`, CI) BotID has no OIDC token to verify with, so a stand-in treats a request carrying a token (`x-is-human`) as human and one without as a bot: the browser still fetches a real token, and the Playwright suite sends `BOTID_HUMAN` ([`e2e/member.ts`](e2e/member.ts)) with the requests it makes itself.
-- **Write limits:** per Member, 5 Posts, 10 replies and 10 reshares per 10 minutes (`LIMITS` in [`lib/swiftter.ts`](lib/swiftter.ts)), counted in Postgres and checked again under a per-Member lock when the note is inserted. The next one gets 429 with `Retry-After` and a message saying when it is allowed; the composer shows it on the note and keeps the text. Torn-up notes, refused notes and undone reshares still count, so neither deleting nor refused attempts are a way round the limit (or round moderation's cost); "check again" is capped at 4 attempts per note.
+- **Write limits:** per Member, 5 Posts, 10 replies and 10 reshares per 10 minutes (`LIMITS` in [`lib/swiftter.ts`](lib/swiftter.ts)), counted in Postgres and checked again under a per-Member lock when the note is inserted. The next one gets 429 with `Retry-After` and a message saying when it is allowed; the composer shows it on the note and keeps the text. Torn-up notes, refused notes and undone reshares still count, so neither deleting nor refused attempts are a way round the limit (or round moderation's cost); "check again" is offered for a note's first 4 attempts (the hourly re-check carries on for a week).
 - **Stored decisions, fail-closed** ([ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md)): a note is stored pending, then judged; approved notes become public, refused ones stay visible to their author only (with the reason), and a note with no verdict stays pending (author only, "check again", and the 15-minute cron) instead of being lost. Every attempt is appended to `moderation_decisions`. Before the model sees a note, its text is normalised (Unicode compatibility forms folded, invisible characters removed); look-alike letters from other scripts, leetspeak and spacing are left to the model, a known limit.
-- **AI moderation** ([`service/moderation.ts`](service/moderation.ts), [ADR-0006](docs/adr/0006-ai-moderation-before-publishing.md)): every new Post's plain text is judged by `anthropic/claude-haiku-4.5` through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) (AI SDK 7, structured output, temperature 0, 8 s timeout) against `MODERATION_POLICY`, written in plain language in that file: no insults, harassment or hate, and on topic (Taylor, her music, Eras, tours, the fandom), judged leniently. The Post is passed as delimited, untrusted data. A refused Post is not stored: 422 `{ category: "insult" | "off_topic", message }`, which the composer writes on the note, keeping the text. No verdict in time (Gateway down, timeout) is 503 "try again", nothing stored. On Vercel the Gateway authenticates with the deployment's OIDC token; the Vercel team (Le Bon Tempérament) needs paid AI Gateway credits, since the free tier refuses this model. The Playwright suite and CI set `SWIFTTER_MODERATION=fake` (never honoured on a Vercel deployment): Posts containing `fake-insult`, `fake-off-topic` or `fake-moderation-down` are refused or fail, the rest are allowed. To check the policy against the real model, `npm run moderation:check` (opt-in, not in CI) moderates a handful of sample Posts and prints the verdicts; it needs `AI_GATEWAY_API_KEY`, or a `VERCEL_OIDC_TOKEN` from `npx vercel env pull --scope le-bon-temperament`, in `.env.local`.
+- **AI moderation** ([`service/moderation.ts`](service/moderation.ts), [ADR-0006](docs/adr/0006-ai-moderation-before-publishing.md)): every new Post's plain text is judged by `anthropic/claude-haiku-4.5` through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) (AI SDK 7, structured output, temperature 0, 8 s timeout) against `MODERATION_POLICY`, written in plain language in that file: no insults, harassment or hate, and on topic (Taylor, her music, Eras, tours, the fandom), judged leniently. The Post is passed as delimited, untrusted data. A refused Post is stored for its author only (see "Stored decisions" above): 422 `{ category: "insult" | "off_topic", message }`, which the composer writes on the note. No verdict in time (Gateway down, timeout) keeps the note pending: 202, checked again later. On Vercel the Gateway authenticates with the deployment's OIDC token; the Vercel team (Le Bon Tempérament) needs paid AI Gateway credits, since the free tier refuses this model. The Playwright suite and CI set `SWIFTTER_MODERATION=fake` (never honoured on a Vercel deployment): Posts containing `fake-insult`, `fake-off-topic` or `fake-moderation-down` are refused or fail, the rest are allowed. To check the policy against the real model, `npm run moderation:check` (opt-in, not in CI) moderates a handful of sample Posts and prints the verdicts; it needs `AI_GATEWAY_API_KEY`, or a `VERCEL_OIDC_TOKEN` from `npx vercel env pull --scope le-bon-temperament`, in `.env.local`.
 
 ## Database
 
@@ -102,15 +120,17 @@ Swiftter's schema lives in [`db/schema.ts`](db/schema.ts): `members` (keyed by N
 | `POST`/`DELETE /api/swiftter/posts/[id]/reshare` | Reshare someone else's public Post, or undo it: 201/204; 422 your own, 409 already, 404 not public. |
 | `POST /api/swiftter/posts/[id]/check` | "Check again" on your pending note (at most 4 moderation attempts in all). |
 | `GET /api/swiftter/me` | Your held notes (pending or refused, with reasons) and what you reshare: session only, `no-store`. |
-| `GET /api/cron/moderation` | Vercel Cron (every 15 minutes, `vercel.json`): re-checks pending notes with backoff; needs `Authorization: Bearer $CRON_SECRET`. |
+| `DELETE /api/swiftter/me` | Delete your account: your notes torn up, your reshares and your Neon Auth account deleted, signed out; 204. From `/guestbook`. |
+| `GET /api/swiftter/me/export` | Your data as a JSON download (account, notes in every state, reshares, moderation decisions): session only, `no-store`. |
+| `GET /api/cron/moderation` | Vercel Cron (hourly, `vercel.json`): re-checks pending notes (every run for a day, then daily, given up after a week), and once a day purges what is past retention (30 days); needs `Authorization: Bearer $CRON_SECRET`. |
 
-Every write goes through [`lib/member-write.ts`](lib/member-write.ts): same-origin only (403), JSON only (415), signed in (401, or 503 when Neon Auth fails), BotID (403); then ownership and visibility in SQL (404). Threads have their own page, `/swiftter/p/[id]` (server-rendered, with `DiscussionForumPosting` structured data; demo, seed and torn-up notes are `noindex`).
+Every write goes through [`lib/member-write.ts`](lib/member-write.ts): same-origin only (403), JSON only (415), signed in (401, or 503 when Neon Auth fails), BotID (403); then ownership and visibility in SQL (404). Threads have their own page, `/swiftter/p/[id]` (server-rendered, with `DiscussionForumPosting` structured data; demo, seed and torn-up notes, and threads below the indexing bar, are `noindex`).
 
-Every database command uses `DATABASE_URL` (read from `.env.local` when it is not already set in the environment). There are two long-lived Neon branches: **production** (Vercel's Production environment) and **`dev`** (Preview and Development: every preview deployment and local work). `.env.local` points at `dev`: `npx vercel env pull .env.local --environment=development --scope le-bon-temperament --project taylorssecretgarden` gives it, plus `NEON_API_KEY` added by hand for the scripts that talk to Neon's API.
+Every database command uses `DATABASE_URL` (read from `.env.local` when it is not already set in the environment). There are two long-lived Neon branches: **production** (Vercel's Production environment) and **`dev`** (Preview and Development: every preview deployment and local work). `.env.local` points at `dev`: `npx vercel env pull .env.local --environment=development --scope le-bon-temperament --project taylorssecretgarden` gives it.
 
 **Production's credentials are on no laptop.** Its `DATABASE_URL` is a Sensitive variable in Vercel (write-only: builds and functions get it, nobody can read it back) and otherwise lives only in Neon. Production migrations run in the **Migrate production** workflow ([`.github/workflows/migrate-production.yml`](.github/workflows/migrate-production.yml)): Actions → Migrate production → Run workflow, pick the branch whose migrations to apply (usually `dev`, before merging a release) and type `production`. It fetches the connection string from Neon's API for the run, masked in the log. Apply a migration to `dev` first (`npm run db:migrate` locally); its reverse lives in `drizzle/down/`.
 
-Neon Auth keeps the Members' accounts (users, sessions) in the `neon_auth` schema of the same database. It belongs to Neon: `drizzle.config.ts` limits drizzle-kit to `public`, and nothing in the app writes to `neon_auth` except through `/api/auth`.
+Neon Auth keeps the Members' accounts (users, sessions) in the `neon_auth` schema of the same database. It belongs to Neon: `drizzle.config.ts` limits drizzle-kit to `public`, and nothing in the app writes to `neon_auth` except through `/api/auth`, with one exception: a Member deleting their account deletes their own `neon_auth."user"` row (Neon Auth's hosted `delete-user` is disabled; [ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md)).
 
 ```bash
 npm run db:migrate   # apply the SQL migrations in drizzle/
@@ -118,6 +138,19 @@ npm run db:seed      # insert the demo Members and Posts (safe to re-run)
 npm run db:unseed    # show the demo rows; add `-- --yes` to delete them
 npm run db:generate  # after editing db/schema.ts: write a new migration to drizzle/, then commit it
 ```
+
+### Backups
+
+The **Backup production** workflow ([`.github/workflows/backup-production.yml`](.github/workflows/backup-production.yml)) runs every Monday (and by hand: Actions → Backup production → Run workflow). It fetches production's connection string from Neon's API like Migrate production, runs `pg_dump` at the project's Postgres major version, encrypts the dump with [`age`](https://github.com/FiloSottile/age) and keeps it 30 days as the run's artifact. The repository is public, so anyone can download its artifacts: the dump is only ever uploaded encrypted, and the job fails if no key is set.
+
+One-time setup, by the owner:
+
+1. Make a key pair on your own machine: `age-keygen -o garden-backup.key`. It prints the public key (`age1…`).
+2. Keep `garden-backup.key` (the private key) offline, e.g. in a password manager and on a USB stick: not in the repository, not in GitHub, not in Vercel. Without it no backup can be opened.
+3. Set the public key as a repository variable: Settings → Secrets and variables → Actions → Variables → `BACKUP_AGE_RECIPIENT` = `age1…` (or `gh variable set BACKUP_AGE_RECIPIENT --body age1…`).
+4. Run the workflow once by hand and check it succeeds.
+
+To restore: download the artifact, `age --decrypt -i garden-backup.key -o production.dump production-….dump.age`, then `pg_restore --no-owner --dbname=<a new Neon branch's URL> production.dump` (restore into a new branch first, never straight over production).
 
 ## Seeding
 

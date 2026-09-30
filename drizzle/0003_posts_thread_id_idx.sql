@@ -1,0 +1,1 @@
+CREATE INDEX "posts_thread_id_idx" ON "posts" USING btree ("thread_id","created_at","id") WHERE "posts"."published_at" is not null;

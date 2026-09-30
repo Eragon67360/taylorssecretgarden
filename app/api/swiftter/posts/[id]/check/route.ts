@@ -1,5 +1,6 @@
 import { memberWrite } from "@/lib/member-write";
 import { errorResponse, outcomeResponse } from "@/lib/swiftter-responses";
+import { feedChanged } from "@/service/feed-cache";
 import { checkAgain } from "@/service/swiftter";
 
 type Context = { params: Promise<{ id: string }> };
@@ -14,7 +15,11 @@ export function POST(request: Request, { params }: Context) {
 		request,
 		async (writer) => {
 			try {
-				return outcomeResponse(await checkAgain(writer.id, (await params).id));
+				const outcome = await checkAgain(writer.id, (await params).id);
+
+				if (outcome.status === "approved") feedChanged();
+
+				return outcomeResponse(outcome);
 			} catch (error) {
 				return errorResponse(error, "Checking your note");
 			}

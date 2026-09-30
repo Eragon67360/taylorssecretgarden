@@ -7,6 +7,13 @@
 /** A Member as a note shows them. */
 export type Author = { id: string; displayName: string; username: string | null; avatarUrl: string | null };
 
+/**
+ * A torn-up note's author, as a thread shows it: nobody. Tearing a note up
+ * takes the Member's name off it too, in the page, its structured data and
+ * the thread's JSON alike.
+ */
+export const NO_AUTHOR: Author = { id: "", displayName: "", username: null, avatarUrl: null };
+
 /** A public Post, as the feed and a thread show it. */
 export type FeedPost = {
 	id: string;
@@ -37,8 +44,8 @@ export type FeedPage = { items: FeedItem[]; nextCursor: string | null };
 /** Where a note stands with moderation. Only approved notes are public. */
 export type NoteStatus = "pending" | "approved" | "blocked";
 
-/** Why moderation refused a note. */
-export type RefusalCategory = "insult" | "off_topic";
+/** Why moderation refused a note: unkind, not safe to share (personal details, scams, sexual or illegal content, full lyrics), or off-topic. */
+export type RefusalCategory = "insult" | "restricted" | "off_topic";
 
 /** One of the signed-in Member's own notes that is not public: waiting for a check, or refused. */
 export type HeldNote = {
@@ -52,15 +59,23 @@ export type HeldNote = {
 	attempts: number;
 	/** Whether "check again" is still allowed. */
 	canCheckAgain: boolean;
+	/**
+	 * Moderation could not be reached for a whole week (MODERATION_RETRY), so
+	 * the scheduled re-check gave up on it: it will never be published as it is.
+	 */
+	givenUp: boolean;
 	createdAt: string;
 	/** For a reply: its thread's first Post. */
 	rootId: string | null;
+	/** For a reply: the note it answers, where its thread shows it. */
+	parentId: string | null;
 };
 
 /** A note in a thread: public, or torn up (text gone) but kept so the replies under it still read. */
 export type ThreadNote = {
 	id: string;
 	parentId: string | null;
+	/** NO_AUTHOR once torn up. */
 	author: Author;
 	/** Sanitised HTML; empty when torn up. */
 	content: string;
@@ -75,7 +90,7 @@ export type Thread = {
 	root: ThreadNote;
 	replies: ThreadNote[];
 	reshareCount: number;
-	/** Whether search engines may index it: a real Member's Post, not demo or seed content, not torn up. */
+	/** Whether search engines may index it: a real Member's Post, not demo or seed content, not torn up, meeting the indexing bar (service/swiftter.ts). */
 	indexable: boolean;
 };
 
@@ -91,8 +106,20 @@ export const LIMITS = {
 
 export type LimitedWrite = keyof typeof LIMITS;
 
-/** Moderation attempts per note, "check again" and the scheduled re-check included. */
+/**
+ * Moderation attempts after which "check again" is no longer offered (every
+ * attempt counts, the scheduled re-check's too). The scheduled re-check itself
+ * is not capped by it: it follows MODERATION_RETRY.
+ */
 export const MAX_MODERATION_ATTEMPTS = 4;
+
+/**
+ * How long the scheduled re-check (hourly, vercel.json) keeps trying a note
+ * that moderation gave no verdict for: at every run for its first day, then
+ * once a day, then one last time a week after it was written. Only then is it
+ * given up on, and its author told; an outage of a few hours strands nothing.
+ */
+export const MODERATION_RETRY = { hourlyForHours: 24, days: 7 } as const;
 
 /** Visible characters in a string, as a reader counts them. */
 export function characterCount(text: string): number {

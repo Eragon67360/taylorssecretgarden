@@ -55,16 +55,24 @@ export function Hero() {
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-x-8 gap-y-5">
-            {/* A luggage tag, punched and strung. */}
+            {/*
+              A luggage tag, punched and strung. The tag's shape is a layer
+              behind the link: clipped on the link itself, it would cut off
+              the focus outline too. Its shadow is a drop-shadow on a wrapper,
+              since a clip also cuts off the clipped element's own shadow.
+            */}
             <IntentLink
               className={cn(
-                "group bg-accent text-on-accent focus-ring relative inline-flex min-h-12 items-center gap-3 py-3.5 pr-6 pl-9 text-[15px] font-bold tracking-wide",
-                "rounded-[4px] [clip-path:polygon(14px_0,100%_0,100%_100%,14px_100%,0_50%)]",
-                "shadow-[0_2px_0_rgba(0,0,0,.15),0_8px_18px_-8px_rgba(60,20,20,.5)] transition-transform duration-200 ease-out",
+                "group text-on-accent focus-ring relative isolate inline-flex min-h-12 items-center gap-3 rounded-[4px] py-3.5 pr-6 pl-9 text-[15px] font-bold tracking-wide",
+                "transition-transform duration-200 ease-out",
                 "motion-safe:hover:-translate-y-0.5 motion-safe:hover:-rotate-2 motion-safe:active:scale-[.97]",
               )}
+              data-tag-link=""
               href="/music"
             >
+              <span aria-hidden="true" className="absolute inset-0 -z-10 [filter:drop-shadow(0_2px_0_rgba(0,0,0,.15))_drop-shadow(0_8px_9px_rgba(60,20,20,.35))]">
+                <span className="bg-accent absolute inset-0 rounded-[4px] [clip-path:polygon(14px_0,100%_0,100%_100%,14px_100%,0_50%)]" data-tag-shape="" />
+              </span>
               <span aria-hidden="true" className="bg-paper absolute top-1/2 left-[14px] size-2.5 -translate-y-1/2 rounded-full" />
               Open the music journal
               <span aria-hidden="true" className="transition-transform duration-200 ease-out motion-safe:group-hover:translate-x-1">

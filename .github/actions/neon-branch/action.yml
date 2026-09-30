@@ -1,0 +1,125 @@
+# A Neon branch for one CI job (database + Neon Auth, docs/adr/0004), created
+# from production, migrated and seeded, with DATABASE_URL and
+# NEON_AUTH_BASE_URL exported to the job's later steps. It expires after two
+# hours; the job deletes it sooner with ./.github/actions/neon-branch/delete
+# (a composite action has no post step to do it here).
+#
+# Creation is retried with backoff (30 s, 60 s, 120 s): the free plan caps the
+# project's branches, and while other runs hold them Neon answers 422. Every
+# attempt asks for the same branch name, and create-branch-action returns an
+# existing branch of that name instead of failing, so an attempt that got as
+# far as creating it is picked up, not duplicated. The branch_id output comes
+# from whichever attempt succeeded, so the delete step finds it after a retry.
+#
+# Needs `npm ci` to have run (migrate and seed are npm scripts).
+name: Neon branch for CI
+description: Creates, migrates and seeds a Neon branch for this job, retrying while the project is at its branch limit.
+
+inputs:
+  api_key:
+    description: Neon API key (secrets.NEON_API_KEY)
+    required: true
+  project_id:
+    description: Neon project (vars.NEON_PROJECT_ID)
+    required: true
+  branch_name:
+    description: The branch's name, unique to this run and job
+    required: true
+  cookie_secret:
+    description: Neon Auth's cookie secret (secrets.NEON_AUTH_COOKIE_SECRET); the seed's write guard wants it
+    required: true
+
+outputs:
+  branch_id:
+    description: The branch's ID, for the delete step
+    value: ${{ steps.try1.outputs.branch_id || steps.try2.outputs.branch_id || steps.try3.outputs.branch_id || steps.try4.outputs.branch_id }}
+
+runs:
+  using: composite
+  steps:
+    - name: Branch expiry
+      id: expiry
+      shell: bash
+      run: echo "at=$(date -u -d '+2 hours' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+    # Third-party actions that receive a secret are pinned by commit (the
+    # comment says which release); Dependabot keeps the pin current.
+    - name: Create the branch
+      id: try1
+      continue-on-error: true
+      uses: neondatabase/create-branch-action@fb620d43d4c565abaf088b848a4e28e5c4ea4d9c # v6.3.1
+      with:
+        api_key: ${{ inputs.api_key }}
+        project_id: ${{ inputs.project_id }}
+        branch_name: ${{ inputs.branch_name }}
+        expires_at: ${{ steps.expiry.outputs.at }}
+        get_auth_url: true
+
+    - name: Wait 30 s (Neon at its branch limit?)
+      if: steps.try1.outcome == 'failure'
+      shell: bash
+      run: sleep 30
+
+    - name: Create the branch (2nd attempt)
+      id: try2
+      if: steps.try1.outcome == 'failure'
+      continue-on-error: true
+      uses: neondatabase/create-branch-action@fb620d43d4c565abaf088b848a4e28e5c4ea4d9c # v6.3.1
+      with:
+        api_key: ${{ inputs.api_key }}
+        project_id: ${{ inputs.project_id }}
+        branch_name: ${{ inputs.branch_name }}
+        expires_at: ${{ steps.expiry.outputs.at }}
+        get_auth_url: true
+
+    - name: Wait 60 s
+      if: steps.try2.outcome == 'failure'
+      shell: bash
+      run: sleep 60
+
+    - name: Create the branch (3rd attempt)
+      id: try3
+      if: steps.try2.outcome == 'failure'
+      continue-on-error: true
+      uses: neondatabase/create-branch-action@fb620d43d4c565abaf088b848a4e28e5c4ea4d9c # v6.3.1
+      with:
+        api_key: ${{ inputs.api_key }}
+        project_id: ${{ inputs.project_id }}
+        branch_name: ${{ inputs.branch_name }}
+        expires_at: ${{ steps.expiry.outputs.at }}
+        get_auth_url: true
+
+    - name: Wait 120 s
+      if: steps.try3.outcome == 'failure'
+      shell: bash
+      run: sleep 120
+
+    - name: Create the branch (last attempt)
+      id: try4
+      if: steps.try3.outcome == 'failure'
+      uses: neondatabase/create-branch-action@fb620d43d4c565abaf088b848a4e28e5c4ea4d9c # v6.3.1
+      with:
+        api_key: ${{ inputs.api_key }}
+        project_id: ${{ inputs.project_id }}
+        branch_name: ${{ inputs.branch_name }}
+        expires_at: ${{ steps.expiry.outputs.at }}
+        get_auth_url: true
+
+    - name: Point the app at the branch
+      shell: bash
+      env:
+        DB_URL: ${{ steps.try1.outputs.db_url_pooled || steps.try2.outputs.db_url_pooled || steps.try3.outputs.db_url_pooled || steps.try4.outputs.db_url_pooled }}
+        AUTH_URL: ${{ steps.try1.outputs.auth_url || steps.try2.outputs.auth_url || steps.try3.outputs.auth_url || steps.try4.outputs.auth_url }}
+      run: |
+        test -n "$DB_URL" || { echo "::error::No connection string for the CI branch"; exit 1; }
+        test -n "$AUTH_URL" || { echo "::error::Neon Auth is not enabled on the CI branch"; exit 1; }
+        echo "DATABASE_URL=$DB_URL" >> "$GITHUB_ENV"
+        echo "NEON_AUTH_BASE_URL=$AUTH_URL" >> "$GITHUB_ENV"
+
+    - name: Migrate and seed the branch
+      # The demo content, then the development fixtures (scripts/seed.ts: accounts,
+      # three feed pages, threads, reshares, every moderation state).
+      shell: bash
+      env:
+        NEON_AUTH_COOKIE_SECRET: ${{ inputs.cookie_secret }}
+      run: npm run db:migrate && npm run db:seed && npm run seed

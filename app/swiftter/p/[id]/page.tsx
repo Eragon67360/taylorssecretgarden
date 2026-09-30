@@ -2,14 +2,19 @@ import type { Metadata } from "next";
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { ThreadView } from "@/components/swiftter/thread-view";
 import { siteConfig } from "@/config/site";
 import { isIndexable } from "@/lib/indexing";
+import { pageMetadata } from "@/lib/metadata";
 import { postPlainText } from "@/service/post-html";
-import { getThread } from "@/service/swiftter";
+import { getThread as readThread } from "@/service/swiftter";
 
 type ThreadPageProps = { params: Promise<{ id: string }> };
+
+// The metadata and the page read the thread once per request, not twice.
+const getThread = cache(readThread);
 
 /** A note's text, shortened for a description. */
 function excerpt(html: string, length = 155): string {
@@ -29,14 +34,13 @@ export async function generateMetadata({ params }: ThreadPageProps): Promise<Met
 	const canonical = `/swiftter/p/${root.id}`;
 
 	return {
-		title,
-		description,
-		alternates: { canonical },
-		// Demo, seed and torn-up notes are never indexed (docs/adr/0007); outside
-		// production the layout already keeps everything out (lib/indexing.ts).
-		robots: isIndexable() && !thread.indexable ? { index: false, follow: true } : undefined,
-		openGraph: { type: "article", title, description, url: canonical, publishedTime: root.publishedAt },
-		twitter: { card: "summary_large_image", title, description },
+		// The Swiftter layout's template adds the site's name; the card and site name are the site's.
+		...pageMetadata({ title, description, path: canonical, article: { publishedTime: root.publishedAt } }),
+		// Demo, seed and torn-up notes are never indexed (docs/adr/0007), nor a
+		// thread below the indexing bar (service/swiftter.ts); outside production
+		// the layout already keeps everything out (lib/indexing.ts): a `robots`
+		// key here, even undefined, would replace the layout's noindex.
+		...(isIndexable() && !thread.indexable && { robots: { index: false, follow: true } }),
 	};
 }
 
@@ -59,7 +63,8 @@ export default async function ThreadPage({ params }: ThreadPageProps) {
 		url,
 		headline: thread.root.tornUp ? "A torn-up note" : excerpt(thread.root.content, 110),
 		text: thread.root.tornUp ? undefined : postPlainText(thread.root.content),
-		author: person(thread.root.author.displayName),
+		// A torn-up note has no author any more (NO_AUTHOR).
+		author: thread.root.tornUp ? undefined : person(thread.root.author.displayName),
 		datePublished: thread.root.publishedAt,
 		isPartOf: { "@type": "WebPage", url: `${siteConfig.url}/swiftter`, name: "Swiftter" },
 		commentCount: thread.replies.filter((reply) => !reply.tornUp).length,

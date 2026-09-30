@@ -1,41 +1,29 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import * as m from "motion/react-m";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 import { IntentLink } from "@/components/intent-link";
 import { GardenMark } from "@/components/garden-mark";
+import MemberMenu from "@/components/member-menu";
 import { Scribble } from "@/components/scrapbook";
 import { afterLoad } from "@/lib/after-load";
-import { isAuthClientLoaded, mayBeMember, subscribeAuthClientLoaded } from "@/lib/auth/member-hint";
+import { currentMember, getSessionMember, subscribeMember } from "@/lib/auth/member-hint";
 import { cn } from "@/lib/utils";
 
-// Sign-out for Members. Once the page has loaded and gone idle, one small
-// request asks whether anyone is signed in; only then does Neon Auth's client
-// load. Visitors (and first paint) never wait for it. A page that loads the
-// client itself (a sign-in form) shows the menu straight away, so it appears
-// as soon as someone signs in there.
-const MemberMenu = dynamic(() => import("@/components/member-menu"), { ssr: false });
-
+// Sign-out for Members. Once the page has loaded and gone idle, the page's one
+// session request (shared with Swiftter, lib/auth/member-hint.ts) says whether
+// anyone is signed in; visitors (and first paint) never wait for it. Signing
+// in or out on the page shows or hides the menu straight away.
 function LazyMemberMenu() {
-  const [member, setMember] = useState(false);
-  const clientLoaded = useSyncExternalStore(subscribeAuthClientLoaded, isAuthClientLoaded, () => false);
+  const member = useSyncExternalStore(subscribeMember, currentMember, () => undefined);
 
   useEffect(() => {
-    let current = true;
-
-    afterLoad()
-      .then(mayBeMember)
-      .then((maybe) => current && setMember(maybe));
-
-    return () => {
-      current = false;
-    };
+    afterLoad().then(getSessionMember);
   }, []);
 
-  return member || clientLoaded ? <MemberMenu /> : null;
+  return member ? <MemberMenu user={member} /> : null;
 }
 
 /** The site's sections, each an index tab in its own pastel. */

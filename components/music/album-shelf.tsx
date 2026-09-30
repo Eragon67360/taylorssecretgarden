@@ -31,7 +31,7 @@ type AlbumShelfProps = {
  * Every Album as a polaroid on a shelf: one row that scrolls (and snaps)
  * sideways on small screens. A Taylor's Version leans on its original and
  * carries a handwritten tag. Each polaroid links to its Album's page
- * (`?album=<id>`); followed in the same tab, it selects the Album in place.
+ * (its canonical address); followed in the same tab, it selects the Album in place.
  */
 export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -69,7 +69,7 @@ export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
                     ? "z-10 -translate-y-2 scale-[1.06] shadow-[0_1px_1px_rgba(0,0,0,.1),0_18px_26px_-12px_rgba(0,0,0,.6)]"
                     : "motion-safe:hover:-translate-y-1.5 motion-safe:hover:rotate-0!",
                 )}
-                href={`/music?album=${album.id}`}
+                href={album.path}
                 scroll={false}
                 style={{ rotate: active ? "0deg" : `${TILTS[index % TILTS.length]}deg` }}
                 onNavigate={(event) => {
@@ -79,14 +79,19 @@ export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
                 }}
               >
                 {active && <Pin className="-top-2 left-1/2 -translate-x-1/2" />}
-                <Image
-                  alt=""
-                  className="aspect-square w-full object-cover"
-                  height={120}
-                  sizes="(min-width: 1024px) 130px, 96px"
-                  src={album.images[0].url}
-                  width={120}
-                />
+                {album.images[0] ? (
+                  <Image
+                    alt=""
+                    className="aspect-square w-full object-cover"
+                    height={120}
+                    sizes="(min-width: 1024px) 130px, 96px"
+                    src={album.images[0].url}
+                    width={120}
+                  />
+                ) : (
+                  // Deezer failed this Album (components/music/catalogue.ts): a blank photo, same size.
+                  <span aria-hidden="true" className="bg-line block aspect-square w-full" />
+                )}
                 <span aria-hidden="true" className="font-hand block truncate py-1 text-center text-[17px] leading-tight font-bold text-[var(--photo-ink)]">
                   {look.short}
                 </span>

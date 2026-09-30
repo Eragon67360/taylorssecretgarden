@@ -21,7 +21,7 @@ import { Providers } from "./providers";
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: `${siteConfig.name}: a Swiftie's scrapbook`,
+    default: `${siteConfig.name}: a Taylor Swift fan scrapbook`,
     template: `%s · ${siteConfig.name}`,
   },
   description: siteConfig.description,

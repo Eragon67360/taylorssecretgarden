@@ -33,6 +33,29 @@ test.describe("Home", () => {
 		await expect(page.getByRole("img", { name: /Stamp: This is NOT Taylor's Version/i })).toBeVisible();
 	});
 
+	test("the luggage-tag link to Music shows its keyboard focus in full: no clip on the link, an ink outline", async ({ page }) => {
+		await page.goto("/");
+
+		const cta = page.getByRole("link", { name: /Open the music journal/ });
+
+		// A key press first, so the focus that follows is keyboard focus (:focus-visible).
+		await page.keyboard.press("Shift");
+		await cta.focus();
+		await expect(cta).toBeFocused();
+		const style = await cta.evaluate((link) => {
+			const { clipPath, outlineStyle, outlineWidth, outlineColor } = getComputedStyle(link);
+
+			return { clipPath, outlineStyle, outlineWidth: parseFloat(outlineWidth), outlineColor, ink: getComputedStyle(document.body).color };
+		});
+
+		// The tag's shape is clipped on a decorative layer behind the link, not on the link.
+		expect(style.clipPath).toBe("none");
+		expect(style.outlineStyle).toBe("solid");
+		expect(style.outlineWidth).toBeGreaterThanOrEqual(2);
+		expect(style.outlineColor).toBe(style.ink);
+		await expect(cta.locator("[data-tag-shape]")).toHaveCSS("clip-path", /polygon/);
+	});
+
 	test("the taped photo, the first screen's largest picture, is fetched first and sized for the screen", async ({ page }) => {
 		await page.goto("/");
 
@@ -106,7 +129,8 @@ test.describe("Home", () => {
 
 		await expect(eras).toHaveCount(12);
 		for (let index = 0; index < 12; index++) {
-			await expect(eras.nth(index)).toHaveAttribute("href", /^\/music\?album=\d+$/);
+			// At its canonical address: the debut's is /music itself.
+			await expect(eras.nth(index)).toHaveAttribute("href", index === 0 ? "/music" : /^\/music\?album=\d+$/);
 		}
 		// Taylor's Version Albums stand for their original's Era.
 		await expect(gallery(page).getByRole("link", { name: /Fearless/ })).toHaveAttribute("href", "/music?album=221543452");

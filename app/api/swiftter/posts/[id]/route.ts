@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { memberWrite } from "@/lib/member-write";
 import { errorResponse } from "@/lib/swiftter-responses";
+import { feedChanged } from "@/service/feed-cache";
 import { deletePost } from "@/service/swiftter";
 
 type Context = { params: Promise<{ id: string }> };
@@ -18,6 +19,7 @@ export function DELETE(request: Request, { params }: Context) {
 		async (writer) => {
 			try {
 				await deletePost(writer.id, (await params).id);
+				feedChanged();
 
 				return new NextResponse(null, { status: 204 });
 			} catch (error) {
