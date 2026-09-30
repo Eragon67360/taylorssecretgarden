@@ -902,6 +902,37 @@ test.describe("Swiftter, replies and reshares", () => {
 		await fanPage.close();
 	});
 
+	test("a Member's held reply shows on its thread after a reload, with check again and tear up", async ({ page, browser }) => {
+		await page.goto("/swiftter");
+		const { note } = (await (await write(page, `<p>hold on ${Date.now()}</p>`)).json()) as { note: FeedPost };
+		const replier = await openAs(browser, fan);
+		const text = `${MARKER.down} held reply ${Date.now()}`;
+
+		expect((await write(replier.page, `<p>${text}</p>`, note.id)).status()).toBe(202);
+		await replier.page.goto(`/swiftter/p/${note.id}`);
+		const held = replier.page.getByRole("article", { name: /Your reply, waiting for a check/ });
+
+		await expect(held).toContainText(text);
+		await expect(replier.page.getByText("Only you can see this reply: it's waiting for a check.")).toBeVisible();
+		await expect(held.getByRole("button", { name: "check again" })).toBeVisible();
+		await expectNoAxeViolations(replier.page);
+
+		// Nobody else sees it: not its thread's author.
+		await page.goto(`/swiftter/p/${note.id}`);
+		await expect(page.getByRole("heading", { level: 2, name: "No replies yet" })).toBeVisible();
+		await expect(page.getByText(text)).toHaveCount(0);
+
+		await held.getByRole("button", { name: /tear up your note/ }).click();
+		await replier.page.getByRole("dialog").getByRole("button", { name: "Tear it up" }).click();
+		await expect(held).toHaveCount(0);
+		// The keyboard goes back to the note it answered.
+		await expect(replier.page.locator(`[id="note-${note.id}"]`)).toBeFocused();
+		await replier.page.reload();
+		await expect(replier.page.getByRole("heading", { level: 2, name: "No replies yet" })).toBeVisible();
+		await expect(replier.page.getByText(text)).toHaveCount(0);
+		await replier.close();
+	});
+
 	test("on a thread, a reshare pressed before the Member's own view arrives stays pressed", async ({ page, browser }) => {
 		await page.goto("/swiftter");
 		const { note } = (await (await write(page, `<p>Reshare me quickly ${Date.now()}</p>`)).json()) as { note: FeedPost };

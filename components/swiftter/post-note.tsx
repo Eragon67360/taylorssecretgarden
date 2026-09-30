@@ -78,8 +78,8 @@ export function PostNote({ post, paper, onDelete, footer, banner, id, position }
       aria-posinset={position?.at}
       aria-setsize={position?.of}
       className="focus-ring relative drop-shadow-[0_10px_12px_rgba(40,20,10,.18)]"
-      style={{ rotate: `${look.tilt}deg`, color: look.ink }}
       id={id}
+      style={{ rotate: `${look.tilt}deg`, color: look.ink }}
       // Not in the tab order; focus lands here when an action takes away what the Member was on.
       tabIndex={-1}
     >

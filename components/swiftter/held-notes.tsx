@@ -83,7 +83,7 @@ export function HeldNoteCard({ note, checking, onCheckAgain, onTearUp, inThread 
         </p>
         <p className="text-soft text-[13px]">
           {inThread ? (
-            "Only you can see this reply"
+            "your reply"
           ) : note.rootId ? (
             <Link className="focus-ring rounded-sm underline" href={`/swiftter/p/${note.rootId}`}>
               a reply

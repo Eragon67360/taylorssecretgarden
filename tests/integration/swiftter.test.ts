@@ -295,7 +295,10 @@ describe.skipIf(!!skipReason)("Swiftter service against Postgres", () => {
 			const { note: first } = await writeNote(bob, note("reply"), root.id, allow);
 			const { note: second } = await writeNote(cleo, note("reply to the reply"), first.id, allow);
 
-			await writeNote(cleo, note("refused reply"), root.id, refuse());
+			const refused = await writeNote(cleo, note("refused reply"), first.id, refuse());
+
+			// A held reply says where its thread shows it: its root and the note it answers.
+			expect(await listHeld(cleo)).toEqual([expect.objectContaining({ id: refused.note.id, rootId: root.id, parentId: first.id })]);
 
 			const thread = await getThread(second.id);
 

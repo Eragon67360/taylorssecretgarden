@@ -9,7 +9,8 @@ import { toast } from "sonner";
 
 import { displayNameOf } from "@/lib/display-name";
 
-import { writeNote } from "./api";
+import { checkAgain as checkAgainRequest, writeNote } from "./api";
+import { HeldNoteCard } from "./held-notes";
 import { Composer } from "./lazy-composer";
 import { NoteActions } from "./note-actions";
 import { type NotePaper } from "./note-paper";
@@ -21,11 +22,10 @@ import { applyWriteResult, heldElementId, noteElementId, tearUpNote, useFocusAft
 /** Replies indent up to this depth; deeper ones stay at it and say whom they answer. */
 const MAX_INDENT = 4;
 
-/** A reply of the Member's that moderation has not passed (yet): shown to them, under what it answers. */
-type HeldReply = HeldNote & { parentId: string };
-
-const HELD_LABEL: Record<"pending" | RefusalCategory, string> = {
+/** Over a reply of the Member's that moderation has not passed (yet), shown to them under what it answers. */
+const HELD_LABEL: Record<"pending" | "givenUp" | RefusalCategory, string> = {
   pending: "Only you can see this reply: it's waiting for a check.",
+  givenUp: "Only you can see this reply: it couldn't be checked, so it won't be published.",
   insult: "Only you can see this reply: it wasn't passed, it reads as unkind.",
   restricted: "Only you can see this reply: it wasn't passed, it isn't safe to share.",
   off_topic: "Only you can see this reply: it wasn't passed, it's off-topic.",
@@ -42,7 +42,7 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
   const user = session.pending ? null : session.user;
   const [root, setRoot] = useState(thread.root);
   const [replies, setReplies] = useState<ThreadNote[]>(thread.replies);
-  const [held, setHeld] = useState<HeldReply[]>([]);
+  const [checking, setChecking] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [reshareCount, setReshareCount] = useState(thread.reshareCount);
   const [announcement, setAnnouncement] = useState("");
@@ -52,6 +52,9 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
   // What the Member reshares: the same merge as the feed, so a reshare pressed before this answers stays pressed.
   const mine = useMine(user?.id);
   const reshare = useReshare(mine, (_, delta) => setReshareCount((count) => count + delta), setAnnouncement);
+  const { addHeld, dropHeld } = mine;
+  // The Member's held replies in this thread (the feed margin lists them all).
+  const held = mine.held.filter((note) => note.rootId === thread.root.id && note.parentId);
 
   // A link to a reply lands on it.
   useEffect(() => {
@@ -81,7 +84,7 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
           toast.success(`Your reply to ${parent.author.displayName} was passed.`);
         },
         held: (note) => {
-          setHeld((previous) => [...previous.filter((other) => other.id !== note.id), { ...note, parentId: parent.id }]);
+          addHeld(note);
           if (note.status === "pending") focusSoon(heldElementId(note.id));
         },
         announce: (message) => {
@@ -104,6 +107,46 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
 
       return () => replace(note);
     });
+  };
+
+  const tearUpHeld = async (note: HeldNote) => {
+    await tearUpNote(note.id, () => {
+      dropHeld(note.id);
+      // Back to the note it answered.
+      if (note.parentId) focusSoon(noteElementId(note.parentId));
+
+      return () => addHeld(note);
+    });
+  };
+
+  const checkHeld = async (note: HeldNote) => {
+    if (checking) return;
+    setChecking(note.id);
+    const result = await checkAgainRequest(note.id);
+
+    setChecking(null);
+    if (!result.ok) {
+      toast.error(result.message);
+
+      return;
+    }
+    applyWriteResult(result, {
+      approved: (passed) => {
+        dropHeld(note.id);
+        setReplies((previous) => [
+          ...previous,
+          { id: passed.id, parentId: note.parentId, author: passed.author, content: passed.content, tornUp: false, isDemo: false, createdAt: passed.createdAt, publishedAt: passed.publishedAt },
+        ]);
+        focusSoon(noteElementId(passed.id));
+        toast.success("Your reply was checked and passed.");
+      },
+      held: (updated) => {
+        addHeld(updated);
+        if (!updated.canCheckAgain) focusSoon(heldElementId(updated.id));
+      },
+      announce: setAnnouncement,
+    });
+    if (result.status === "blocked") setAnnouncement(result.message);
   };
 
   const signInHref = `/sign-in?redirect_url=${encodeURIComponent(`/swiftter/p/${thread.root.id}`)}`;
@@ -134,14 +177,14 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
       </div>
     ) : null;
 
+  // The Member's own replies in this thread that are not public: after a reload too (/api/swiftter/me), with the feed margin's actions.
   const heldUnder = (note: ThreadNote) =>
     held
       .filter((reply) => reply.parentId === note.id)
       .map((reply) => (
-        <div key={reply.id} className="focus-ring border-pen/50 bg-card mt-5 max-w-[560px] rounded-[3px] border-2 border-dashed px-4 py-3" id={heldElementId(reply.id)} role="status" tabIndex={-1}>
-          <p className="text-pen text-[14.5px] font-bold">{HELD_LABEL[reply.status === "pending" ? "pending" : (reply.category ?? "insult")]}</p>
-          {reply.reason && <p className="text-soft mt-1 text-[14px]">{reply.reason}</p>}
-          <div dangerouslySetInnerHTML={{ __html: reply.content }} className="post-content mt-2 text-[15px]" dir="auto" />
+        <div key={reply.id} className="border-pen/50 bg-card mt-5 max-w-[560px] rounded-[3px] border-2 border-dashed px-4 py-3">
+          <p className="text-pen mb-2 text-[14.5px] font-bold">{HELD_LABEL[reply.givenUp ? "givenUp" : reply.status === "pending" ? "pending" : (reply.category ?? "insult")]}</p>
+          <HeldNoteCard inThread checking={checking} note={reply} onCheckAgain={checkHeld} onTearUp={tearUpHeld} />
         </div>
       ));
 
