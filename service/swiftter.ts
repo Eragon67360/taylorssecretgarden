@@ -3,6 +3,7 @@ import "server-only";
 import { sql } from "drizzle-orm";
 
 import { type Database, getDb } from "@/db/client";
+import { allowedAvatarUrl } from "@/lib/avatar";
 import { displayNameOf } from "@/lib/display-name";
 import { members } from "@/db/schema";
 import {
@@ -116,14 +117,16 @@ export type AuthUser = { id: string; name?: string | null; email: string; image?
 
 /**
  * The Member details of a signed-in person. Neon Auth has no usernames, so a
- * Member's handle is left empty.
+ * Member's handle is left empty. Neon Auth stores names and pictures as
+ * given, so the name is cut to 80 graphemes (displayNameOf) and the picture
+ * kept only when next/image may load it (lib/avatar.ts).
  */
 export function memberFromAuthUser(user: AuthUser): MemberDetails {
 	return {
 		id: user.id,
 		displayName: displayNameOf(user),
 		username: null,
-		avatarUrl: user.image || null,
+		avatarUrl: allowedAvatarUrl(user.image),
 	};
 }
 
@@ -359,11 +362,13 @@ type PostRow = {
 	reshare_count: number;
 };
 
+// Rows stored before avatars were checked may hold a picture next/image
+// refuses (a Clerk avatar): those Members show their initials.
 const authorOf = (row: { author_id: string; display_name: string; username: string | null; avatar_url: string | null }): Author => ({
 	id: row.author_id,
 	displayName: row.display_name,
 	username: row.username,
-	avatarUrl: row.avatar_url,
+	avatarUrl: allowedAvatarUrl(row.avatar_url),
 });
 
 // Every note leaves the server sanitised, including rows written some other
