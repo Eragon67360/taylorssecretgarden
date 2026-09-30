@@ -1,8 +1,10 @@
 import type { Page } from "@playwright/test";
 
+import { existsSync } from "node:fs";
+
 import { PHONE, expectNoAxeViolations, expectNoHorizontalOverflow, expectReducedMotion } from "./checks";
 import { expect, test } from "./fixtures";
-import { newTestMember, readTestMember, writeGuard } from "./member";
+import { MEMBER_STATE, newTestMember, readTestMember, writeGuard } from "./member";
 
 // Sign-in and sign-up are "signing the guestbook": our own forms on a paper
 // card, in the journal's hand, backed by Neon Auth through /api/auth.
@@ -147,8 +149,8 @@ for (const path of [
 }
 
 test.describe("BotID in the browser", () => {
-	// The stubbed refusal below is logged by the browser as a failed request.
-	test.use({ expectedConsoleMessages: [/Failed to load resource: the server responded with a status of 401/] });
+	// The stubbed refusals below are logged by the browser as failed requests.
+	test.use({ expectedConsoleMessages: [/Failed to load resource: the server responded with a status of 4(01|22)/] });
 
 	test("the sign-in form sends BotID's token with the request", async ({ page }) => {
 		let token: string | undefined;
@@ -167,6 +169,73 @@ test.describe("BotID in the browser", () => {
 		await expect(formError(page)).toBeVisible();
 		expect(token, "x-is-human header").toBeTruthy();
 	});
+
+	test("the sign-up form sends BotID's token with the request, and shows Neon Auth's refusal", async ({ page }) => {
+		let token: string | undefined;
+
+		await page.route("**/api/auth/sign-up/email", (route) => {
+			token = route.request().headers()["x-is-human"];
+
+			return route.fulfill({ status: 422, contentType: "application/json", body: JSON.stringify({ code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL", message: "User already exists. Use another email." }) });
+		});
+		await page.goto("/sign-up");
+		await field(page, "Name").fill("Nobody");
+		await field(page, "Email").fill("nobody@example.com");
+		await field(page, "Password").fill("not-a-real-password");
+		await page.getByRole("button", { name: "Sign the guestbook", exact: true }).click();
+
+		await expect(formError(page)).toContainText(/already signed the guestbook/i);
+		expect(token, "x-is-human header").toBeTruthy();
+	});
+});
+
+/** Counts the page's session requests to /api/auth/get-session. */
+function countSessionRequests(page: Page) {
+	const seen: string[] = [];
+
+	page.on("request", (request) => {
+		if (new URL(request.url()).pathname === "/api/auth/get-session") seen.push(request.url());
+	});
+
+	return seen;
+}
+
+/** Once the page has loaded and gone idle, when the header asks who is signed in (components/site-header.tsx). */
+async function settle(page: Page) {
+	await page.waitForLoadState("load");
+	await page.evaluate(() => new Promise<void>((resolve) => requestIdleCallback(() => resolve())));
+	await page.waitForLoadState("networkidle");
+}
+
+// The header and Swiftter both want to know who is signed in: they share one request (lib/auth/member-hint.ts).
+test("a visitor's Swiftter page asks who is signed in once", async ({ page }) => {
+	const sessions = countSessionRequests(page);
+
+	await page.goto("/swiftter");
+	await expect(page.getByRole("link", { name: /sign the guestbook to pass a note/i }).first()).toBeVisible();
+	await settle(page);
+
+	expect(sessions).toHaveLength(1);
+});
+
+test("a Google sign-in coming back is completed by the page's one session request", async ({ page }) => {
+	const sessions = countSessionRequests(page);
+
+	// Neon Auth itself is not part of the test: the exchange is stubbed, answering with a Member.
+	await page.route("**/api/auth/get-session?*", (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: "application/json",
+			body: JSON.stringify({ session: { id: "s" }, user: { id: "u", name: "Google Swiftie", email: "google@example.com" } }),
+		}),
+	);
+	await page.goto("/music?neon_auth_session_verifier=the-verifier");
+
+	await expect(page.getByRole("banner").getByRole("button", { name: "Sign out" })).toBeVisible();
+	await settle(page);
+	expect(sessions).toEqual([expect.stringMatching(/\/api\/auth\/get-session\?neon_auth_session_verifier=the-verifier$/)]);
+	// Done with, the verifier leaves the address bar.
+	await expect(page).toHaveURL(/\/music$/);
 });
 
 // Everything below talks to Neon Auth, so it only runs on a disposable branch.
@@ -186,6 +255,21 @@ test.describe("signing in and out", () => {
 
 		await expect(page).toHaveURL(/\/swiftter$/);
 		await expect(page.getByText("writing as Fresh Swiftie")).toBeVisible();
+	});
+
+	test("a Member's Swiftter page asks who is signed in once", async ({ browser }) => {
+		test.skip(!existsSync(MEMBER_STATE), "The setup project signs up the test Member");
+
+		const context = await browser.newContext({ storageState: MEMBER_STATE });
+		const page = await context.newPage();
+		const sessions = countSessionRequests(page);
+
+		await page.goto("/swiftter");
+		await expect(page.getByText(/^writing as /)).toBeVisible();
+		await expect(page.getByRole("banner").getByRole("button", { name: "Sign out" })).toBeVisible();
+		await settle(page);
+		expect(sessions).toHaveLength(1);
+		await context.close();
 	});
 
 	test("signing up again with a used email says so", async ({ page }) => {

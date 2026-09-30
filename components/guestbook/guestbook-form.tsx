@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useRef, useState } from "react";
 
 import { GOOGLE_ERROR } from "@/components/guestbook/guestbook";
-import { authClient } from "@/lib/auth/client";
+import { type AuthFailure, signInEmail, signInSocial, signUpEmail } from "@/lib/auth/client";
 import { BOT_REFUSAL } from "@/lib/botid-routes";
 import { cn } from "@/lib/utils";
 
@@ -48,16 +48,12 @@ const PAGES = {
 const ALREADY_SIGNED = "That email has already signed the guestbook. Sign in instead.";
 const TOO_MANY_TRIES = "Too many tries in a row. Wait a minute, then try again.";
 
-type AuthFailure = { code?: string; message?: string; status?: number };
-
 /**
- * What went wrong, in the journal's voice. Neon Auth's client throws its
- * `AuthApiError` (codes like `invalid_credentials`) or returns Better Auth's
- * `{ error }` (codes like `INVALID_EMAIL_OR_PASSWORD`); both are read here.
+ * What went wrong, in the journal's voice. Neon Auth answers with Better
+ * Auth's codes (`INVALID_EMAIL_OR_PASSWORD`, `USER_ALREADY_EXISTS`…); the
+ * lower-case ones are Neon Auth's own names for the same failures.
  */
-function describeError(failure: unknown): string {
-  const { code = "", message = "", status } = (failure ?? {}) as AuthFailure;
-
+function describeError({ code = "", message = "", status }: AuthFailure): string {
   switch (code.toLowerCase()) {
     case "invalid_credentials":
     case "invalid_email_or_password":
@@ -113,14 +109,13 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
 
     setPending("email");
     setError(null);
-    const { error: failure } = await (
+    const { error: failure } =
       mode === "sign-up"
-        ? authClient.signUp.email({ name: String(form.get("name") ?? "").trim(), email, password })
-        : authClient.signIn.email({ email, password })
-    ).catch((thrown: unknown) => ({ error: thrown }));
+        ? await signUpEmail({ name: String(form.get("name") ?? "").trim(), email, password })
+        : await signInEmail({ email, password });
 
     if (failure) {
-      const { status = 0 } = failure as AuthFailure;
+      const { status } = failure;
 
       setError(describeError(failure));
       // Only a refused email or password marks the fields: not a rate limit, nor BotID (403).
@@ -142,15 +137,13 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
     setFieldsInvalid(false);
     const here = window.location.origin;
     // On success the browser leaves for Google, and Neon Auth brings it back to callbackURL.
-    const { error: failure } = await authClient.signIn
-      .social({
-        provider: "google",
-        callbackURL: new URL(redirectTo, here).href,
-        // Back to this page, still headed for the same place; Neon Auth adds `?error=…`
-        // (see guestbookError in components/guestbook/guestbook.tsx).
-        errorCallbackURL: new URL(`${copy.path}?redirect_url=${encodeURIComponent(redirectTo)}`, here).href,
-      })
-      .catch((thrown: unknown) => ({ error: thrown }));
+    const { error: failure } = await signInSocial({
+      provider: "google",
+      callbackURL: new URL(redirectTo, here).href,
+      // Back to this page, still headed for the same place; Neon Auth adds `?error=…`
+      // (see guestbookError in components/guestbook/guestbook.tsx).
+      errorCallbackURL: new URL(`${copy.path}?redirect_url=${encodeURIComponent(redirectTo)}`, here).href,
+    });
 
     if (failure) {
       setError(GOOGLE_ERROR);

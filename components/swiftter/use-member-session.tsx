@@ -1,37 +1,29 @@
 "use client";
 
-import type { SessionState } from "./session-probe";
+import { type ReactNode, useEffect, useMemo, useSyncExternalStore } from "react";
 
-import dynamic from "next/dynamic";
-import { type ReactNode, useEffect, useState } from "react";
+import { currentMember, getSessionMember, type MemberUser, subscribeMember } from "@/lib/auth/member-hint";
 
-import { mayBeMember } from "@/lib/auth/member-hint";
+/** The signed-in person, as Neon Auth's session reports them. */
+export type SessionUser = MemberUser;
 
-const SessionProbe = dynamic(() => import("./session-probe"), { ssr: false });
+export type SessionState = { pending: true } | { pending: false; user: SessionUser | null };
 
 /**
- * Who is signed in, for Swiftter's pages. Visitors never download Neon Auth's
- * client: one small request asks first (lib/auth/member-hint.ts), and only
- * someone who may be signed in gets the probe. Render `probe` somewhere on the
- * page.
+ * Who is signed in, for Swiftter's pages: the page's one session request,
+ * shared with the header (lib/auth/member-hint.ts), which also completes a
+ * Google sign-in coming back to the page. Follows signing out as it happens.
+ * `probe` is always null now (there is no client to load); it stays so
+ * callers that render it need not change.
  */
 export function useMemberSession(): { session: SessionState; probe: ReactNode } {
-  const [probing, setProbing] = useState(false);
-  const [session, setSession] = useState<SessionState>({ pending: true });
+  const member = useSyncExternalStore(subscribeMember, currentMember, () => undefined);
 
   useEffect(() => {
-    let current = true;
-
-    mayBeMember().then((maybe) => {
-      if (!current) return;
-      if (maybe) setProbing(true);
-      else setSession({ pending: false, user: null });
-    });
-
-    return () => {
-      current = false;
-    };
+    getSessionMember();
   }, []);
 
-  return { session, probe: probing ? <SessionProbe onChange={setSession} /> : null };
+  const session = useMemo<SessionState>(() => (member === undefined ? { pending: true } : { pending: false, user: member }), [member]);
+
+  return { session, probe: null };
 }
