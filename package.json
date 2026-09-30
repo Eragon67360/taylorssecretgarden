@@ -31,6 +31,7 @@
 		"@tiptap/pm": "^3.31.3",
 		"@tiptap/react": "^3.31.3",
 		"@tiptap/starter-kit": "^3.31.3",
+		"@vercel/functions": "^3.9.9",
 		"ai": "^7.0.122",
 		"botid": "^1.5.11",
 		"cn": "^0.4.0",
