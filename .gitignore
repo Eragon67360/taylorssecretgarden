@@ -40,6 +40,7 @@ next-env.d.ts
 /blob-report/
 /e2e/.auth/
 /playwright/.cache/
+/playwright-results.json
 
 # lighthouse ci
 /.lighthouseci/
