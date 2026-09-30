@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { AuthUnavailableError, getSessionUser } from "@/lib/auth/server";
 import { memberWrite } from "@/lib/member-write";
 import { errorResponse } from "@/lib/swiftter-responses";
+import { feedChanged } from "@/service/feed-cache";
 import { deleteMemberAccount, listHeld, listOwnReshares } from "@/service/swiftter";
 
 const PRIVATE = { "Cache-Control": "private, no-store" };
@@ -51,6 +52,8 @@ export function DELETE(request: Request) {
 		async (writer) => {
 			try {
 				await deleteMemberAccount(writer.id);
+				// Their notes and reshares leave the feed: its cached first page is out of date.
+				feedChanged();
 			} catch (error) {
 				return errorResponse(error, "Deleting your account");
 			}
