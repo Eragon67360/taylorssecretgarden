@@ -1,6 +1,6 @@
 name: CI
 
-# Two jobs on every pull request and on pushes to dev, each on its own
+# Two jobs on every pull request, each on its own
 # production build under `next start`, unless only documentation changed
 # (see the `changes` job):
 #   smoke       lint, typecheck, unit and integration tests, build, then the
@@ -20,30 +20,23 @@ name: CI
 #   secrets.NEON_AUTH_COOKIE_SECRET  signs Neon Auth's session cookies (32+ characters); given
 #                                    only to the steps that run the app or its write guard
 
+# Pull requests only. Every change reaches dev through a pull request this
+# already tested, and the release pull request (dev → main) tests dev again.
+# A run on pushes to dev as well tested the same commit twice, and cancelling
+# one of the two (to stay under Neon's branch cap) left `cancelled` smoke and
+# lighthouse checks on the release's head, which main's ruleset counts as
+# failed (#144).
 on:
   pull_request:
-  push:
-    branches: [dev]
 
 # The GITHUB_TOKEN only reads the repository: the jobs talk to Neon with their
 # own key and upload artifacts, neither of which needs a write permission.
 permissions:
   contents: read
 
-# One run at a time per branch of this repository, the newest winning. A push
-# to dev and the open release pull request (dev → main) test the same commit,
-# so they share a group: before, both ran, and four Neon branches at once hit
-# the free plan's cap (422). A fork's branch of the same name gets a group of
-# its own, so it cannot cancel ours.
-#
-# Why cancelling cannot leave the release pull request without its required
-# checks (smoke, lighthouse): every run in the `dev` group tests dev's newest
-# commit, which is also the pull request's head. Checks are recorded on that
-# commit whichever event ran them, so the run that survives (push or
-# pull_request) reports smoke and lighthouse for the head, and a cancelled run
-# is only ever replaced by one on the same commit or a newer head. The
-# pull_request run tests dev merged into main, the push run dev itself; main
-# only ever receives dev, so both are the same code.
+# One run at a time per pull request branch, the newest push winning: an
+# outdated run would only hold two Neon branches for nothing. A fork's branch
+# of the same name gets a group of its own, so it cannot cancel ours.
 concurrency:
   group: ci-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
@@ -60,9 +53,7 @@ env:
 jobs:
   # Whether anything besides documentation changed: Markdown files, docs/,
   # LICENSE, .vscode/ and dependabot.yml neither build nor run. A pull request
-  # is compared with its base (from where they part); a push to dev with main,
-  # the same comparison as the release pull request that shares its
-  # concurrency group, so whichever of the two survives decides the same way.
+  # is compared with its base (from where they part).
   # When only documentation changed, smoke and lighthouse are skipped (no Neon
   # branch, no build) and, skipped, still count as passed for the required
   # checks. Anything uncertain (a failed diff, this job failing) runs both.
@@ -80,8 +71,8 @@ jobs:
       - name: Anything besides documentation?
         id: diff
         env:
-          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || 'origin/main' }}
-          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           if ! files=$(git diff --name-only "$BASE...$HEAD"); then
             echo "::warning::Could not compare $HEAD with $BASE: running every check"
