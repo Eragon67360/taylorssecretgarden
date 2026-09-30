@@ -1,6 +1,6 @@
 # Swiftter becomes a social feed; moderation decisions are stored, and publishing fails closed with a pending state
 
-Swiftter only had Posts. It now has threaded replies, reshares and a paginated feed, and every moderation decision is kept. The owner chose (2026-09-30) to store refused notes for their author instead of discarding them (superseding ADR-0006's "nothing is stored"). The design went through three adversarial reviews (schema, failure mode, auth); their outcomes are in SESSION-LOG.md.
+Swiftter only had Posts. It now has threaded replies, reshares and a paginated feed, and every moderation decision is kept. The owner chose (2026-09-30) to store refused notes for their author instead of discarding them (superseding ADR-0006's "nothing is stored"). The design went through three adversarial reviews (schema, failure mode, auth); their outcomes are in [the session log](../sessions/2026-09-30/SESSION-LOG.md).
 
 - **Replies live in `posts`** (`parent_id`, `root_id`): a reply is a rich-text message like a Post, with the same sanitising, moderation, tear-up and limits. A stored generated `thread_id` and a composite foreign key make the database itself refuse a reply outside its parent's thread.
 - **Reshares get their own table**: they carry no text, so they are neither moderated nor tombstoned. Unique per (Member, Post); undoing soft-deletes and resharing again restores the same row, so undo/redo neither bumps the feed nor frees a place in the limit. Self-reshares and reshares of anything but a public Post are refused by the insert itself.

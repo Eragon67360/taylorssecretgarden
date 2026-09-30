@@ -1,10 +1,12 @@
 # Wake-up report: overnight session 2026-09-30
 
+> **Session record, 2026-09-30** (the overnight session; moved here from the repository root on 2026-09-30). It describes the project as it was that night and is not kept up to date. Since then, release PR [#59](https://github.com/Eragon67360/taylorssecretgarden/pull/59) was merged into `main` and tagged [v0.1.0](https://github.com/Eragon67360/taylorssecretgarden/releases/tag/v0.1.0) (2026-09-30), followed by release PR [#73](https://github.com/Eragon67360/taylorssecretgarden/pull/73). The current state is in the [README](../../../README.md).
+
 Scope: Swiftter as a real social feed, and the visibility foundations (SEO, GEO, accessibility) for www.taylorssecretgarden.com. Plan: [ROADMAP.md](ROADMAP.md). Minute-by-minute: [SESSION-LOG.md](SESSION-LOG.md).
 
 ## 1. TL;DR
 
-- **Nothing was merged to `main`.** Production is unchanged at `3cfcfe6`. Everything below is on `dev` (CI green at `6f6b3cc`), waiting on release PR [#59](https://github.com/Eragon67360/taylorssecretgarden/pull/59). The reason is in section 7: the brief's checklist line 11 could not be shown on a Vercel deployment.
+- **Nothing was merged to `main` during the session** (it was later the same day: v0.1.0, see the note above). Production was unchanged at `3cfcfe6`. Everything below is on `dev` (CI green at `6f6b3cc`), waiting on release PR [#59](https://github.com/Eragon67360/taylorssecretgarden/pull/59). The reason is in section 7: the brief's checklist line 11 could not be shown on a Vercel deployment.
 - **Swiftter is now a social feed** (on `dev`): threaded replies with a page per thread, reshares with credit, a paginated feed, "tear up" for your own notes, and AI moderation on every Post and reply. Moderation decisions are stored and fail closed with a visible "pending" state.
 - **Visibility foundations** (on `dev`):
   - the `.com` is the canonical address everywhere;
