@@ -12,7 +12,6 @@ const config = [
       ".next/**",
       "node_modules/**",
       "public/**",
-      "portfolio-hover/**",
       "playwright-report/**",
       "test-results/**",
       "blob-report/**",
