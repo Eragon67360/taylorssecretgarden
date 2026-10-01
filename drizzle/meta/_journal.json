@@ -36,6 +36,13 @@
       "when": 1790840851273,
       "tag": "0004_note_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790844406170,
+      "tag": "0005_delete_auth_user",
+      "breakpoints": true
     }
   ]
 }
