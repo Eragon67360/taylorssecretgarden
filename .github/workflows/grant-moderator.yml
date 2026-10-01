@@ -1,0 +1,74 @@
+# Grants or revokes the moderator role on production (#166): who may handle
+# reports and appeals on /guestbook/moderation. Run by hand: Actions → Grant
+# moderator → Run workflow → pick `main`, the action, and the Member's id (the
+# last part of their Member page's address, /swiftter/m/<id>).
+#
+# Like Migrate production, no database password is stored for it: the
+# connection string is fetched from Neon's API at run time (secrets.NEON_API_KEY,
+# vars.NEON_PROJECT_ID), masked in the log, and gone when the run ends. The
+# script (scripts/moderator.ts) runs with --production, which it requires on
+# production's database and refuses anywhere else. The log is public, like the
+# repository: the script takes a Member id only (never an email) and prints ids only.
+name: Grant moderator
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Grant or revoke the role"
+        required: true
+        type: choice
+        options:
+          - grant
+          - revoke
+      member:
+        description: "The Member's id (the end of their page's address, /swiftter/m/<id>)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: grant-moderator
+  cancel-in-progress: false
+
+jobs:
+  moderator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json # reads `engines.node`
+          cache: npm
+
+      - run: npm ci
+
+      - name: Production's connection string, from Neon (masked)
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          api() { curl --fail-with-body -sS -H "Authorization: Bearer $NEON_API_KEY" "https://console.neon.tech/api/v2/projects/$PROJECT_ID/$1"; }
+          json() { node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(($1)(JSON.parse(s))))"; }
+          branch=$(api branches | json 'd => d.branches.find((b) => b.default)?.id ?? ""')
+          test -n "$branch" || { echo "::error::No default (production) branch found"; exit 1; }
+          uri=$(api "connection_uri?branch_id=$branch&database_name=neondb&role_name=neondb_owner" | json 'd => d.uri')
+          password=$(node -e 'console.log(decodeURIComponent(new URL(process.argv[1]).password))' "$uri")
+          echo "::add-mask::$uri"
+          echo "::add-mask::$password"
+          echo "DATABASE_URL=$uri" >> "$GITHUB_ENV"
+          echo "Production branch: $branch"
+
+      # The inputs reach the script as environment variables, never pasted into the shell's text.
+      - name: ${{ inputs.action }} the moderator role
+        env:
+          ACTION: ${{ inputs.action }}
+          MEMBER: ${{ inputs.member }}
+        run: npm run moderator -- "$ACTION" "$MEMBER" --production
+
+      - name: Moderators now
+        run: npm run moderator -- list --production
