@@ -229,3 +229,56 @@ test("a page without an Era downloads no Era display face, only the journal face
     await expect.poll(() => fontLoaded(page, face), { message: `${face} on /` }).toBe(true);
   }
 });
+
+// The account emails (lib/emails), each in a frame as a mail app shows it, and as plain text.
+test.describe("Account emails preview", () => {
+  const EMAILS = [
+    { title: "Email verification code", heading: "Confirm your email address", expiry: "This code works for 5 minutes." },
+    { title: "Password reset link", heading: "Choose a new password", expiry: "This link works for 1 hour, and only once." },
+    { title: "Sign-in code", heading: "Sign in to Taylor's Secret Garden", expiry: "This code works for 5 minutes." },
+    { title: "Sign-in link", heading: "Sign in to Taylor's Secret Garden", expiry: "This link works for 10 minutes, and only once." },
+    { title: "Password reset code", heading: "Choose a new password", expiry: "This code works for 5 minutes." },
+    { title: "Email verification link", heading: "Confirm your email address", expiry: "This link works for 1 hour." },
+  ];
+
+  test("renders every email, its wordmark, and its plain text", async ({ page }) => {
+    const response = await page.goto("/styleguide/emails");
+
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1, name: "Account emails" })).toBeVisible();
+
+    for (const { title, heading, expiry } of EMAILS) {
+      const section = page.getByRole("region", { name: title, exact: true });
+      const email = page.frameLocator(`iframe[title="${title}, as HTML"]`);
+
+      await expect(section).toBeVisible();
+      await expect(email.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+      await expect(email.getByText(expiry)).toBeVisible();
+      await expect(email.getByText("If this wasn't you, ignore this email", { exact: false })).toBeVisible();
+      // The wordmark loaded (from this server's public/email/), drawn at twice its size.
+      const wordmark = email.getByRole("img", { name: "Taylor's Secret Garden" });
+
+      await expect(wordmark).toHaveAttribute("width", "300");
+      await expect.poll(() => wordmark.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth)).toBe(600);
+      await expect(section.locator("pre")).toContainText(expiry);
+    }
+  });
+
+  test("shows the code as one piece of text, the name as written, and the button's link", async ({ page }) => {
+    await page.goto("/styleguide/emails");
+    const code = page.frameLocator('iframe[title="Email verification code, as HTML"]');
+
+    await expect(code.getByText("428613", { exact: true })).toBeVisible();
+    // Escaped, not markup: "Betty & James" reads as written.
+    await expect(code.getByText("Hi Betty & James,")).toBeVisible();
+    await expect(page.frameLocator('iframe[title="Password reset link, as HTML"]').getByRole("link", { name: "Choose a new password" })).toHaveAttribute(
+      "href",
+      /^https:\/\/auth\.example\.invalid\/reset-password\//,
+    );
+  });
+
+  test("the styleguide links to it", async ({ page }) => {
+    await page.goto("/styleguide");
+    await expect(page.getByRole("link", { name: "Account emails" })).toHaveAttribute("href", "/styleguide/emails");
+  });
+});

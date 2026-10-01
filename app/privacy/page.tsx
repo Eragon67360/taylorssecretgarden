@@ -30,7 +30,8 @@ const CONTENTS = [
  * The privacy policy (GDPR arts. 12–14): in English, the site's language.
  * Every period and every processor here comes from the code or the hosting
  * set-up: service/swiftter.ts (purgeExpired, deleteMemberAccount), the
- * auth cookies (app/api/auth), next.config.ts's media hosts, the trailer
+ * auth cookies (app/api/auth), the account emails (service/auth-email.ts),
+ * next.config.ts's media hosts, the trailer
  * embed (components/tours/tour-trailer.tsx). Change them
  * together.
  */
@@ -133,8 +134,9 @@ export default function PrivacyPage() {
             decisions are stored, and the sign-in service (Neon Auth).
           </li>
           <li>
-            <strong>Resend</strong> (United States): sends the account emails (codes to confirm your address, password reset links) on the sign-in
-            service&apos;s behalf. It receives your email address and the email it delivers, and keeps a record of the delivery.
+            <strong>Resend</strong> (United States): sends the account emails (codes to confirm your address, password reset links). When the sign-in service
+            needs one sent, it gives the site your email address, your name and the code or link, and the site hands them to Resend in the email it asks Resend
+            to deliver; the site itself keeps none of them. Resend receives your email address and that email, and keeps a record of the delivery.
           </li>
           <li>
             <strong>Anthropic, PBC</strong> (United States): its Claude model reads the text of each note to check it against the community rules. It receives

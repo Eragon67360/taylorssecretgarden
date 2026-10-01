@@ -51,3 +51,6 @@ next-env.d.ts
 
 # Claude Code's agent worktrees (were only in .git/info/exclude)
 /.claude/worktrees/
+
+# account email previews (npm run email:preview)
+/.email-preview/

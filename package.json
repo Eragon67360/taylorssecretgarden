@@ -26,7 +26,8 @@
     "moderation:check": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/check-moderation.ts",
     "releases:check": "tsx scripts/check-releases.ts",
     "seed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/seed.ts",
-    "unseed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/unseed.ts"
+    "unseed": "tsx --conditions=react-server --env-file-if-exists=.env.local scripts/unseed.ts",
+    "email:preview": "tsx --conditions=react-server scripts/email-preview.ts"
   },
   "dependencies": {
     "@neondatabase/auth": "0.5.0-beta",
