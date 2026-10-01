@@ -100,3 +100,25 @@ export async function tearUp(id: string): Promise<{ ok: true } | Failure> {
     return { ok: false, message: CONNECTION, status: 0 };
   }
 }
+
+/** Reports someone else's public note for a human to look at, with an optional reason. `already`: you had reported it before. */
+export async function reportNote(id: string, reason: string): Promise<{ ok: true; already: boolean } | Failure> {
+  try {
+    const response = await fetch(`${FEED_URL}/${id}/report`, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(reason.trim() ? { reason } : {}) });
+
+    return response.ok ? { ok: true, already: response.status === 200 } : failure(response, "That note couldn't be reported just now. Try again in a moment.");
+  } catch {
+    return { ok: false, message: CONNECTION, status: 0 };
+  }
+}
+
+/** "Ask a human to look again" at one of your refused notes. `already`: you had asked before. */
+export async function appealNote(id: string): Promise<{ ok: true; already: boolean } | Failure> {
+  try {
+    const response = await fetch(`${FEED_URL}/${id}/appeal`, { method: "POST" });
+
+    return response.ok ? { ok: true, already: response.status === 200 } : failure(response, "That couldn't be sent just now. Try again in a moment.");
+  } catch {
+    return { ok: false, message: CONNECTION, status: 0 };
+  }
+}

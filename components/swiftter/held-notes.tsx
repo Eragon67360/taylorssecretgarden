@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { DeletePost } from "./delete-post";
 import { PostContent } from "./post-content";
 import { relativeDate } from "./relative-date";
-import { heldElementId } from "./use-swiftter";
+import { heldElementId, useAppeal, useFocusAfterRender } from "./use-swiftter";
 
 /** The status, in words: never colour alone. */
 const STATUS: Record<"pending" | "givenUp" | RefusalCategory, string> = {
@@ -21,7 +21,7 @@ const STATUS: Record<"pending" | "givenUp" | RefusalCategory, string> = {
   off_topic: "Not passed: off-topic",
 };
 
-/** What the Member can do with a held note: check it again (while pending), tear it up. */
+/** What the Member can do with a held note: check it again (while pending), tear it up. ("Ask a human to look again", on a refused one, needs nothing from the page: AppealNote.) */
 export type HeldActions = {
   /** The note being checked again, if any: every "check again" waits for it. */
   checking: string | null;
@@ -62,7 +62,8 @@ export function HeldNotes({ notes, ...actions }: HeldNotesProps) {
 
 /**
  * One held note: its status in words, the reason for a refusal, the text,
- * and "check again" / "tear up". In the Member's margin on the feed, and
+ * and "check again" (pending) or "Ask a human to look again" (refused), and
+ * "tear up". In the Member's margin on the feed, and
  * under its parent on a thread (`inThread`, where it needs no link to it).
  */
 export function HeldNoteCard({ note, checking, onCheckAgain, onTearUp, inThread = false }: HeldActions & { note: HeldNote; inThread?: boolean }) {
@@ -117,8 +118,41 @@ export function HeldNoteCard({ note, checking, onCheckAgain, onTearUp, inThread 
             {checking === note.id ? "checking…" : "check again"}
           </button>
         )}
+        {note.status === "blocked" && <AppealNote note={note} />}
         <DeletePost content={note.content} onDelete={() => onTearUp(note)} />
       </div>
     </article>
+  );
+}
+
+/**
+ * "Ask a human to look again", on a refused note: moderation is a model, and
+ * models get things wrong. Once asked, it says so instead (the server
+ * remembers, so it still does after a reload).
+ */
+function AppealNote({ note }: { note: HeldNote }) {
+  const { asked, asking, ask } = useAppeal(note);
+  const focusSoon = useFocusAfterRender();
+
+  if (asked) {
+    return (
+      <p className="font-hand min-h-8 px-1 text-[20px] leading-8 font-bold">
+        <span aria-hidden="true">✓ </span>A human was asked to look again
+      </p>
+    );
+  }
+
+  return (
+    <button
+      aria-busy={asking}
+      // Stays focusable while the request is out; a press then does nothing.
+      aria-disabled={asking}
+      className="font-hand focus-ring min-h-8 rounded-sm px-1 text-[20px] font-bold underline decoration-[1.5px] underline-offset-[4px] aria-disabled:opacity-60"
+      type="button"
+      // The button gives way to what was done: the keyboard goes to the note, the toast says it.
+      onClick={() => void ask().then((done) => done && focusSoon(heldElementId(note.id)))}
+    >
+      {asking ? "Asking…" : "Ask a human to look again"}
+    </button>
   );
 }

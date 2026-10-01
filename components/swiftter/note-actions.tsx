@@ -4,7 +4,8 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
-const ACTION = "font-hand focus-ring inline-flex min-h-8 items-center gap-1.5 rounded-sm px-1 text-[20px] leading-none font-bold";
+/** A pencilled control under a note (replies, reshare, report). */
+export const NOTE_ACTION = "font-hand focus-ring inline-flex min-h-8 items-center gap-1.5 rounded-sm px-1 text-[20px] leading-none font-bold";
 
 type NoteActionsProps = {
   postId: string;
@@ -32,7 +33,7 @@ export function NoteActions({ postId, authorName, replyCount, reshareCount, resh
   return (
     <>
       {linkToThread && (
-        <Link className={cn(ACTION, "underline decoration-[1.5px] underline-offset-[4px]")} href={`/swiftter/p/${postId}`}>
+        <Link className={cn(NOTE_ACTION, "underline decoration-[1.5px] underline-offset-[4px]")} href={`/swiftter/p/${postId}`}>
           {replyCount === 0 ? "reply" : replies}
           <span className="sr-only"> to {authorName}&apos;s note</span>
         </Link>
@@ -42,7 +43,7 @@ export function NoteActions({ postId, authorName, replyCount, reshareCount, resh
           // Stays focusable while its request is out (a press then does nothing, use-swiftter.ts).
           aria-disabled={reshare.busy}
           aria-pressed={reshare.reshared}
-          className={cn(ACTION, reshare.reshared && "text-pen", "aria-disabled:opacity-60")}
+          className={cn(NOTE_ACTION, reshare.reshared && "text-pen", "aria-disabled:opacity-60")}
           type="button"
           onClick={reshare.onToggle}
         >

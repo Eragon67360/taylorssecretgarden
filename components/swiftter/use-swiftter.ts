@@ -6,13 +6,14 @@ import type { FeedPost, HeldNote } from "@/lib/swiftter";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { fetchMine, type NoteResult, setReshared, tearUp } from "./api";
+import { appealNote, fetchMine, type NoteResult, reportNote, setReshared, tearUp } from "./api";
 
 /*
   What the feed (swiftter-board.tsx) and a thread (thread-view.tsx) both do
-  with a Member's notes: read their own view, reshare, tear up, and turn the
-  answer to a note written or checked again into what the page shows. One
-  copy, so the two pages cannot drift apart again.
+  with a Member's notes: read their own view, reshare, tear up, report, ask
+  a human to look again, and turn the answer to a note written or checked
+  again into what the page shows. One copy, so the two pages cannot drift
+  apart again.
 */
 
 /**
@@ -118,6 +119,64 @@ export async function tearUpNote(id: string, hide: () => () => void): Promise<bo
   toast.error(result.message);
 
   return false;
+}
+
+/**
+ * Reporting one note for a human to look at: `send` resolves to null once it
+ * is sent (or had been already), thanking the Member, or to the message to
+ * show beside the reason they wrote, which they keep.
+ */
+export function useReport(postId: string) {
+  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+
+  const send = async (reason: string): Promise<string | null> => {
+    // The send button stays focusable while its request is out (aria-disabled): a second press does nothing.
+    if (state !== "idle") return null;
+    setState("sending");
+    const result = await reportNote(postId, reason);
+
+    if (!result.ok) {
+      setState("idle");
+
+      return result.message;
+    }
+    setState("sent");
+    toast.success(result.already ? "You had already reported this note: a human will look at it." : "Thank you: a human will look at this note.");
+
+    return null;
+  };
+
+  return { sending: state === "sending", sent: state === "sent", send };
+}
+
+/**
+ * "Ask a human to look again" at one of the Member's refused notes: once
+ * asked, it stays asked (`asked`), as the server's own view says after a
+ * reload (HeldNote.appealed).
+ */
+export function useAppeal(note: Pick<HeldNote, "id" | "appealed">) {
+  const [asked, setAsked] = useState(false);
+  const [asking, setAsking] = useState(false);
+
+  /** Resolves whether it was asked. */
+  const ask = async (): Promise<boolean> => {
+    if (asking) return false;
+    setAsking(true);
+    const result = await appealNote(note.id);
+
+    setAsking(false);
+    if (!result.ok) {
+      toast.error(result.message);
+
+      return false;
+    }
+    setAsked(true);
+    toast.success("Asked: a human will look at this note again.");
+
+    return true;
+  };
+
+  return { asked: asked || note.appealed, asking, ask };
 }
 
 type WriteHandlers = {

@@ -969,6 +969,130 @@ test.describe("Swiftter, replies and reshares", () => {
 
 // A Member may pass 5 notes in 10 minutes. Its own fresh Member, so the Posts
 // the other tests publish as the shared test Member don't count.
+// Asking a human to look: "Report" on someone else's note, "Ask a human to look again" on your own refused one.
+test.describe("Swiftter, reports and appeals", () => {
+	test.skip(!!writeGuard(), writeGuard() ?? "");
+	// Two Members for the group: the author (this test's page) and a reader (another context).
+	const author = groupMember("note-author", "Note Author");
+	const reader = groupMember("reader", "Careful Reader");
+
+	test.use({ storageState: async ({}, provide) => provide(existsSync(author) ? author : undefined) });
+
+	test("a Member reports someone else's note, with a reason, once; not their own", async ({ page, browser }) => {
+		await page.goto("/swiftter");
+		const text = `Report me ${Date.now()}`;
+		const { note } = (await (await write(page, `<p>${text}</p>`)).json()) as { note: FeedPost };
+
+		// Not your own: no control, and the route says why.
+		await page.goto(`/swiftter/p/${note.id}`);
+		await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+		await expect(page.getByRole("button", { name: /^Report/ })).toHaveCount(0);
+		expect((await page.request.post(`${FEED}/${note.id}/report`, { headers: BOTID_HUMAN, data: {} })).status()).toBe(422);
+
+		const other = await openAs(browser, reader);
+
+		await other.page.goto("/swiftter");
+		const report = feedPosts(other.page).filter({ hasText: text }).first().getByRole("button", { name: "Report Note Author's note" });
+
+		await report.click();
+		const dialog = other.page.getByRole("dialog", { name: /Report this note\?/ });
+
+		await expect(dialog).toContainText(text);
+		// The keyboard lands on the reason, where Enter sends nothing.
+		const reason = dialog.getByRole("textbox", { name: /What's wrong with it\?/ });
+
+		await expect(reason).toBeFocused();
+		await reason.fill("It shares someone's address.");
+		await expectNoAxeViolations(other.page);
+		const sent = other.page.waitForResponse((response) => response.url().endsWith(`/${note.id}/report`));
+
+		await dialog.getByRole("button", { name: "Send report" }).click();
+		expect((await sent).status()).toBe(201);
+		await expect(dialog).toBeHidden();
+		await expect(other.page.getByText("Thank you: a human will look at this note.")).toBeVisible();
+		await expect(report).toHaveCount(0);
+		const reported = feedPosts(other.page).filter({ hasText: text }).first().getByRole("button", { name: "Reported Note Author's note" });
+
+		await expect(reported).toHaveAttribute("aria-disabled", "true");
+
+		// Once per Member and note: again is a 200 that changes nothing; a reason too long is refused.
+		const again = await other.page.request.post(`${FEED}/${note.id}/report`, { headers: BOTID_HUMAN, data: { reason: "again" } });
+
+		expect(again.status()).toBe(200);
+		expect(await again.json()).toEqual({ reported: true, alreadyReported: true });
+		expect((await other.page.request.post(`${FEED}/${note.id}/report`, { headers: BOTID_HUMAN, data: { reason: "x".repeat(501) } })).status()).toBe(400);
+		// Without BotID's token, refused like every write.
+		expect((await other.page.request.post(`${FEED}/${note.id}/report`, { data: {} })).status()).toBe(403);
+		// The export holds it.
+		const exported = (await (await other.page.request.get("/api/swiftter/me/export")).json()) as { reports: { postId: string; kind: string; reason: string }[] };
+
+		expect(exported.reports).toContainEqual(expect.objectContaining({ postId: note.id, kind: "report", reason: "It shares someone's address." }));
+		await other.close();
+	});
+
+	test("a visitor is asked to sign in to report", async ({ browser }) => {
+		const visitor = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+		const page = await visitor.newPage();
+
+		await page.goto(`/swiftter/p/${SEEDED.deepThread}`);
+		await page.getByRole("button", { name: /^Report .+'s note$/ }).first().click();
+		const dialog = page.getByRole("dialog", { name: /Report this note\?/ });
+
+		await expect(dialog).toContainText("Only Members can report a note");
+		await expect(dialog.getByRole("textbox")).toHaveCount(0);
+		await expect(dialog.getByRole("link", { name: "Sign in to report" })).toHaveAttribute("href", `/sign-in?redirect_url=${encodeURIComponent(`/swiftter/p/${SEEDED.deepThread}`)}`);
+		await dialog.getByRole("button", { name: "Close" }).click();
+		await expect(dialog).toBeHidden();
+		expect((await page.request.post(`${FEED}/${SEEDED.deepThread}/report`, { headers: BOTID_HUMAN, data: {} })).status()).toBe(401);
+		await visitor.close();
+	});
+
+	test("an author asks a human to look again at a refused note; it stays asked after a reload, on the feed and on a thread", async ({ page }) => {
+		await page.goto("/swiftter");
+		const text = `${MARKER.insult} misjudged ${Date.now()}`;
+		const response = await write(page, `<p>${text}</p>`);
+
+		expect(response.status()).toBe(422);
+		const { note } = (await response.json()) as { note: HeldNote };
+
+		await page.goto("/swiftter");
+		const held = page.getByRole("region", { name: "Only you can see these" }).getByRole("listitem").filter({ hasText: text });
+		const ask = held.getByRole("button", { name: "Ask a human to look again" });
+
+		await expect(ask).toBeVisible();
+		const sent = page.waitForResponse((answer) => answer.url().endsWith(`/${note.id}/appeal`));
+
+		await ask.click();
+		expect((await sent).status()).toBe(201);
+		await expect(page.getByText("Asked: a human will look at this note again.")).toBeVisible();
+		await expect(held.getByText("A human was asked to look again")).toBeVisible();
+		// The button gave way: the keyboard is on the note.
+		await expect(held.getByRole("article")).toBeFocused();
+		await expectNoAxeViolations(page);
+
+		await page.reload();
+		await expect(held.getByText("A human was asked to look again")).toBeVisible();
+		await expect(held.getByRole("button", { name: "Ask a human to look again" })).toHaveCount(0);
+		expect((await mine(page.request)).held).toContainEqual(expect.objectContaining({ id: note.id, appealed: true }));
+		expect((await page.request.post(`${FEED}/${note.id}/appeal`, { headers: BOTID_HUMAN })).status()).toBe(200);
+
+		// A refused reply, under its parent on the thread, has the same control.
+		const { note: root } = (await (await write(page, `<p>root ${Date.now()}</p>`)).json()) as { note: FeedPost };
+		const reply = `${MARKER.offTopic} reply ${Date.now()}`;
+
+		expect((await write(page, `<p>${reply}</p>`, root.id)).status()).toBe(422);
+		await page.goto(`/swiftter/p/${root.id}`);
+		const heldReply = page.getByRole("article", { name: /Your reply, not passed/ });
+
+		await expect(heldReply).toContainText(reply);
+		await heldReply.getByRole("button", { name: "Ask a human to look again" }).click();
+		await expect(heldReply.getByText("A human was asked to look again")).toBeVisible();
+
+		// A note that was passed has nothing to appeal.
+		expect((await page.request.post(`${FEED}/${root.id}/appeal`, { headers: BOTID_HUMAN })).status()).toBe(404);
+	});
+});
+
 test.describe("Swiftter, posting limit", () => {
 	test.skip(!!writeGuard(), writeGuard() ?? "");
 	// The browser logs the refused 6th Post as a failed request.
