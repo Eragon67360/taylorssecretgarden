@@ -1,15 +1,17 @@
 import { type MemberUser, setSessionMember } from "./member-hint";
 
 /*
-  Neon Auth in the browser: signing up, signing in (email or Google) and
-  signing out, as plain requests to this origin's /api/auth
+  Neon Auth in the browser: signing up, signing in (email or Google), signing
+  out, resetting a password and confirming an email address, as plain
+  requests to this origin's /api/auth
   (docs/adr/0004-neon-auth-replaces-clerk.md). These, and the session request
   in lib/auth/member-hint.ts, are every endpoint the proxy forwards
   (lib/auth/proxy-routes.ts), so the SDK's browser client (about 100 KB) has
   nothing left to do here.
 
   BotID's client (instrumentation-client.ts) wraps the global `fetch` and
-  attaches its token to sign-up and sign-in, so these call `fetch` itself,
+  attaches its token to sign-up, sign-in and the requests that send an email,
+  so these call `fetch` itself,
   looked up at call time.
 */
 
@@ -47,13 +49,21 @@ async function post<T>(path: string, body: Record<string, unknown>): Promise<Aut
   return { data: data as T, error: null };
 }
 
-type SessionAnswer = { user?: MemberUser | null };
+/** A session's token comes back as `null` when no session was opened (the email address must be confirmed first). */
+type SessionAnswer = { token?: string | null; user?: MemberUser | null };
 
-/** Signs a new Member up with email and password; signed in once it answers. */
+/** Whether an answer opened a session: a sign-up that must confirm its email first answers `token: null`. */
+const signedIn = (answer: SessionAnswer) => answer.token !== null && Boolean(answer.user);
+
+/**
+ * Signs a new Member up with email and password: signed in once it answers,
+ * unless Neon Auth requires the email address to be confirmed first; then
+ * `data.token` is null, nobody is signed in, and a code is on its way.
+ */
 export async function signUpEmail(input: { name: string; email: string; password: string }) {
   const result = await post<SessionAnswer>("sign-up/email", input);
 
-  if (result.data) setSessionMember(result.data.user ?? null);
+  if (result.data) setSessionMember(signedIn(result.data) ? (result.data.user ?? null) : null);
 
   return result;
 }
@@ -103,6 +113,44 @@ export async function signOut() {
   const result = await post<{ success?: boolean }>("sign-out", {});
 
   if (result.data) setSessionMember(null);
+
+  return result;
+}
+
+/**
+ * Asks Neon Auth to email a password reset link. It answers the same whether
+ * or not an account has that address. The link goes to Neon Auth, which
+ * sends the browser on to `redirectTo` (an absolute address on this site,
+ * one of Neon Auth's trusted domains) with `?token=…`, or `?error=INVALID_TOKEN`
+ * once the link has expired or been used.
+ */
+export async function requestPasswordReset(input: { email: string; redirectTo: string }) {
+  return post<{ status?: boolean }>("request-password-reset", input);
+}
+
+/** Sets a new password with the token from the reset link. Nobody is signed in by it. */
+export async function resetPassword(input: { newPassword: string; token: string }) {
+  return post<{ status?: boolean }>("reset-password", input);
+}
+
+/**
+ * Asks Neon Auth to email a code that confirms the address. Signed in, it must
+ * be the Member's own address; signed out (just signed up), Neon Auth answers
+ * the same whether or not there is an unconfirmed account to send it to.
+ */
+export async function sendVerificationCode(input: { email: string }) {
+  return post<{ status?: boolean }>("send-verification-email", input);
+}
+
+/**
+ * Confirms an email address with the code Neon Auth sent. Neon Auth then
+ * opens a session (its "sign in after verification" setting): the Member is
+ * signed in, here as everywhere else on the page.
+ */
+export async function verifyEmailCode(input: { email: string; otp: string }) {
+  const result = await post<SessionAnswer & { status?: boolean }>("email-otp/verify-email", input);
+
+  if (result.data && signedIn(result.data)) setSessionMember(result.data.user ?? null);
 
   return result;
 }

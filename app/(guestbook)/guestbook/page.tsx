@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
+import { ConfirmYourEmail } from "@/components/guestbook/confirm-your-email";
 import { YourNotes } from "@/components/guestbook/your-notes";
 import { YourPage } from "@/components/guestbook/your-page";
 import { Paper, Scribble } from "@/components/scrapbook";
+import { isEmailVerificationRequired } from "@/lib/auth/email-verification";
 import { AuthUnavailableError, getSessionUser } from "@/lib/auth/server";
 import { displayNameOf } from "@/lib/display-name";
 import { pageMetadata } from "@/lib/metadata";
@@ -58,6 +60,8 @@ export default async function GuestbookPage() {
         </header>
         {user ? (
           <div className="flex flex-col gap-8">
+            {/* Google sign-ins arrive confirmed; Members who signed up with a password before #82 may not be. */}
+            {!user.emailVerified && <ConfirmYourEmail email={user.email} required={isEmailVerificationRequired()} />}
             <YourNotes memberId={user.id} notes={await readOwnNotes(user.id)} />
             <YourPage />
           </div>

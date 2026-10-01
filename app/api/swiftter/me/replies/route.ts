@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { AuthUnavailableError, getSessionUser } from "@/lib/auth/server";
 import { errorResponse } from "@/lib/swiftter-responses";
 import { countNewReplies } from "@/service/members";
+import { isModerator } from "@/service/moderators";
 
 const PRIVATE = { "Cache-Control": "private, no-store" };
 
@@ -11,6 +12,8 @@ const PRIVATE = { "Cache-Control": "private, no-store" };
  * the signed-in Member's notes since `?since=` (an ISO time: the `at` of an
  * earlier answer, kept by the browser), and `at`, the time to send next.
  * Only a count, never the replies. Without `since`, 0 (counting starts now).
+ * Also `moderator`: whether the header shows them the moderation page's link
+ * (the page and its routes check the role again themselves).
  * Never cached. 400 for a `since` that is not a time, 401 signed out, 503
  * when Neon Auth fails.
  */
@@ -32,7 +35,9 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401, headers: PRIVATE });
 
   try {
-    return NextResponse.json(await countNewReplies(user.id, since), { headers: PRIVATE });
+    const [replies, moderator] = await Promise.all([countNewReplies(user.id, since), isModerator(user.id)]);
+
+    return NextResponse.json({ ...replies, moderator }, { headers: PRIVATE });
   } catch (error) {
     return errorResponse(error, "Counting your new replies");
   }

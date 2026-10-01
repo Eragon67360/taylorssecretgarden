@@ -7,10 +7,11 @@ import { BOT_REFUSAL, isBotIdProtected } from "@/lib/botid-routes";
 
 /*
   Neon Auth's API on this origin: sign-up, sign-in (email and Google),
-  sign-out and the session, and nothing else (lib/auth/proxy-routes.ts). Those
-  requests are proxied to the branch's Neon Auth URL, and its session cookies
-  are set here, first-party. Signing up and signing in are refused to bots
-  (Vercel BotID) before they reach Neon Auth.
+  sign-out, the session, resetting a password and confirming an email
+  address, and nothing else (lib/auth/proxy-routes.ts). Those requests are
+  proxied to the branch's Neon Auth URL, and its session cookies are set here,
+  first-party. Signing up, signing in and anything that sends an email are
+  refused to bots (Vercel BotID) before they reach Neon Auth.
 */
 type Context = { params: Promise<{ path: string[] }> };
 

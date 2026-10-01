@@ -116,6 +116,25 @@ runs:
         echo "DATABASE_URL=$DB_URL" >> "$GITHUB_ENV"
         echo "NEON_AUTH_BASE_URL=$AUTH_URL" >> "$GITHUB_ENV"
 
+    # A branch copies production's Neon Auth settings: required email
+    # verification, the webhook that sends the journal's emails (ADR-0009),
+    # Resend as the mail server. The suite signs up throwaway Members and must
+    # not depend on those, nor send real email: this branch gets Neon's
+    # defaults (no verification required, no webhook, the shared sender). The
+    # verification flow has its own tests, which stub Neon Auth's answers.
+    - name: Neon Auth's defaults on the branch
+      shell: bash
+      env:
+        NEON_API_KEY: ${{ inputs.api_key }}
+        PROJECT_ID: ${{ inputs.project_id }}
+        BRANCH_ID: ${{ steps.try1.outputs.branch_id || steps.try2.outputs.branch_id || steps.try3.outputs.branch_id || steps.try4.outputs.branch_id }}
+      run: |
+        auth() { curl --fail-with-body -sS -o /dev/null -X "$1" -H "Authorization: Bearer $NEON_API_KEY" -H "Content-Type: application/json" \
+          "https://console.neon.tech/api/v2/projects/$PROJECT_ID/branches/$BRANCH_ID/auth/$2" -d "$3"; }
+        auth PATCH email_and_password '{"require_email_verification":false,"send_verification_email_on_sign_up":false,"send_verification_email_on_sign_in":false}'
+        auth PUT webhooks '{"enabled":false,"enabled_events":[],"timeout_seconds":5}'
+        auth PATCH email_provider '{"type":"shared"}'
+
     - name: Migrate and seed the branch
       # The demo content, then the development fixtures (scripts/seed.ts: accounts,
       # three feed pages, threads, reshares, every moderation state).

@@ -136,8 +136,38 @@ export const MODERATION_RETRY = { hourlyForHours: 24, days: 7 } as const;
 /** What a Member asks a human for: to look at someone else's public note (`report`), or to look again at their own refused one (`appeal`). */
 export type NoteReportKind = "report" | "appeal";
 
-/** The longest reason a Member may give with a report, in visible characters. */
+/** The longest reason a Member may give with a report, in visible characters (and a moderator with a decision). */
 export const MAX_REPORT_REASON_CHARACTERS = 500;
+
+/** How a moderator's decision names its maker in moderation_decisions.model: `human:<member id>`. */
+export const HUMAN_MODEL = "human:";
+
+/** What a moderator can do with a note people asked a human about. */
+export type ModerationAction = "tear-up" | "keep" | "publish";
+
+export const MODERATION_ACTIONS: readonly ModerationAction[] = ["tear-up", "keep", "publish"];
+
+/**
+ * A note on the moderation page (/guestbook/moderation): its open reports and
+ * appeals, and what moderation made of it. For moderators only: it carries
+ * held notes' text and the reasons Members wrote.
+ */
+export type ModerationItem = {
+  id: string;
+  /** Sanitised HTML: a held note's too. */
+  content: string;
+  status: NoteStatus;
+  isReply: boolean;
+  /** Where to read it in its thread, when that is public: its own address (a reply's opens its thread on it), or its public thread's for a held reply; null for a held Post. */
+  threadPath: string | null;
+  createdAt: string;
+  /** Null once their account is deleted. */
+  author: { id: string; displayName: string } | null;
+  /** The open ones, newest first. Who sent them is not shown. */
+  reports: { kind: NoteReportKind; reason: string | null; createdAt: string }[];
+  /** The model's last decision on it, if any. */
+  aiDecision: { outcome: string; category: string | null; reason: string | null; createdAt: string } | null;
+};
 
 /** Visible characters in a string, as a reader counts them. */
 export function characterCount(text: string): number {

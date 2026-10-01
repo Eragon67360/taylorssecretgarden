@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { endpointOf, isProductionEndpoint, seedGuard, writeGuard } from "@/db/guard";
+import { endpointOf, isProductionEndpoint, moderatorGuard, seedGuard, writeGuard } from "@/db/guard";
 
 // A made-up endpoint standing in for production, with its hash: the real
 // production endpoint's hash lives in db/guard.ts.
@@ -38,6 +38,24 @@ describe("writeGuard", () => {
     expect(writeGuard({}, PRODUCTION)).toMatch(/Needs/);
     expect(writeGuard({ ...branch("ep-a-1"), DATABASE_URL: "postgres://localhost/db" }, PRODUCTION)).toMatch(/must point at a Neon branch/);
     expect(writeGuard({ ...branch("ep-a-1"), NEON_AUTH_BASE_URL: branch("ep-b-2").NEON_AUTH_BASE_URL }, PRODUCTION)).toMatch(/different/);
+  });
+});
+
+describe("moderatorGuard", () => {
+  it("allows a development branch without --production, and production only with it", () => {
+    expect(moderatorGuard(branch("ep-dev-1"), {}, PRODUCTION)).toBeNull();
+    expect(moderatorGuard(branch(PRODUCTION_EP), { production: true }, PRODUCTION)).toBeNull();
+  });
+
+  it("refuses production without --production, and --production anywhere else", () => {
+    expect(moderatorGuard(branch(PRODUCTION_EP), {}, PRODUCTION)).toMatch(/pass --production/);
+    expect(moderatorGuard(branch("ep-dev-1"), { production: true }, PRODUCTION)).toMatch(/not production's/);
+  });
+
+  it("refuses NODE_ENV=production and VERCEL_ENV=production, and a missing DATABASE_URL", () => {
+    expect(moderatorGuard({ ...branch(PRODUCTION_EP), NODE_ENV: "production" }, { production: true }, PRODUCTION)).toMatch(/NODE_ENV=production/);
+    expect(moderatorGuard({ ...branch("ep-dev-1"), VERCEL_ENV: "production" }, {}, PRODUCTION)).toMatch(/VERCEL_ENV=production/);
+    expect(moderatorGuard({}, {}, PRODUCTION)).toMatch(/Needs DATABASE_URL/);
   });
 });
 

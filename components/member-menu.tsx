@@ -13,12 +13,13 @@ const NEW_REPLIES_SHOWN = 100;
 
 /**
  * The signed-in Member's corner of the header: their name, their guestbook
- * page (with a badge counting new replies to their notes) and "Sign out".
+ * page (with a badge counting new replies to their notes), the moderation
+ * page for moderators, and "Sign out".
  * Shown only once the page knows someone is signed in (components/site-header.tsx).
  */
 export default function MemberMenu({ user }: { user: MemberUser }) {
   const [leaving, setLeaving] = useState(false);
-  const newReplies = useNewReplies(user.id);
+  const { count: newReplies, moderator } = useNewReplies(user.id);
 
   return (
     <div className="flex min-h-11 items-center gap-3 pb-2 text-[14px]">
@@ -37,6 +38,12 @@ export default function MemberMenu({ user }: { user: MemberUser }) {
           </span>
         )}
       </Link>
+      {/* Reports and appeals to handle (app/(guestbook)/guestbook/moderation): moderators only, and the page checks again. */}
+      {moderator && (
+        <Link className="focus-ring text-ink flex min-h-9 items-center rounded-[6px] px-1 font-bold underline underline-offset-2" href="/guestbook/moderation">
+          Moderation
+        </Link>
+      )}
       <button
         className="focus-ring text-ink min-h-9 rounded-[6px] px-1 font-bold underline underline-offset-2"
         disabled={leaving}

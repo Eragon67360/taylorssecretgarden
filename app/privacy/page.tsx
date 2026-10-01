@@ -30,7 +30,8 @@ const CONTENTS = [
  * The privacy policy (GDPR arts. 12–14): in English, the site's language.
  * Every period and every processor here comes from the code or the hosting
  * set-up: service/swiftter.ts (purgeExpired, deleteMemberAccount), the
- * auth cookies (app/api/auth), next.config.ts's media hosts, the trailer
+ * auth cookies (app/api/auth), the account emails (service/auth-email.ts),
+ * next.config.ts's media hosts, the trailer
  * embed (components/tours/tour-trailer.tsx). Change them
  * together.
  */
@@ -72,6 +73,11 @@ export default function PrivacyPage() {
             <strong>Your account:</strong> the name you give, your email address and your password, which is never stored as such, only as a one-way hash. If
             you sign in with Google instead, Google tells the site your name, email address, profile picture and Google account identifier, and the sign-in
             tokens it issues are kept with your account.
+          </li>
+          <li>
+            <strong>Account emails:</strong> the site emails you only about your account: a code to confirm your email address, or a link to choose a new
+            password when you ask for one. Until it is used or expires (a few minutes for a code, an hour for a link), a one-time token is kept with your
+            account to check it.
           </li>
           <li>
             <strong>Your sessions:</strong> when you sign in, a session is recorded with the IP address and browser it was opened from, until you sign out or it
@@ -126,6 +132,11 @@ export default function PrivacyPage() {
           <li>
             <strong>Neon</strong> (United States; servers in the AWS us-east-1 region, Virginia): the database where accounts, sessions, notes and moderation
             decisions are stored, and the sign-in service (Neon Auth).
+          </li>
+          <li>
+            <strong>Resend</strong> (United States): sends the account emails (codes to confirm your address, password reset links). When the sign-in service
+            needs one sent, it gives the site your email address, your name and the code or link, and the site hands them to Resend in the email it asks Resend
+            to deliver; the site itself keeps none of them. Resend receives your email address and that email, and keeps a record of the delivery.
           </li>
           <li>
             <strong>Anthropic, PBC</strong> (United States): its Claude model reads the text of each note to check it against the community rules. It receives

@@ -32,12 +32,16 @@ export class AuthUnavailableError extends Error {}
  * The person signed in on this request, or null. Throws AuthUnavailableError
  * when Neon Auth itself fails (a 5xx or no answer), so an outage is not
  * mistaken for being signed out.
+ *
+ * `fresh` asks Neon Auth itself rather than the signed copy kept in a cookie
+ * for up to five minutes, which still says "unconfirmed" for a while after the
+ * Member confirmed their address in another browser.
  */
-export async function getSessionUser() {
+export async function getSessionUser({ fresh = false } = {}) {
   let result: Awaited<ReturnType<NeonAuth["getSession"]>>;
 
   try {
-    result = await getAuth().getSession();
+    result = await getAuth().getSession(fresh ? { query: { disableCookieCache: "true" } } : undefined);
   } catch (error) {
     throw new AuthUnavailableError("Neon Auth did not answer", { cause: error });
   }

@@ -38,11 +38,16 @@ function writeSeen(memberId: string, at: string) {
 /** The pages where the Member sees their replies: the badge resets there. */
 const looksAtReplies = (pathname: string, memberId: string) => pathname === "/swiftter" || pathname === "/guestbook" || pathname === memberPath(memberId);
 
-/** How many new replies the signed-in Member has, read again on every page they open. 0 where they are looking at them. */
-export function useNewReplies(memberId: string): number {
+/**
+ * How many new replies the signed-in Member has, read again on every page they
+ * open (0 where they are looking at them), and whether they are a moderator,
+ * which the same answer says.
+ */
+export function useNewReplies(memberId: string): { count: number; moderator: boolean } {
   const pathname = usePathname();
   const looking = looksAtReplies(pathname, memberId);
   const [count, setCount] = useState(0);
+  const [moderator, setModerator] = useState(false);
 
   useEffect(() => {
     let current = true;
@@ -53,6 +58,7 @@ export function useNewReplies(memberId: string): number {
       // Looking now, or looking for the first time: counted from now on.
       if (looking || !seen) writeSeen(memberId, answer.at);
       setCount(looking ? 0 : answer.count);
+      setModerator(answer.moderator === true);
     });
 
     return () => {
@@ -60,5 +66,5 @@ export function useNewReplies(memberId: string): number {
     };
   }, [memberId, pathname, looking]);
 
-  return looking ? 0 : count;
+  return { count: looking ? 0 : count, moderator };
 }

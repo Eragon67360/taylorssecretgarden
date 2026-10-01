@@ -148,6 +148,7 @@ describe("the alerts' contents", () => {
     expect(body).toContain(`- note \`${publicNote}\`, 2 reports: https://www.taylorssecretgarden.com/swiftter/p/${publicNote}`);
     expect(body).toContain(`- note \`${refused}\`, 1 appeal (not public: id only)`);
     expect(body).not.toContain(`/swiftter/p/${refused}`);
+    expect(body).toContain("https://www.taylorssecretgarden.com/guestbook/moderation");
   });
 
   it("lists at most 50 notes, saying how many more", () => {
