@@ -7,7 +7,7 @@ import { type Database, getDb } from "@/db/client";
 import { bare, type Narrowed, type NotNull, type RawValue, type RowOf } from "@/db/rows";
 import { allowedAvatarUrl } from "@/lib/avatar";
 import { displayNameOf } from "@/lib/display-name";
-import { members, moderationDecisions, noteReports, posts, reshares } from "@/db/schema";
+import { members, moderationDecisions, moderators, noteReports, posts, reshares } from "@/db/schema";
 import {
   type Author,
   characterCount,
@@ -15,6 +15,7 @@ import {
   type FeedPage,
   type FeedPost,
   type HeldNote,
+  HUMAN_MODEL,
   LIMITS,
   type LimitedWrite,
   MAX_MODERATION_ATTEMPTS,
@@ -628,6 +629,9 @@ type HeldRow = RowOf<typeof posts, "id" | "content" | "rootId" | "parentId" | "c
 /** The last refusal of a held note. */
 const last = alias(moderationDecisions, "last");
 
+/** A decision moderation made, not a moderator: their notes are for the moderators, never shown as the model's reason. */
+const notHuman = sql`${moderationDecisions.model} not like ${`${HUMAN_MODEL}%`}`;
+
 async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
   const { rows } = await getDb().execute<HeldRow>(sql`
 		select ${p.id}, ${p.content}, ${p.status}, ${p.rootId}, ${p.parentId}, ${p.createdAt}, d.attempts, coalesce(${givenUp()}, false) as given_up, ${last.category}, ${last.reason},
@@ -638,7 +642,7 @@ async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 		) d on true
 		left join lateral (
 			select ${moderationDecisions.category}, ${moderationDecisions.reason} from ${moderationDecisions}
-			where ${moderationDecisions.postId} = ${p.id} and ${moderationDecisions.outcome} = 'blocked' order by ${moderationDecisions.createdAt} desc limit 1
+			where ${moderationDecisions.postId} = ${p.id} and ${moderationDecisions.outcome} = 'blocked' and ${notHuman} order by ${moderationDecisions.createdAt} desc limit 1
 		) ${last} on true
 		where ${where} and ${p.status} in ('pending', 'blocked') and ${p.deletedAt} is null
 		order by ${p.createdAt} desc`);
@@ -760,22 +764,39 @@ export async function deletePost(memberId: string, postId: string): Promise<void
   if (!isUuid(postId)) throw new PostNotFoundError();
 
   await getDb().transaction(async (tx) => {
-    const rows = await tx
-      .update(posts)
-      .set({ content: "", deletedAt: sql`now()` })
-      .where(and(eq(posts.id, postId), eq(posts.memberId, memberId), isNull(posts.deletedAt)))
-      .returning({ id: posts.id });
-
-    if (!rows[0]) throw new PostNotFoundError();
-    await tx.update(moderationDecisions).set({ reason: null }).where(eq(moderationDecisions.postId, postId));
-    // Nothing left for a human to look at: reports and appeals of it are settled (and purged in time).
-    await tx
-      .update(noteReports)
-      .set({ resolvedAt: sql`now()` })
-      .where(and(eq(noteReports.postId, postId), isNull(noteReports.resolvedAt)));
+    if (!(await tearUpInTransaction(tx, postId, memberId))) throw new PostNotFoundError();
   });
 
   await purgeTombstones(memberId);
+}
+
+/** A transaction, as getDb().transaction hands it over. */
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/**
+ * Tears a note up inside a transaction: deletePost's, or a moderator's
+ * (service/moderators.ts), one path for both. `memberId`: only if the note is
+ * theirs. Its text and every moderation reason so far are erased, and its
+ * reports and appeals settled. Resolves to its author's id (for
+ * purgeTombstones, once committed), or null when there was no such note left
+ * to tear up.
+ */
+export async function tearUpInTransaction(tx: Transaction, postId: string, memberId?: string): Promise<string | null> {
+  const rows = await tx
+    .update(posts)
+    .set({ content: "", deletedAt: sql`now()` })
+    .where(and(eq(posts.id, postId), memberId === undefined ? undefined : eq(posts.memberId, memberId), isNull(posts.deletedAt)))
+    .returning({ memberId: posts.memberId });
+
+  if (!rows[0]) return null;
+  await tx.update(moderationDecisions).set({ reason: null }).where(eq(moderationDecisions.postId, postId));
+  // Nothing left for a human to look at: reports and appeals of it are settled (and purged in time).
+  await tx
+    .update(noteReports)
+    .set({ resolvedAt: sql`now()` })
+    .where(and(eq(noteReports.postId, postId), isNull(noteReports.resolvedAt)));
+
+  return rows[0].memberId;
 }
 
 /** A note `p` that no reply answers and no reshare (even undone) points at: its row can go. */
@@ -786,7 +807,7 @@ const unreferenced = sql`not exists (select 1 from ${posts} ${c} where ${c.paren
  * count towards a limit. Best effort: a reply arriving at the same moment
  * makes Postgres refuse the delete (foreign key), and the row simply stays.
  */
-async function purgeTombstones(memberId: string) {
+export async function purgeTombstones(memberId: string) {
   const window = Math.max(LIMITS.post.minutes, LIMITS.reply.minutes);
 
   try {
@@ -984,7 +1005,8 @@ export async function exportMemberData(memberId: string): Promise<MemberExport> 
         outcome: moderationDecisions.outcome,
         category: moderationDecisions.category,
         reason: moderationDecisions.reason,
-        model: moderationDecisions.model,
+        // A moderator's decision says a human made it, not which one (their id stays with the moderators).
+        model: sql<string>`case when ${moderationDecisions.model} like ${`${HUMAN_MODEL}%`} then 'human' else ${moderationDecisions.model} end`,
         createdAt: moderationDecisions.createdAt,
       })
       .from(moderationDecisions)
@@ -1059,6 +1081,8 @@ export async function deleteMemberAccount(memberId: string): Promise<void> {
       .set({ resolvedAt: sql`now()` })
       .where(and(isNull(noteReports.resolvedAt), inArray(noteReports.postId, tx.select({ id: posts.id }).from(posts).where(eq(posts.memberId, memberId)))));
     await tx.update(members).set({ displayName: "", username: null, avatarUrl: null }).where(eq(members.id, memberId));
+    // A moderator's role goes with their account (the row stays, emptied, so the cascade alone would not take it).
+    await tx.delete(moderators).where(eq(moderators.memberId, memberId));
     await tx.execute(sql`select public.delete_auth_user(${memberId})`);
   });
 
@@ -1082,7 +1106,8 @@ const MAX_TOMBSTONE_DEPTH = 50;
  * - refused notes, and notes given up on, after RETENTION_DAYS (their author
  *   is told so in their margin), with their moderation history;
  * - the model's reasons on approved notes' decisions after RETENTION_DAYS
- *   (the outcome, category and model stay, for the audit);
+ *   (the outcome, category and model stay, for the audit); a moderator's
+ *   note on their decision (`human:…`) stays, being the audit itself;
  * - reports and appeals the owner resolved (or whose note was torn up),
  *   RETENTION_DAYS after; the rest go with their note (on delete cascade).
  * Returns how many rows each step removed or cleared.
@@ -1111,7 +1136,7 @@ export async function purgeExpired(db: Executor = getDb()) {
 			and ${unreferenced}`);
   const reasons = await db.execute(sql`
 		update ${moderationDecisions} set ${bare(moderationDecisions.reason)} = null
-		where ${moderationDecisions.outcome} = 'approved' and ${moderationDecisions.reason} is not null
+		where ${moderationDecisions.outcome} = 'approved' and ${moderationDecisions.reason} is not null and ${notHuman}
 			and ${moderationDecisions.createdAt} < now() - make_interval(days => ${RETENTION_DAYS})`);
   const reports = await db.execute(sql`
 		delete from ${noteReports} where ${noteReports.resolvedAt} < now() - make_interval(days => ${RETENTION_DAYS})`);

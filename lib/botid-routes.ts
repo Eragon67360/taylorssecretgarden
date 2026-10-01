@@ -18,6 +18,8 @@ export const BOTID_PROTECTED_ROUTES = [
   { path: "/api/swiftter/posts/*", method: "DELETE" },
   // Deleting one's account (app/api/swiftter/me).
   { path: "/api/swiftter/me", method: "DELETE" },
+  // A moderator's decisions (app/api/swiftter/moderation/[id]); reading the list is not a write.
+  { path: "/api/swiftter/moderation/*", method: "POST" },
   { path: "/api/auth/sign-up/*", method: "POST" },
   { path: "/api/auth/sign-in/*", method: "POST" },
   { path: "/api/auth/request-password-reset", method: "POST" },
