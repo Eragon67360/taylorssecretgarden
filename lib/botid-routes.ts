@@ -3,7 +3,11 @@
  * attaches BotID's token to requests matching these (instrumentation-client.ts)
  * and the routes refuse requests without a valid one (lib/bot-protection.ts):
  * every Swiftter write (lib/member-write.ts), and signing up or signing in
- * (email or Google), checked in front of Neon Auth in app/api/auth/[...path].
+ * (email or Google), checked in front of Neon Auth in app/api/auth/[...path],
+ * and the two requests that make Neon Auth send an email (a reset link, a
+ * verification code), which a script could otherwise aim at anyone's inbox.
+ * Setting the new password and entering the code are not guarded: they need
+ * what the email carried, and the Member comes to them from that email.
  *
  * `*` matches the rest of the path, as BotID's client reads it.
  */
@@ -16,6 +20,8 @@ export const BOTID_PROTECTED_ROUTES = [
   { path: "/api/swiftter/me", method: "DELETE" },
   { path: "/api/auth/sign-up/*", method: "POST" },
   { path: "/api/auth/sign-in/*", method: "POST" },
+  { path: "/api/auth/request-password-reset", method: "POST" },
+  { path: "/api/auth/send-verification-email", method: "POST" },
 ];
 
 /** What a Member reads when BotID refuses their request (403). */

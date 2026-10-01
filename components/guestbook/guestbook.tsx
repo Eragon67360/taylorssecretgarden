@@ -28,6 +28,35 @@ export function guestbookRedirect(params: SearchParams): string {
   return safeRedirect(firstParam(params.redirect_url), DEFAULT_REDIRECT);
 }
 
+/**
+ * Another guestbook page, still headed for the same place: a visitor who came
+ * to reply to a thread and has no account yet goes back to the thread once
+ * signed up (or once their password is reset). Swiftter, where every page
+ * goes by default, needs no mention. `extra` adds to the query (a notice).
+ */
+export function withRedirect(path: string, redirectTo: string, extra: Record<string, string> = {}) {
+  const query = new URLSearchParams(extra);
+
+  if (redirectTo !== DEFAULT_REDIRECT) query.set("redirect_url", redirectTo);
+
+  return query.size ? `${path}?${query}` : path;
+}
+
+/** The good news a page was sent with (`?notice=…`), to show above its form. */
+const NOTICES = {
+  "password-reset": "Your password is changed. Sign in with the new one.",
+  "email-confirmed": "Your email address is confirmed. Sign in to carry on.",
+} as const;
+
+export type GuestbookNotice = keyof typeof NOTICES;
+
+/** The notice for `?notice=…`, or null; only the known ones, never text from the address. */
+export function guestbookNotice(params: SearchParams): string | null {
+  const notice = firstParam(params.notice);
+
+  return notice && Object.hasOwn(NOTICES, notice) ? NOTICES[notice as GuestbookNotice] : null;
+}
+
 /** The explanation to show when Google sent the visitor back with `?error=…`. */
 export function guestbookError(params: SearchParams): string | null {
   return firstParam(params.error) ? GOOGLE_ERROR : null;

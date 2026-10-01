@@ -74,6 +74,11 @@ export default function PrivacyPage() {
             tokens it issues are kept with your account.
           </li>
           <li>
+            <strong>Account emails:</strong> the site emails you only about your account: a code to confirm your email address, or a link to choose a new
+            password when you ask for one. Until it is used or expires (a few minutes for a code, an hour for a link), a one-time token is kept with your
+            account to check it.
+          </li>
+          <li>
             <strong>Your sessions:</strong> when you sign in, a session is recorded with the IP address and browser it was opened from, until you sign out or it
             expires.
           </li>
@@ -126,6 +131,10 @@ export default function PrivacyPage() {
           <li>
             <strong>Neon</strong> (United States; servers in the AWS us-east-1 region, Virginia): the database where accounts, sessions, notes and moderation
             decisions are stored, and the sign-in service (Neon Auth).
+          </li>
+          <li>
+            <strong>Resend</strong> (United States): sends the account emails (codes to confirm your address, password reset links) on the sign-in
+            service&apos;s behalf. It receives your email address and the email it delivers, and keeps a record of the delivery.
           </li>
           <li>
             <strong>Anthropic, PBC</strong> (United States): its Claude model reads the text of each note to check it against the community rules. It receives

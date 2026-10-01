@@ -4,11 +4,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useRef, useState } from "react";
 
-import { DEFAULT_REDIRECT, GOOGLE_ERROR } from "@/components/guestbook/guestbook";
+import { ConfirmEmail } from "@/components/guestbook/confirm-email";
+import {
+  describeRequestFailure,
+  Field,
+  FormError,
+  FormNotice,
+  inlineLinkClass,
+  inputClass,
+  isFieldRefusal,
+  MIN_PASSWORD_LENGTH,
+  useHydrated,
+} from "@/components/guestbook/form-fields";
+import { GOOGLE_ERROR, withRedirect } from "@/components/guestbook/guestbook";
 import { Button } from "@/components/scrapbook";
 import { trackEvent } from "@/lib/analytics";
 import { type AuthFailure, signInEmail, signInSocial, signUpEmail } from "@/lib/auth/client";
-import { BOT_REFUSAL } from "@/lib/botid-routes";
 import { MINIMUM_AGE } from "@/lib/swiftter";
 
 type Mode = "sign-in" | "sign-up";
@@ -19,9 +30,9 @@ type GuestbookFormProps = {
   redirectTo: string;
   /** An error to show straight away (e.g. Google sent the visitor back with one). */
   initialError?: string | null;
+  /** Good news to show straight away (e.g. the password was just changed). */
+  notice?: string | null;
 };
-
-const MIN_PASSWORD_LENGTH = 8;
 
 /** Each page's words, and what its password field asks for. */
 const PAGES = {
@@ -47,24 +58,16 @@ const PAGES = {
   },
 } as const;
 
-/**
- * The other guestbook page, still headed for the same place: a visitor who
- * came to reply to a thread and has no account yet goes back to the thread
- * once signed up. Swiftter, where both pages go by default, needs no mention.
- */
-function withRedirect(path: string, redirectTo: string) {
-  return redirectTo === DEFAULT_REDIRECT ? path : `${path}?redirect_url=${encodeURIComponent(redirectTo)}`;
-}
-
 const ALREADY_SIGNED = "That email has already signed the guestbook. Sign in instead.";
-const TOO_MANY_TRIES = "Too many tries in a row. Wait a minute, then try again.";
 
 /**
  * What went wrong, in the journal's voice. Neon Auth answers with Better
  * Auth's codes (`INVALID_EMAIL_OR_PASSWORD`, `USER_ALREADY_EXISTS`…); the
  * lower-case ones are Neon Auth's own names for the same failures.
  */
-function describeError({ code = "", message = "", status }: AuthFailure): string {
+function describeError(failure: AuthFailure): string {
+  const { code = "", message = "" } = failure;
+
   switch (code.toLowerCase()) {
     case "invalid_credentials":
     case "invalid_email_or_password":
@@ -80,39 +83,39 @@ function describeError({ code = "", message = "", status }: AuthFailure): string
     case "email_address_invalid":
     case "invalid_email":
       return "That doesn't look like an email address.";
-    case "over_request_rate_limit":
-      return TOO_MANY_TRIES;
-    // Refused by BotID (app/api/auth/[...path]) before reaching Neon Auth.
-    case "bot_detected":
-      return BOT_REFUSAL;
   }
   // Better Auth's "User already exists. Use another email." has no code of its own here.
   if (/already exists/i.test(message)) return ALREADY_SIGNED;
-  if (status === 429) return TOO_MANY_TRIES;
-  if (status === undefined || status === 0) return "The guestbook can't be reached right now. Check your connection and try again.";
 
-  return "The guestbook couldn't be signed just now. Try again in a moment.";
+  // BotID's refusal (app/api/auth/[...path]), a rate limit, no connection.
+  return describeRequestFailure(failure) ?? "The guestbook couldn't be signed just now. Try again in a moment.";
 }
 
-const inlineLinkClass = "text-accent hover:text-ink focus-ring rounded-sm font-bold underline underline-offset-[3px]";
-
-const inputClass =
-  "text-ink placeholder:text-soft/70 focus-visible:outline-ink w-full rounded-none border-0 bg-[color-mix(in_srgb,var(--paper)_35%,var(--card))] px-2 py-2.5 text-[1rem] shadow-[inset_0_-2px_0_var(--soft)] transition-shadow outline-offset-[3px] hover:shadow-[inset_0_-2px_0_var(--ink)] focus:shadow-[inset_0_-2px_0_var(--ink)] focus-visible:outline-[2.5px] focus-visible:outline-solid aria-[invalid=true]:shadow-[inset_0_-2px_0_var(--pen)]";
+/** Neon Auth refuses to sign in a Member whose email address is not confirmed yet, when it requires it. */
+const isUnconfirmed = ({ code = "" }: AuthFailure) => code.toLowerCase() === "email_not_verified";
 
 /**
  * The guestbook's own sign-in and sign-up forms, written on its card: a
  * handwritten title, "Continue with Google" on a paper slip, notebook-line
  * fields and an ink-stamp button. Talks to Neon Auth through /api/auth.
+ *
+ * When Neon Auth wants the email address confirmed first (a sign-up that
+ * opened no session, or a sign-in refused with EMAIL_NOT_VERIFIED), the card
+ * turns to the code step (components/guestbook/confirm-email.tsx), which
+ * signs the Member in and carries on to `redirectTo`.
  */
-export function GuestbookForm({ mode, redirectTo, initialError = null }: GuestbookFormProps) {
+export function GuestbookForm({ mode, redirectTo, initialError = null, notice = null }: GuestbookFormProps) {
   const copy = PAGES[mode];
   const router = useRouter();
   const id = useId();
+  const hydrated = useHydrated();
   const passwordRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(initialError);
   // Only a refused email or password marks the fields; a Google error does not.
   const [fieldsInvalid, setFieldsInvalid] = useState(false);
   const [pending, setPending] = useState<"email" | "google" | null>(null);
+  // The address waiting to be confirmed, and how the Member got here.
+  const [confirming, setConfirming] = useState<{ email: string; moment: "signed-up" | "sign-in" } | null>(null);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -122,15 +125,20 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
 
     setPending("email");
     setError(null);
-    const { error: failure } =
+    const { data, error: failure } =
       mode === "sign-up" ? await signUpEmail({ name: String(form.get("name") ?? "").trim(), email, password }) : await signInEmail({ email, password });
 
-    if (failure) {
-      const { status } = failure;
+    if (failure && isUnconfirmed(failure)) {
+      // The password was right; the address still needs its code (sent now if Neon Auth sends one on sign-in).
+      setPending(null);
+      setConfirming({ email, moment: "sign-in" });
 
+      return;
+    }
+    if (failure) {
       setError(describeError(failure));
       // Only a refused email or password marks the fields: not a rate limit, nor BotID (403).
-      setFieldsInvalid(status >= 400 && status < 500 && status !== 429 && status !== 403);
+      setFieldsInvalid(isFieldRefusal(failure));
       setPending(null);
       // Try again from the password, typed afresh.
       if (passwordRef.current) passwordRef.current.value = "";
@@ -139,9 +147,24 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
       return;
     }
     trackEvent(mode === "sign-up" ? { name: "Sign up" } : { name: "Sign in" });
+    // Signed up, but Neon Auth opens the session only once the address is confirmed: its code is on its way.
+    if (data.token === null) {
+      setPending(null);
+      setConfirming({ email, moment: "signed-up" });
+
+      return;
+    }
     router.push(redirectTo);
     router.refresh();
   };
+
+  const confirmed = (signedIn: boolean) => {
+    // Neon Auth signs the Member in with the code unless its "sign in after verification" is off.
+    router.push(signedIn ? redirectTo : withRedirect("/sign-in", redirectTo, { notice: "email-confirmed" }));
+    router.refresh();
+  };
+
+  if (confirming) return <ConfirmEmail email={confirming.email} moment={confirming.moment} onConfirmed={confirmed} />;
 
   const continueWithGoogle = async () => {
     setPending("google");
@@ -208,15 +231,9 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
       </p>
 
       <form aria-describedby={describedBy} className="flex flex-col gap-5" onSubmit={handleSubmit}>
-        {error && (
-          <p
-            className="border-pen text-pen rounded-[0.25rem] border-l-4 bg-[color-mix(in_srgb,var(--pen)_8%,var(--card))] px-3 py-2 text-[0.95rem] font-semibold"
-            id={errorId}
-            role="alert"
-          >
-            {error}
-          </p>
-        )}
+        {/* The good news goes once the Member tries again: an error then says more. */}
+        {notice && !error && <FormNotice>{notice}</FormNotice>}
+        {error && <FormError id={errorId}>{error}</FormError>}
 
         {mode === "sign-up" && (
           <Field id={`${id}-name`} label="Name">
@@ -247,11 +264,20 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
         <Button
           aria-busy={pending === "email"}
           className="mt-1 w-full text-[16px] shadow-[2px_3px_0_color-mix(in_srgb,var(--ink)_30%,transparent)]"
-          disabled={pending !== null}
+          disabled={!hydrated || pending !== null}
           type="submit"
         >
           {pending === "email" ? copy.pending : copy.submit}
         </Button>
+
+        {/* After the button, so the keyboard still goes from the password straight to signing in. */}
+        {mode === "sign-in" && (
+          <p className="text-[0.95rem]">
+            <Link className={inlineLinkClass} href={withRedirect("/forgot-password", redirectTo)}>
+              Forgot your password?
+            </Link>
+          </p>
+        )}
       </form>
 
       <p className="border-line text-soft border-t border-dashed pt-4 text-[0.95rem]">
@@ -260,22 +286,6 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
           {copy.switchLink.label}
         </Link>
       </p>
-    </div>
-  );
-}
-
-function Field({ id, label, hint, hintId, children }: { id: string; label: string; hint?: string; hintId?: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-ink font-bold" htmlFor={id}>
-        {label}
-      </label>
-      {children}
-      {hint && (
-        <p className="text-soft text-[0.875rem]" id={hintId}>
-          {hint}
-        </p>
-      )}
     </div>
   );
 }

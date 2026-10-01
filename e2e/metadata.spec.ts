@@ -180,7 +180,7 @@ test.describe("per-route metadata", () => {
   });
 
   test("the guestbook pages are noindex", async ({ page, request }) => {
-    for (const path of ["/sign-in", "/sign-up"]) {
+    for (const path of ["/sign-in", "/sign-up", "/forgot-password", "/reset-password"]) {
       expect((await metadataOf(page, request, path)).robots, path).toMatch(/noindex/);
     }
   });

@@ -17,4 +17,11 @@ describe("BotID's routes", () => {
     expect(isBotIdProtected("POST", "/api/auth/sign-up/email")).toBe(true);
     expect(isBotIdProtected("GET", "/api/swiftter/posts")).toBe(false);
   });
+
+  it("guard the requests that make Neon Auth send an email, not the ones that use what it sent", () => {
+    expect(isBotIdProtected("POST", "/api/auth/request-password-reset")).toBe(true);
+    expect(isBotIdProtected("POST", "/api/auth/send-verification-email")).toBe(true);
+    expect(isBotIdProtected("POST", "/api/auth/reset-password")).toBe(false);
+    expect(isBotIdProtected("POST", "/api/auth/email-otp/verify-email")).toBe(false);
+  });
 });
