@@ -69,6 +69,7 @@ export function TourEntry({ tour, index }: TourEntryProps) {
               <TourVideo
                 caption="on repeat"
                 className="w-[92%] sm:mt-24 sm:-ml-8 sm:w-[62%]"
+                credit={tour.videoCredit}
                 src={tour.videoUrl}
                 tilt={flip ? -2 : 2.5}
                 tour={tour.tour}

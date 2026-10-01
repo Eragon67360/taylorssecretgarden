@@ -9,6 +9,7 @@ const routes = [
 	{ path: "/music", heading: "pick an Era. the page changes outfits." },
 	{ path: "/tours", heading: "Tours" },
 	{ path: "/swiftter", heading: "Swiftter" },
+	{ path: "/credits", heading: "Credits" },
 	{ path: "/sign-in", heading: "Sign in to Taylor's Secret Garden" },
 ];
 

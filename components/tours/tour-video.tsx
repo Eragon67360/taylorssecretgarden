@@ -5,6 +5,7 @@ import { useReducedMotion } from "motion/react";
 
 import { Polaroid } from "@/components/scrapbook";
 import { cloudinaryWidth, videoStill } from "@/lib/cloudinary";
+import { type Credit } from "@/lib/credits";
 import { cn } from "@/lib/utils";
 
 type TourVideoProps = {
@@ -13,6 +14,8 @@ type TourVideoProps = {
   src: string;
   /** Handwritten caption on the polaroid. */
   caption: string;
+  /** The footage's source, when it is known. */
+  credit?: Credit;
   tilt?: number;
   className?: string;
 };
@@ -39,7 +42,7 @@ type Mode = "auto" | "playing" | "paused";
  * and it never starts on its own before the page has loaded, so the footage
  * does not compete with the page for the network.
  */
-export function TourVideo({ tour, src, caption, tilt = 3, className }: TourVideoProps) {
+export function TourVideo({ tour, src, caption, credit, tilt = 3, className }: TourVideoProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const reduce = useReducedMotion();
@@ -113,6 +116,7 @@ export function TourVideo({ tour, src, caption, tilt = 3, className }: TourVideo
             </button>
           </span>
         }
+        credit={credit}
         tilt={tilt}
       >
         <video
