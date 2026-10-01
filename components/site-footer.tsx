@@ -21,8 +21,7 @@ export function SiteFooter() {
       <div className="relative mx-auto flex w-full max-w-[1240px] flex-col items-center gap-4 px-4 pt-12 pb-10 text-center sm:px-8">
         <Bracelet className="rotate-[1.5deg]" size="sm" word="Long Live" />
         <p className="font-hand max-w-[30rem] text-[24px] leading-snug font-bold">
-          kept with glitter gel pens, by a fan, for fans.{" "}
-          <Highlight color="#F9D9E3">this is NOT Taylor&apos;s version.</Highlight>
+          kept with glitter gel pens, by a fan, for fans. <Highlight color="#F9D9E3">this is NOT Taylor&apos;s version.</Highlight>
         </p>
         <p className="text-soft max-w-[40rem] text-[14px] leading-relaxed">
           {/* Deezer's API terms: its logo, clearly visible, and the previews' terms told to listeners (IV). */}
@@ -30,8 +29,8 @@ export function SiteFooter() {
           <a className="text-ink focus-ring rounded-sm font-semibold underline underline-offset-2" href="https://www.deezer.com/">
             <DeezerLogo />
           </a>
-          , for private listening only. An unofficial fan site, not affiliated with Taylor Swift, her team or her labels; its photos and footage belong to
-          their owners.
+          , for private listening only. An unofficial fan site, not affiliated with Taylor Swift, her team or her labels; its photos and footage belong to their
+          owners.
         </p>
         <nav aria-label="The small print">
           <ul className="flex flex-wrap justify-center gap-x-6 gap-y-1 text-[14px]">

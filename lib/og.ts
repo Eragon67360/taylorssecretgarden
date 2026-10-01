@@ -12,12 +12,7 @@ type OgFont = { name: string; data: ArrayBuffer; weight: 400 | 500 | 600 | 700; 
  * woff2 files next/font serves), cut down to the glyphs of `text`. Null if
  * Google Fonts cannot be reached.
  */
-export async function googleFont(
-  font: Omit<OgFont, "data">,
-  family: string,
-  axes: string,
-  text: string,
-): Promise<OgFont | null> {
+export async function googleFont(font: Omit<OgFont, "data">, family: string, axes: string, text: string): Promise<OgFont | null> {
   const url = `https://fonts.googleapis.com/css2?family=${family.replaceAll(" ", "+")}:${axes}&text=${encodeURIComponent(text)}`;
 
   try {

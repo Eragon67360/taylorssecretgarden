@@ -7,35 +7,35 @@ import { expect, test } from "./fixtures";
 // several Eras. Production serves it only with ENABLE_STYLEGUIDE=1, which the
 // Playwright web server and CI set.
 const KIT = [
-	"Paper",
-	"Washi tape",
-	"Pin",
-	"Polaroid",
-	"Bracelet",
-	"Pressed flowers",
-	"Scribble",
-	"Arrow",
-	"Highlight",
-	"Sticky note",
-	"Rubber stamp",
-	"Ticket stub",
-	"Buttons",
-	"Ruled list",
+  "Paper",
+  "Washi tape",
+  "Pin",
+  "Polaroid",
+  "Bracelet",
+  "Pressed flowers",
+  "Scribble",
+  "Arrow",
+  "Highlight",
+  "Sticky note",
+  "Rubber stamp",
+  "Ticket stub",
+  "Buttons",
+  "Ruled list",
 ];
 
 const ERAS = [
-	"Taylor Swift",
-	"Fearless",
-	"Speak Now",
-	"Red",
-	"1989",
-	"reputation",
-	"Lover",
-	"folklore",
-	"evermore",
-	"Midnights",
-	"The Tortured Poets Department",
-	"The Life of a Showgirl",
+  "Taylor Swift",
+  "Fearless",
+  "Speak Now",
+  "Red",
+  "1989",
+  "reputation",
+  "Lover",
+  "folklore",
+  "evermore",
+  "Midnights",
+  "The Tortured Poets Department",
+  "The Life of a Showgirl",
 ];
 
 const sandbox = (page: Page) => page.getByRole("region", { name: "Era sandbox" });
@@ -43,172 +43,189 @@ const background = (page: Page) => sandbox(page).evaluate((element) => getComput
 
 /** Whether a web font whose family name contains `name` has been downloaded. */
 const fontLoaded = (page: Page, name: string) =>
-	page.evaluate((name) => {
-		const pattern = new RegExp(name.replace(/ /g, "[ _]"), "i");
-		let loaded = false;
+  page.evaluate((name) => {
+    const pattern = new RegExp(name.replace(/ /g, "[ _]"), "i");
+    let loaded = false;
 
-		document.fonts.forEach((face) => {
-			if (pattern.test(face.family) && !/fallback/i.test(face.family) && face.status === "loaded") loaded = true;
-		});
+    document.fonts.forEach((face) => {
+      if (pattern.test(face.family) && !/fallback/i.test(face.family) && face.status === "loaded") loaded = true;
+    });
 
-		return loaded;
-	}, name);
+    return loaded;
+  }, name);
 
 test.describe("Styleguide", () => {
-	test("shows every kit component in several Eras", async ({ page }) => {
-		const response = await page.goto("/styleguide");
+  test("shows every kit component in several Eras", async ({ page }) => {
+    const response = await page.goto("/styleguide");
 
-		expect(response?.status()).toBe(200);
-		await expect(page.getByRole("heading", { level: 1, name: "Styleguide" })).toBeVisible();
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1, name: "Styleguide" })).toBeVisible();
 
-		const spreads = page.locator("[data-era]").filter({ has: page.getByRole("heading", { name: "Paper", exact: true }) });
+    const spreads = page.locator("[data-era]").filter({ has: page.getByRole("heading", { name: "Paper", exact: true }) });
 
-		expect(await spreads.count()).toBeGreaterThanOrEqual(3);
-		for (let index = 0; index < (await spreads.count()); index++) {
-			for (const component of KIT) {
-				await expect(spreads.nth(index).getByRole("heading", { name: component, exact: true })).toBeAttached();
-			}
-		}
-	});
+    expect(await spreads.count()).toBeGreaterThanOrEqual(3);
+    for (let index = 0; index < (await spreads.count()); index++) {
+      for (const component of KIT) {
+        await expect(spreads.nth(index).getByRole("heading", { name: component, exact: true })).toBeAttached();
+      }
+    }
+  });
 
-	test("shows the palette of every Era", async ({ page }) => {
-		await page.goto("/styleguide");
-		const palettes = page.getByRole("region", { name: "Era palettes" });
+  test("shows the palette of every Era", async ({ page }) => {
+    await page.goto("/styleguide");
+    const palettes = page.getByRole("region", { name: "Era palettes" });
 
-		for (const era of ERAS) {
-			await expect(palettes.getByRole("heading", { name: era, exact: true })).toBeVisible();
-		}
-	});
+    for (const era of ERAS) {
+      await expect(palettes.getByRole("heading", { name: era, exact: true })).toBeVisible();
+    }
+  });
 
-	test("the styleguide lists which Era each curated Album belongs to", async ({ page }) => {
-		await page.goto("/styleguide");
-		const table = page.getByRole("region", { name: "Album → Era" }).getByRole("table");
+  test("the styleguide lists which Era each curated Album belongs to", async ({ page }) => {
+    await page.goto("/styleguide");
+    const table = page.getByRole("region", { name: "Album → Era" }).getByRole("table");
 
-		// Sixteen Albums: one per Era, plus four Taylor's Versions.
-		await expect(table.getByRole("row")).toHaveCount(16 + 1);
-		await expect(table.getByRole("row", { name: /221543452 Fearless/ })).toBeVisible();
-	});
+    // Sixteen Albums: one per Era, plus four Taylor's Versions.
+    await expect(table.getByRole("row")).toHaveCount(16 + 1);
+    await expect(table.getByRole("row", { name: /221543452 Fearless/ })).toBeVisible();
+  });
 
-	test("passes axe (WCAG 2.2 AA), every Era palette included", async ({ page }) => {
-		await page.goto("/styleguide");
-		await expectNoAxeViolations(page);
-	});
+  test("passes axe (WCAG 2.2 AA), every Era palette included", async ({ page }) => {
+    await page.goto("/styleguide");
+    await expectNoAxeViolations(page);
+  });
 
-	test("fits a 390px phone", async ({ page }) => {
-		await page.setViewportSize(PHONE);
-		await page.goto("/styleguide");
-		await expectNoHorizontalOverflow(page);
-	});
+  test("fits a 390px phone", async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    await page.goto("/styleguide");
+    await expectNoHorizontalOverflow(page);
+  });
 
-	test("is still under reduced motion", async ({ page }) => {
-		await page.goto("/styleguide");
-		await expectReducedMotion(page);
-	});
+  test("is still under reduced motion", async ({ page }) => {
+    await page.goto("/styleguide");
+    await expectReducedMotion(page);
+  });
 
-	test("decorations are hidden from assistive tech, meaningful pieces are labelled", async ({ page }) => {
-		await page.goto("/styleguide");
+  test("decorations are hidden from assistive tech, meaningful pieces are labelled", async ({ page }) => {
+    await page.goto("/styleguide");
 
-		const unlabelled = await page.evaluate(() =>
-			[...document.querySelectorAll("main svg")]
-				.filter((svg) => !svg.closest("[aria-hidden='true']") && !svg.closest("[role='img'][aria-label]"))
-				.map((svg) => svg.outerHTML.slice(0, 80)),
-		);
+    const unlabelled = await page.evaluate(() =>
+      [...document.querySelectorAll("main svg")]
+        .filter((svg) => !svg.closest("[aria-hidden='true']") && !svg.closest("[role='img'][aria-label]"))
+        .map((svg) => svg.outerHTML.slice(0, 80)),
+    );
 
-		expect(unlabelled, "SVGs exposed to assistive tech without a label").toEqual([]);
-		await expect(page.getByRole("img", { name: "Swiftie", exact: true }).first()).toBeVisible();
-		await expect(page.getByRole("img", { name: /NOT Taylor's Version/i }).first()).toBeVisible();
-	});
+    expect(unlabelled, "SVGs exposed to assistive tech without a label").toEqual([]);
+    await expect(page.getByRole("img", { name: "Swiftie", exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("img", { name: /NOT Taylor's Version/i }).first()).toBeVisible();
+  });
 
-	test("the button variants work as buttons and as links, with the ink focus ring", async ({ page }) => {
-		await page.goto("/styleguide");
-		const spread = page.locator("[data-era]").filter({ has: page.getByRole("heading", { name: "Buttons", exact: true }) }).first();
+  test("the button variants work as buttons and as links, with the ink focus ring", async ({ page }) => {
+    await page.goto("/styleguide");
+    const spread = page
+      .locator("[data-era]")
+      .filter({ has: page.getByRole("heading", { name: "Buttons", exact: true }) })
+      .first();
 
-		for (const name of ["Try again", "Pass it on", "Tear it up", "Keep it"]) {
-			await expect(spread.getByRole("button", { name, exact: true })).toBeVisible();
-		}
-		await expect(spread.getByRole("button", { name: "Pass it on" })).toHaveAttribute("aria-disabled", "true");
-		await expect(spread.getByRole("link", { name: "Open the music journal" })).toHaveAttribute("href", "/music");
-		await expect(spread.getByRole("link", { name: "A link, as a button" })).toHaveAttribute("href", "/swiftter");
+    for (const name of ["Try again", "Pass it on", "Tear it up", "Keep it"]) {
+      await expect(spread.getByRole("button", { name, exact: true })).toBeVisible();
+    }
+    await expect(spread.getByRole("button", { name: "Pass it on" })).toHaveAttribute("aria-disabled", "true");
+    await expect(spread.getByRole("link", { name: "Open the music journal" })).toHaveAttribute("href", "/music");
+    await expect(spread.getByRole("link", { name: "A link, as a button" })).toHaveAttribute("href", "/swiftter");
 
-		// A key press first, so the focus that follows is keyboard focus (:focus-visible).
-		await page.keyboard.press("Shift");
-		const primary = spread.getByRole("button", { name: "Try again" });
+    // A key press first, so the focus that follows is keyboard focus (:focus-visible).
+    await page.keyboard.press("Shift");
+    const primary = spread.getByRole("button", { name: "Try again" });
 
-		await primary.focus();
-		await expect(primary).toBeFocused();
-		const ring = await primary.evaluate((button) => {
-			const { outlineStyle, outlineWidth, outlineColor } = getComputedStyle(button);
+    await primary.focus();
+    await expect(primary).toBeFocused();
+    const ring = await primary.evaluate((button) => {
+      const { outlineStyle, outlineWidth, outlineColor } = getComputedStyle(button);
 
-			// The ink of the Era around it.
-			return { outlineStyle, outlineWidth: parseFloat(outlineWidth), outlineColor, ink: getComputedStyle(button.closest("[data-era]")!).color };
-		});
+      // The ink of the Era around it.
+      return { outlineStyle, outlineWidth: parseFloat(outlineWidth), outlineColor, ink: getComputedStyle(button.closest("[data-era]")!).color };
+    });
 
-		expect(ring.outlineStyle).toBe("solid");
-		expect(ring.outlineWidth).toBeGreaterThanOrEqual(2);
-		expect(ring.outlineColor).toBe(ring.ink);
-	});
+    expect(ring.outlineStyle).toBe("solid");
+    expect(ring.outlineWidth).toBeGreaterThanOrEqual(2);
+    expect(ring.outlineColor).toBe(ring.ink);
+  });
 
-	test("under reduced motion a hovered button still shows it, by underlining its label, and stays put", async ({ page }) => {
-		await page.emulateMedia({ reducedMotion: "reduce" });
-		await page.goto("/styleguide");
-		const spread = page.locator("[data-era]").filter({ has: page.getByRole("heading", { name: "Buttons", exact: true }) }).first();
-		const underline = (name: string) =>
-			spread.getByRole("button", { name }).evaluate((button) => getComputedStyle(button.firstElementChild!).textDecorationLine);
-		const translate = (name: string) => spread.getByRole("button", { name }).evaluate((button) => getComputedStyle(button).translate);
+  test("under reduced motion a hovered button still shows it, by underlining its label, and stays put", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/styleguide");
+    const spread = page
+      .locator("[data-era]")
+      .filter({ has: page.getByRole("heading", { name: "Buttons", exact: true }) })
+      .first();
+    const underline = (name: string) =>
+      spread.getByRole("button", { name }).evaluate((button) => getComputedStyle(button.firstElementChild!).textDecorationLine);
+    const translate = (name: string) => spread.getByRole("button", { name }).evaluate((button) => getComputedStyle(button).translate);
 
-		for (const name of ["Try again", "Tear it up"]) {
-			expect(await underline(name)).toBe("none");
-			await spread.getByRole("button", { name }).hover();
-			await expect.poll(() => underline(name)).toBe("underline");
-			expect(await translate(name)).toBe("none");
-		}
+    for (const name of ["Try again", "Tear it up"]) {
+      expect(await underline(name)).toBe("none");
+      await spread.getByRole("button", { name }).hover();
+      await expect.poll(() => underline(name)).toBe("underline");
+      expect(await translate(name)).toBe("none");
+    }
 
-		// An aria-disabled button stays focusable but doesn't react.
-		await spread.getByRole("button", { name: "Pass it on" }).hover();
-		expect(await underline("Pass it on")).toBe("none");
-	});
+    // An aria-disabled button stays focusable but doesn't react.
+    await spread.getByRole("button", { name: "Pass it on" }).hover();
+    expect(await underline("Pass it on")).toBe("none");
+  });
 
-	test("picking an Era re-colours the sandbox with a colour transition", async ({ page }) => {
-		await page.goto("/styleguide");
-		const before = await background(page);
+  test("picking an Era re-colours the sandbox with a colour transition", async ({ page }) => {
+    await page.goto("/styleguide");
+    const before = await background(page);
 
-		await sandbox(page).getByRole("radio", { name: "Midnights" }).check();
-		// The Era's colour variables transition (a CSS transition on the container).
-		expect(await sandbox(page).evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
-		await expect(sandbox(page).getByRole("heading", { level: 2, name: "Midnights" })).toBeVisible();
-		await expect.poll(() => background(page)).not.toBe(before);
-		await expect.poll(() => background(page)).toBe("rgb(19, 29, 54)");
-	});
+    await sandbox(page).getByRole("radio", { name: "Midnights" }).check();
+    // The Era's colour variables transition (a CSS transition on the container).
+    expect(await sandbox(page).evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
+    await expect(sandbox(page).getByRole("heading", { level: 2, name: "Midnights" })).toBeVisible();
+    await expect.poll(() => background(page)).not.toBe(before);
+    await expect.poll(() => background(page)).toBe("rgb(19, 29, 54)");
+  });
 
-	test("under reduced motion the re-colouring is instant", async ({ page }) => {
-		await page.emulateMedia({ reducedMotion: "reduce" });
-		await page.goto("/styleguide");
+  test("under reduced motion the re-colouring is instant", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/styleguide");
 
-		await sandbox(page).getByRole("radio", { name: "Midnights" }).check();
-		expect(await background(page)).toBe("rgb(19, 29, 54)");
-		expect(await sandbox(page).evaluate((element) => element.getAnimations().length)).toBe(0);
-	});
+    await sandbox(page).getByRole("radio", { name: "Midnights" }).check();
+    expect(await background(page)).toBe("rgb(19, 29, 54)");
+    expect(await sandbox(page).evaluate((element) => element.getAnimations().length)).toBe(0);
+  });
 
-	test("an Era's display face is downloaded only once that Era is shown", async ({ page }) => {
-		await page.goto("/styleguide");
-		await page.evaluate(() => document.fonts.ready);
-		expect(await fontLoaded(page, "Special Elite"), "TTPD face before TTPD is shown").toBe(false);
+  test("an Era's display face is downloaded only once that Era is shown", async ({ page }) => {
+    await page.goto("/styleguide");
+    await page.evaluate(() => document.fonts.ready);
+    expect(await fontLoaded(page, "Special Elite"), "TTPD face before TTPD is shown").toBe(false);
 
-		await sandbox(page).getByRole("radio", { name: "The Tortured Poets Department" }).check();
-		await expect.poll(() => fontLoaded(page, "Special Elite"), { message: "TTPD face once TTPD is shown" }).toBe(true);
-	});
+    await sandbox(page).getByRole("radio", { name: "The Tortured Poets Department" }).check();
+    await expect.poll(() => fontLoaded(page, "Special Elite"), { message: "TTPD face once TTPD is shown" }).toBe(true);
+  });
 });
 
 test("a page without an Era downloads no Era display face, only the journal faces", async ({ page }) => {
-	await page.goto("/");
-	await page.evaluate(() => document.fonts.ready);
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
 
-	// reputation's face (UnifrakturMaguntia) is left out: the old Tour pages use it too.
-	for (const face of ["Rye", "Cinzel", "Pinyon Script", "Abril Fatface", "Permanent Marker", "Pacifico", "IM Fell", "Cormorant", "Bodoni Moda", "Special Elite"]) {
-		expect(await fontLoaded(page, face), `${face} on /`).toBe(false);
-	}
-	// The site chrome writes in the journal's pen (Caveat) and text face (Karla).
-	for (const face of ["Caveat", "Karla"]) {
-		await expect.poll(() => fontLoaded(page, face), { message: `${face} on /` }).toBe(true);
-	}
+  // reputation's face (UnifrakturMaguntia) is left out: the old Tour pages use it too.
+  for (const face of [
+    "Rye",
+    "Cinzel",
+    "Pinyon Script",
+    "Abril Fatface",
+    "Permanent Marker",
+    "Pacifico",
+    "IM Fell",
+    "Cormorant",
+    "Bodoni Moda",
+    "Special Elite",
+  ]) {
+    expect(await fontLoaded(page, face), `${face} on /`).toBe(false);
+  }
+  // The site chrome writes in the journal's pen (Caveat) and text face (Karla).
+  for (const face of ["Caveat", "Karla"]) {
+    await expect.poll(() => fontLoaded(page, face), { message: `${face} on /` }).toBe(true);
+  }
 });

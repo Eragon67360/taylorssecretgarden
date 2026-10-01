@@ -25,30 +25,30 @@ const AUTH_COOKIE_PREFIX = "__Secure-neon-auth";
  * rate limit with every sign-in.
  */
 function isAnonymousSessionCheck(request: Request, path: string[]) {
-	if (request.method !== "GET" || path.join("/") !== "get-session" || new URL(request.url).search) return false;
+  if (request.method !== "GET" || path.join("/") !== "get-session" || new URL(request.url).search) return false;
 
-	return !(request.headers.get("cookie") ?? "").split(";").some((cookie) => cookie.trim().startsWith(AUTH_COOKIE_PREFIX));
+  return !(request.headers.get("cookie") ?? "").split(";").some((cookie) => cookie.trim().startsWith(AUTH_COOKIE_PREFIX));
 }
 
 const handler = async (request: Request, context: Context) => {
-	// The decoded path segments, which are what Neon Auth's handler proxies
-	// (so `sign%2Dup` cannot slip past as something else).
-	const { path } = await context.params;
+  // The decoded path segments, which are what Neon Auth's handler proxies
+  // (so `sign%2Dup` cannot slip past as something else).
+  const { path } = await context.params;
 
-	// Only the endpoints this site uses are forwarded (lib/auth/proxy-routes.ts):
-	// the rest of Neon Auth's API, and any oddly spelled path, stop here.
-	if (!isAuthProxyRoute(request.method, path)) return NextResponse.json({ code: "NOT_FOUND" }, { status: 404 });
+  // Only the endpoints this site uses are forwarded (lib/auth/proxy-routes.ts):
+  // the rest of Neon Auth's API, and any oddly spelled path, stop here.
+  if (!isAuthProxyRoute(request.method, path)) return NextResponse.json({ code: "NOT_FOUND" }, { status: 404 });
 
-	if (isAnonymousSessionCheck(request, path)) return NextResponse.json(null, { headers: { "Cache-Control": "private, no-store" } });
+  if (isAnonymousSessionCheck(request, path)) return NextResponse.json(null, { headers: { "Cache-Control": "private, no-store" } });
 
-	if (isBotIdProtected(request.method, `/api/auth/${path.join("/")}`) && (await isBot(request))) {
-		// Shaped like Neon Auth's own errors, which the guestbook form reads (`code`).
-		return NextResponse.json({ code: "BOT_DETECTED", message: BOT_REFUSAL }, { status: 403 });
-	}
+  if (isBotIdProtected(request.method, `/api/auth/${path.join("/")}`) && (await isBot(request))) {
+    // Shaped like Neon Auth's own errors, which the guestbook form reads (`code`).
+    return NextResponse.json({ code: "BOT_DETECTED", message: BOT_REFUSAL }, { status: 403 });
+  }
 
-	const methods = getAuth().handler();
+  const methods = getAuth().handler();
 
-	return methods[request.method as keyof typeof methods](request, context);
+  return methods[request.method as keyof typeof methods](request, context);
 };
 
 export { handler as GET, handler as POST, handler as PUT, handler as DELETE, handler as PATCH };

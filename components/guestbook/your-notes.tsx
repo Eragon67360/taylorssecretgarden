@@ -49,7 +49,10 @@ export function YourNotes({ memberId, notes }: YourNotesProps) {
           <ol className="mt-4 flex flex-col gap-3">
             {notes.notes.map((note) => (
               <li key={note.id} className="border-line border-t pt-3">
-                <Link className="focus-ring text-ink block rounded-sm text-[16px] leading-snug break-words underline underline-offset-2" href={`/swiftter/p/${note.id}`}>
+                <Link
+                  className="focus-ring text-ink block rounded-sm text-[16px] leading-snug break-words underline underline-offset-2"
+                  href={`/swiftter/p/${note.id}`}
+                >
                   {note.excerpt || "(a note without words)"}
                 </Link>
                 <p className="text-soft mt-1 text-[14px]">

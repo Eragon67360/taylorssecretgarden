@@ -20,35 +20,35 @@ const PURGE_HOUR_UTC = 3;
  * else is refused.
  */
 export async function GET(request: Request) {
-	const secret = process.env.CRON_SECRET;
+  const secret = process.env.CRON_SECRET;
 
-	if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-		return NextResponse.json({ error: "Not allowed." }, { status: 401 });
-	}
+  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Not allowed." }, { status: 401 });
+  }
 
-	const { gaveUpIds, ...result } = await recheckPending();
+  const { gaveUpIds, ...result } = await recheckPending();
 
-	// Notes it passed are public now: the cached first page of the feed is out of date.
-	if (result.approved > 0) feedChanged();
+  // Notes it passed are public now: the cached first page of the feed is out of date.
+  if (result.approved > 0) feedChanged();
 
-	if (gaveUpIds.length > 0) await notifyOwner(givenUpAlert(gaveUpIds));
+  if (gaveUpIds.length > 0) await notifyOwner(givenUpAlert(gaveUpIds));
 
-	const reports = await listReportsToNotify();
-	let reportsSent = 0;
+  const reports = await listReportsToNotify();
+  let reportsSent = 0;
 
-	if (reports.length > 0) {
-		const delivery = await notifyOwner(reportsAlert(reports));
+  if (reports.length > 0) {
+    const delivery = await notifyOwner(reportsAlert(reports));
 
-		if (!(delivery.channel === "log" && delivery.error)) {
-			await markReportsNotified(reports.map((report) => report.id));
-			reportsSent = reports.length;
-		}
-	}
+    if (!(delivery.channel === "log" && delivery.error)) {
+      await markReportsNotified(reports.map((report) => report.id));
+      reportsSent = reports.length;
+    }
+  }
 
-	const purged = new Date().getUTCHours() === PURGE_HOUR_UTC ? await purgeExpired() : null;
+  const purged = new Date().getUTCHours() === PURGE_HOUR_UTC ? await purgeExpired() : null;
 
-	// Anything removed may have been on the cached first page (a reshare, a torn-up note).
-	if (purged && Object.values(purged).some((count) => count > 0)) feedChanged();
+  // Anything removed may have been on the cached first page (a reshare, a torn-up note).
+  if (purged && Object.values(purged).some((count) => count > 0)) feedChanged();
 
-	return NextResponse.json({ ...result, reportsSent, purged });
+  return NextResponse.json({ ...result, reportsSent, purged });
 }

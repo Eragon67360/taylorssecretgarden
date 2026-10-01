@@ -109,10 +109,7 @@ export function getAlbumDetails(albumId: string): Promise<AlbumDetails> {
 const cachedAlbumDetails = unstable_cache((albumId: string) => fetchAlbumDetails(albumId), ["deezer", "album-details"], { revalidate: DAY });
 
 async function fetchAlbumDetails(albumId: string): Promise<AlbumDetails> {
-  const [album, tracks] = await Promise.all([
-    deezerGet<DeezerAlbumDetails>(`/album/${albumId}`),
-    getAlbumTracks(albumId),
-  ]);
+  const [album, tracks] = await Promise.all([deezerGet<DeezerAlbumDetails>(`/album/${albumId}`), getAlbumTracks(albumId)]);
 
   return {
     ...toAlbum(album),

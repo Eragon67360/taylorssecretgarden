@@ -11,19 +11,19 @@ type Context = { params: Promise<{ id: string }> };
  * your pending note, 409 once its checks are used up.
  */
 export function POST(request: Request, { params }: Context) {
-	return memberWrite(
-		request,
-		async (writer) => {
-			try {
-				const outcome = await checkAgain(writer.id, (await params).id);
+  return memberWrite(
+    request,
+    async (writer) => {
+      try {
+        const outcome = await checkAgain(writer.id, (await params).id);
 
-				if (outcome.status === "approved") feedChanged();
+        if (outcome.status === "approved") feedChanged();
 
-				return outcomeResponse(outcome);
-			} catch (error) {
-				return errorResponse(error, "Checking your note");
-			}
-		},
-		{ body: false },
-	);
+        return outcomeResponse(outcome);
+      } catch (error) {
+        return errorResponse(error, "Checking your note");
+      }
+    },
+    { body: false },
+  );
 }

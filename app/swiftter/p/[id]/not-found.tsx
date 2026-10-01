@@ -8,9 +8,7 @@ import { TornPage, WayOut } from "@/components/torn-page";
 export default function ThreadNotFound() {
   return (
     <TornPage aside="it was never passed along, or it got lost in the shuffle." kicker="404 · note not found" title="This note isn't on Swiftter.">
-      <p className="text-soft max-w-[34rem] text-[17px] leading-relaxed">
-        The link may be mistyped, or the note is only visible to the Member who wrote it.
-      </p>
+      <p className="text-soft max-w-[34rem] text-[17px] leading-relaxed">The link may be mistyped, or the note is only visible to the Member who wrote it.</p>
       <div className="mt-5">
         <WayOut
           label="Back to Swiftter"

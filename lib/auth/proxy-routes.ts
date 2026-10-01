@@ -7,8 +7,8 @@
   missing the BotID check (lib/botid-routes.ts).
 */
 export const AUTH_PROXY_ROUTES: Readonly<Record<string, readonly string[]>> = {
-	GET: ["get-session"],
-	POST: ["sign-up/email", "sign-in/email", "sign-in/social", "sign-out"],
+  GET: ["get-session"],
+  POST: ["sign-up/email", "sign-in/email", "sign-in/social", "sign-out"],
 };
 
 /**
@@ -19,7 +19,7 @@ export const AUTH_PROXY_ROUTES: Readonly<Record<string, readonly string[]>> = {
  * never matches.
  */
 export function isAuthProxyRoute(method: string, segments: readonly string[]): boolean {
-	if (segments.some((segment) => segment === "." || segment === ".." || /[/\\%]/.test(segment))) return false;
+  if (segments.some((segment) => segment === "." || segment === ".." || /[/\\%]/.test(segment))) return false;
 
-	return (AUTH_PROXY_ROUTES[method.toUpperCase()] ?? []).includes(segments.join("/"));
+  return (AUTH_PROXY_ROUTES[method.toUpperCase()] ?? []).includes(segments.join("/"));
 }

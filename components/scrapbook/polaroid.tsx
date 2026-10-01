@@ -33,10 +33,7 @@ export function Polaroid({ children, caption, credit, tilt = -2, taped = false, 
 
   return (
     <m.figure
-      className={cn(
-        "relative bg-photo p-2.5 pb-3 shadow-[0_1px_2px_rgba(0,0,0,.12),0_22px_36px_-18px_rgba(40,20,10,.55)] sm:p-3",
-        className,
-      )}
+      className={cn("relative bg-photo p-2.5 pb-3 shadow-[0_1px_2px_rgba(0,0,0,.12),0_22px_36px_-18px_rgba(40,20,10,.55)] sm:p-3", className)}
       {...motionProps}
     >
       {taped && (

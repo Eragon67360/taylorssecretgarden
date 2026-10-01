@@ -15,35 +15,35 @@ const baseURL = `http://localhost:${PORT}`;
 // Locally `npm run test:e2e` builds and starts a production server; in CI the
 // workflow builds in its own step, so the web server only starts it.
 export default defineConfig({
-	testDir: "./e2e",
-	timeout: 60_000,
-	expect: { timeout: 15_000 },
-	fullyParallel: true,
-	forbidOnly: isCI,
-	// One retry in CI, so an outside hiccup (Neon Auth, a cold branch) does not
-	// block a release. It also hides flakes, so CI lists every test that passed
-	// only on its retry in the run summary and as a warning on the pull request
-	// (scripts/playwright-summary.ts, from the JSON report), without failing.
-	retries: isCI ? 1 : 0,
-	workers: isCI ? 2 : undefined,
-	reporter: isCI ? [["github"], ["html", { open: "never" }], ["json", { outputFile: "playwright-results.json" }]] : [["list"], ["html", { open: "never" }]],
-	use: {
-		baseURL,
-		trace: "retain-on-failure",
-		screenshot: "only-on-failure",
-	},
-	projects: [
-		// Signs up this run's test Member (e2e/member.setup.ts) before anything else.
-		{ name: "setup", testMatch: /member\.setup\.ts/, use: { ...devices["Desktop Chrome"] } },
-		{ name: "chromium", use: { ...devices["Desktop Chrome"] }, dependencies: ["setup"] },
-	],
-	webServer: {
-		command: isCI ? `npx next start -p ${PORT}` : `npm run build && npx next start -p ${PORT}`,
-		url: baseURL,
-		timeout: 300_000,
-		reuseExistingServer: !isCI,
-		// Serves the development styleguide (/styleguide) from the production build.
-		// Moderates Posts with the fake (service/moderation.ts): no AI calls from the tests.
-		env: { ENABLE_STYLEGUIDE: "1", SWIFTTER_MODERATION: "fake" },
-	},
+  testDir: "./e2e",
+  timeout: 60_000,
+  expect: { timeout: 15_000 },
+  fullyParallel: true,
+  forbidOnly: isCI,
+  // One retry in CI, so an outside hiccup (Neon Auth, a cold branch) does not
+  // block a release. It also hides flakes, so CI lists every test that passed
+  // only on its retry in the run summary and as a warning on the pull request
+  // (scripts/playwright-summary.ts, from the JSON report), without failing.
+  retries: isCI ? 1 : 0,
+  workers: isCI ? 2 : undefined,
+  reporter: isCI ? [["github"], ["html", { open: "never" }], ["json", { outputFile: "playwright-results.json" }]] : [["list"], ["html", { open: "never" }]],
+  use: {
+    baseURL,
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+  },
+  projects: [
+    // Signs up this run's test Member (e2e/member.setup.ts) before anything else.
+    { name: "setup", testMatch: /member\.setup\.ts/, use: { ...devices["Desktop Chrome"] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, dependencies: ["setup"] },
+  ],
+  webServer: {
+    command: isCI ? `npx next start -p ${PORT}` : `npm run build && npx next start -p ${PORT}`,
+    url: baseURL,
+    timeout: 300_000,
+    reuseExistingServer: !isCI,
+    // Serves the development styleguide (/styleguide) from the production build.
+    // Moderates Posts with the fake (service/moderation.ts): no AI calls from the tests.
+    env: { ENABLE_STYLEGUIDE: "1", SWIFTTER_MODERATION: "fake" },
+  },
 });

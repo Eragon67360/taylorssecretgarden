@@ -33,5 +33,5 @@ export const getFirstFeedPage = unstable_cache(() => listFeed(), ["swiftter-firs
  * page from before. Route Handlers only (it needs a request's context).
  */
 export function feedChanged() {
-	revalidateTag(FEED_TAG, { expire: 0 });
+  revalidateTag(FEED_TAG, { expire: 0 });
 }

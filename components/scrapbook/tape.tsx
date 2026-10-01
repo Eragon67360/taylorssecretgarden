@@ -27,11 +27,7 @@ export function WashiTape({ className, color = "var(--tape)", rotate = -4, width
   };
 
   return (
-    <span
-      aria-hidden="true"
-      className={cn("pointer-events-none absolute z-20 block h-[26px] shadow-[0_1px_1px_rgba(0,0,0,.06)]", className)}
-      style={style}
-    />
+    <span aria-hidden="true" className={cn("pointer-events-none absolute z-20 block h-[26px] shadow-[0_1px_1px_rgba(0,0,0,.06)]", className)} style={style} />
   );
 }
 

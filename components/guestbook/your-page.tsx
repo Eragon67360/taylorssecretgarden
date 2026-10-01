@@ -52,9 +52,8 @@ export function YourPage() {
           Your data
         </h2>
         <p className="text-soft mt-2 text-[16px] leading-relaxed">
-          Everything Swiftter keeps about you, in one file: your name and email, every note and reply you wrote (the ones on
-          the feed, waiting or not passed, and what&apos;s left of those you tore up), your reshares and every moderation
-          check of your notes.
+          Everything Swiftter keeps about you, in one file: your name and email, every note and reply you wrote (the ones on the feed, waiting or not passed,
+          and what&apos;s left of those you tore up), your reshares and every moderation check of your notes.
         </p>
         <a
           download
@@ -70,8 +69,8 @@ export function YourPage() {
           Delete your account
         </h2>
         <p className="text-soft mt-2 text-[16px] leading-relaxed">
-          Your notes are torn up and your name taken off them; replies others wrote stay, answering a torn-up note. Your
-          reshares go, and so does your account. It can&apos;t be undone.
+          Your notes are torn up and your name taken off them; replies others wrote stay, answering a torn-up note. Your reshares go, and so does your account.
+          It can&apos;t be undone.
         </p>
         {error && (
           <p className="text-pen mt-3 text-[15px] font-semibold" role="alert">

@@ -106,8 +106,7 @@ export default function Composer({
       if (result.published) {
         editor.commands.clearContent(true);
         trackEvent({ name: "Note passed", reply });
-      }
-      else setRefusal(result.message);
+      } else setRefusal(result.message);
     } finally {
       setPublishing(false);
     }
@@ -324,7 +323,16 @@ function LinkField({ editor, hasLink, onDone }: { editor: Editor; hasLink: boole
   );
 }
 
-const icon = { "aria-hidden": true, focusable: false, className: "size-[18px]", fill: "none", stroke: "currentColor", strokeLinecap: "round", strokeWidth: 2, viewBox: "0 0 24 24" } as const;
+const icon = {
+  "aria-hidden": true,
+  focusable: false,
+  className: "size-[18px]",
+  fill: "none",
+  stroke: "currentColor",
+  strokeLinecap: "round",
+  strokeWidth: 2,
+  viewBox: "0 0 24 24",
+} as const;
 
 function BulletIcon() {
   return (

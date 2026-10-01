@@ -43,8 +43,8 @@ export default function CreditsPage() {
         <Scribble className="absolute -bottom-3 left-0 h-4 w-full" />
       </h1>
       <p className="text-soft mt-8 max-w-[38rem] text-[17px] leading-relaxed">
-        The posters, photos and footage in this scrapbook are not ours: they belong to the people and companies below. If one of them is yours and
-        you would like it credited differently or taken out, write to{" "}
+        The posters, photos and footage in this scrapbook are not ours: they belong to the people and companies below. If one of them is yours and you would
+        like it credited differently or taken out, write to{" "}
         <a className={link} href={`mailto:${siteConfig.contactEmail}`}>
           {siteConfig.contactEmail}
         </a>{" "}

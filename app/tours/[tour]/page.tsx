@@ -116,14 +116,7 @@ export default async function TourPage({ params }: TourPageProps) {
 
           <div className="relative flex justify-center lg:col-span-5">
             <PressedFlower className="absolute -bottom-8 left-0 z-30 h-44 w-24 -rotate-[20deg] sm:left-6" kind={look.flower} />
-            <TourPoster
-              priority
-              caption={tourYears(tour)}
-              className="w-[78%] max-w-[380px]"
-              tilt={2.5}
-              tour={tour}
-              width={380}
-            />
+            <TourPoster priority caption={tourYears(tour)} className="w-[78%] max-w-[380px]" tilt={2.5} tour={tour} width={380} />
           </div>
         </div>
 
@@ -144,7 +137,9 @@ export default async function TourPage({ params }: TourPageProps) {
           </section>
 
           <div className="flex flex-col items-center gap-12 lg:col-span-5 lg:pt-16">
-            {tour.videoUrl && <TourVideo caption="on repeat" className="w-full max-w-[440px]" credit={tour.videoCredit} src={tour.videoUrl} tilt={-2} tour={tour.tour} />}
+            {tour.videoUrl && (
+              <TourVideo caption="on repeat" className="w-full max-w-[440px]" credit={tour.videoCredit} src={tour.videoUrl} tilt={-2} tour={tour.tour} />
+            )}
             {era ? (
               <StickyNote attach="tape" className="w-[260px]" tilt={3} tone="era">
                 {era.note}
@@ -173,14 +168,17 @@ export default async function TourPage({ params }: TourPageProps) {
  */
 function EraAlbums({ tour }: { tour: Tour }) {
   const albums = tour.era ? eraAlbums(tour.era) : [];
-  const chip = "bg-card border-line focus-ring inline-block rounded-full border px-3 py-1 text-[15px] font-semibold underline decoration-1 underline-offset-4 hover:decoration-2";
+  const chip =
+    "bg-card border-line focus-ring inline-block rounded-full border px-3 py-1 text-[15px] font-semibold underline decoration-1 underline-offset-4 hover:decoration-2";
 
   return (
     <section aria-labelledby="era-albums" className="mt-20">
       <h2 className="font-serif text-[clamp(2rem,4vw,2.6rem)] leading-tight font-semibold" id="era-albums">
         {tour.era ? "Albums of this Era" : "Every Era's Albums"}
       </h2>
-      <p className="font-hand text-soft mt-1 text-[22px] font-bold">{tour.era ? "the records this Tour was built on" : "every Era, one night: the whole shelf"}</p>
+      <p className="font-hand text-soft mt-1 text-[22px] font-bold">
+        {tour.era ? "the records this Tour was built on" : "every Era, one night: the whole shelf"}
+      </p>
       <ul className="mt-5 flex flex-wrap gap-2.5">
         {albums.map((album) => (
           <li key={album.id}>

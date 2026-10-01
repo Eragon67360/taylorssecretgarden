@@ -38,8 +38,8 @@ export default function ToursPage() {
               <Scribble className="absolute -bottom-3 left-0 h-4 w-full" />
             </h1>
             <p className="text-soft mt-8 max-w-[34rem] text-[17px] leading-relaxed sm:text-lg">
-              {TOURS.length} Tours, one diary: a ticket stub, a poster off the bedroom wall and a bit of footage for each, from the first headline
-              shows of 2009 to three and a half hours of the Eras Tour.
+              {TOURS.length} Tours, one diary: a ticket stub, a poster off the bedroom wall and a bit of footage for each, from the first headline shows of 2009
+              to three and a half hours of the Eras Tour.
             </p>
           </div>
 

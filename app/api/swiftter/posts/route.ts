@@ -18,15 +18,15 @@ const PUBLIC_FIRST_PAGE = { "Cache-Control": "public, s-maxage=15, stale-while-r
  * from the data cache (service/feed-cache.ts), invalidated on every change.
  */
 export async function GET(request: Request) {
-	try {
-		const cursor = new URL(request.url).searchParams.get("cursor");
+  try {
+    const cursor = new URL(request.url).searchParams.get("cursor");
 
-		if (!cursor) return NextResponse.json(await getFirstFeedPage(), { headers: PUBLIC_FIRST_PAGE });
+    if (!cursor) return NextResponse.json(await getFirstFeedPage(), { headers: PUBLIC_FIRST_PAGE });
 
-		return NextResponse.json(await listFeed(cursor));
-	} catch (error) {
-		return errorResponse(error, "Reading the feed");
-	}
+    return NextResponse.json(await listFeed(cursor));
+  } catch (error) {
+    return errorResponse(error, "Reading the feed");
+  }
 }
 
 /**
@@ -41,23 +41,23 @@ export async function GET(request: Request) {
  * to a note that is not public is 404.
  */
 export function POST(request: Request) {
-	return memberWrite(request, async (writer, body) => {
-		const { content, parentId } = body;
+  return memberWrite(request, async (writer, body) => {
+    const { content, parentId } = body;
 
-		if (typeof content !== "string" || (parentId !== undefined && parentId !== null && typeof parentId !== "string")) {
-			return NextResponse.json({ error: "Expected a JSON body with a `content` string (and an optional `parentId`)." }, { status: 400 });
-		}
+    if (typeof content !== "string" || (parentId !== undefined && parentId !== null && typeof parentId !== "string")) {
+      return NextResponse.json({ error: "Expected a JSON body with a `content` string (and an optional `parentId`)." }, { status: 400 });
+    }
 
-		try {
-			await ensureMember(memberFromAuthUser(writer));
-			const outcome = await writeNote(writer.id, content, parentId);
+    try {
+      await ensureMember(memberFromAuthUser(writer));
+      const outcome = await writeNote(writer.id, content, parentId);
 
-			// A new Post, or a reply (its thread's count), is public.
-			if (outcome.status === "approved") feedChanged();
+      // A new Post, or a reply (its thread's count), is public.
+      if (outcome.status === "approved") feedChanged();
 
-			return outcomeResponse(outcome);
-		} catch (error) {
-			return errorResponse(error, "Passing your note");
-		}
-	});
+      return outcomeResponse(outcome);
+    } catch (error) {
+      return errorResponse(error, "Passing your note");
+    }
+  });
 }

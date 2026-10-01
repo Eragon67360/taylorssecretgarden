@@ -20,16 +20,16 @@ import { BOTID_TOKEN_HEADER } from "./botid-routes";
  * any token: the site is only deployed on Vercel.)
  */
 export async function isBot(request: Request): Promise<boolean> {
-	if (!process.env.VERCEL) return !request.headers.has(BOTID_TOKEN_HEADER);
+  if (!process.env.VERCEL) return !request.headers.has(BOTID_TOKEN_HEADER);
 
-	try {
-		const verification = await checkBotId();
+  try {
+    const verification = await checkBotId();
 
-		return verification.isBot;
-	} catch (error) {
-		// eslint-disable-next-line no-console
-		console.error("BotID check failed", error);
+    return verification.isBot;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("BotID check failed", error);
 
-		return true;
-	}
+    return true;
+  }
 }

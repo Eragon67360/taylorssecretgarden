@@ -59,12 +59,7 @@ export function TourEntry({ tour, index }: TourEntryProps) {
 
         <div className={cn("relative lg:col-span-7", flip && "lg:order-1")}>
           <div className="relative mx-auto flex max-w-[620px] flex-col items-center gap-10 sm:flex-row sm:items-start sm:gap-0">
-            <TourPoster
-              className="w-[68%] shrink-0 sm:w-[44%]"
-              tilt={flip ? 3 : -3}
-              tour={tour}
-              width={272}
-            />
+            <TourPoster className="w-[68%] shrink-0 sm:w-[44%]" tilt={flip ? 3 : -3} tour={tour} width={272} />
             {tour.videoUrl ? (
               <TourVideo
                 caption="on repeat"

@@ -13,38 +13,38 @@ type Context = { params: Promise<{ id: string }> };
  * your own, 409 when you already reshare it, 429 past the reshare limit.
  */
 export function POST(request: Request, { params }: Context) {
-	return memberWrite(
-		request,
-		async (writer) => {
-			try {
-				// A Member who never wrote has no Member row yet: the reshare needs one.
-				await ensureMember(memberFromAuthUser(writer));
-				await reshare(writer.id, (await params).id);
-				feedChanged();
+  return memberWrite(
+    request,
+    async (writer) => {
+      try {
+        // A Member who never wrote has no Member row yet: the reshare needs one.
+        await ensureMember(memberFromAuthUser(writer));
+        await reshare(writer.id, (await params).id);
+        feedChanged();
 
-				return NextResponse.json({ reshared: true }, { status: 201 });
-			} catch (error) {
-				return errorResponse(error, "Resharing");
-			}
-		},
-		{ body: false },
-	);
+        return NextResponse.json({ reshared: true }, { status: 201 });
+      } catch (error) {
+        return errorResponse(error, "Resharing");
+      }
+    },
+    { body: false },
+  );
 }
 
 /** Undoes your reshare: 204, or 404 when you do not reshare this Post. */
 export function DELETE(request: Request, { params }: Context) {
-	return memberWrite(
-		request,
-		async (writer) => {
-			try {
-				await unreshare(writer.id, (await params).id);
-				feedChanged();
+  return memberWrite(
+    request,
+    async (writer) => {
+      try {
+        await unreshare(writer.id, (await params).id);
+        feedChanged();
 
-				return new NextResponse(null, { status: 204 });
-			} catch (error) {
-				return errorResponse(error, "Undoing the reshare");
-			}
-		},
-		{ body: false },
-	);
+        return new NextResponse(null, { status: 204 });
+      } catch (error) {
+        return errorResponse(error, "Undoing the reshare");
+      }
+    },
+    { body: false },
+  );
 }

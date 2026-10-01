@@ -76,7 +76,16 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
         approved: (note) => {
           setReplies((previous) => [
             ...previous,
-            { id: note.id, parentId: parent.id, author: note.author, content: note.content, tornUp: false, isDemo: false, createdAt: note.createdAt, publishedAt: note.publishedAt },
+            {
+              id: note.id,
+              parentId: parent.id,
+              author: note.author,
+              content: note.content,
+              tornUp: false,
+              isDemo: false,
+              createdAt: note.createdAt,
+              publishedAt: note.publishedAt,
+            },
           ]);
           setReplyingTo(null);
           // The composer closes: the keyboard goes to the reply it wrote.
@@ -136,7 +145,16 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
         dropHeld(note.id);
         setReplies((previous) => [
           ...previous,
-          { id: passed.id, parentId: note.parentId, author: passed.author, content: passed.content, tornUp: false, isDemo: false, createdAt: passed.createdAt, publishedAt: passed.publishedAt },
+          {
+            id: passed.id,
+            parentId: note.parentId,
+            author: passed.author,
+            content: passed.content,
+            tornUp: false,
+            isDemo: false,
+            createdAt: passed.createdAt,
+            publishedAt: passed.publishedAt,
+          },
         ]);
         focusSoon(noteElementId(passed.id));
         toast.success("Your reply was checked and passed.");
@@ -191,7 +209,9 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
       .filter((reply) => reply.parentId === note.id)
       .map((reply) => (
         <div key={reply.id} className="border-pen/50 bg-card mt-5 max-w-[560px] rounded-[3px] border-2 border-dashed px-4 py-3">
-          <p className="text-pen mb-2 text-[14.5px] font-bold">{HELD_LABEL[reply.givenUp ? "givenUp" : reply.status === "pending" ? "pending" : (reply.category ?? "insult")]}</p>
+          <p className="text-pen mb-2 text-[14.5px] font-bold">
+            {HELD_LABEL[reply.givenUp ? "givenUp" : reply.status === "pending" ? "pending" : (reply.category ?? "insult")]}
+          </p>
           <HeldNoteCard inThread checking={checking} note={reply} onCheckAgain={checkHeld} onTearUp={tearUpHeld} />
         </div>
       ));
@@ -215,7 +235,11 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
                 <TornUpNote id={noteElementId(note.id)} paper={paper} />
               ) : (
                 <PostNote
-                  banner={answering ? <p className="font-hand relative pt-3 pl-[78px] text-[18px] leading-none font-bold opacity-80">↳ replying to {answering}</p> : undefined}
+                  banner={
+                    answering ? (
+                      <p className="font-hand relative pt-3 pl-[78px] text-[18px] leading-none font-bold opacity-80">↳ replying to {answering}</p>
+                    ) : undefined
+                  }
                   footer={
                     <>
                       {replyControls(note)}
@@ -277,7 +301,10 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
       {heldUnder(root)}
       {!session.pending && !user && (
         <p>
-          <Link className="font-hand focus-ring decoration-pen rounded-sm text-[25px] font-bold underline decoration-wavy decoration-[1.5px] underline-offset-[5px]" href={signInHref}>
+          <Link
+            className="font-hand focus-ring decoration-pen rounded-sm text-[25px] font-bold underline decoration-wavy decoration-[1.5px] underline-offset-[5px]"
+            href={signInHref}
+          >
             sign the guestbook to reply <span aria-hidden="true">→</span>
           </Link>
         </p>

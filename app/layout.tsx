@@ -40,17 +40,10 @@ export const viewport: Viewport = {
   themeColor: siteConfig.colors.paper,
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     // The font variables sit on <html> so the journal tokens on :root can use them.
-    <html
-      className={cn(fontHand.variable, fontBody.variable, fontSerif.variable, fontSerifItalic.variable)}
-      lang="en"
-    >
+    <html className={cn(fontHand.variable, fontBody.variable, fontSerif.variable, fontSerifItalic.variable)} lang="en">
       <body className="flex min-h-dvh flex-col antialiased">
         <Providers>
           <SiteHeader />
