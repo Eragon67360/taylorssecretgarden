@@ -36,10 +36,13 @@ export function AlbumVersions({ title, versions, selectedId, onSelect }: AlbumVe
               <Link
                 aria-current={active ? "true" : undefined}
                 className={cn(
-                  "bg-card text-ink focus-ring relative flex max-w-[17rem] min-w-0 items-center gap-2.5 rounded-[3px] p-1 pr-3 text-left",
-                  "shadow-[0_1px_1px_rgba(0,0,0,.1),0_6px_12px_-8px_rgba(0,0,0,.5)] motion-safe:transition-transform motion-safe:duration-200",
+                  "group bg-card text-ink focus-ring relative flex max-w-[17rem] min-w-0 items-center gap-2.5 rounded-[3px] p-1 pr-3 text-left",
+                  "shadow-[0_1px_1px_rgba(0,0,0,.1),0_6px_12px_-8px_rgba(0,0,0,.5)] motion-safe:transition-[translate,box-shadow] motion-safe:duration-200",
                   // The open one: an ink outline (the Era accent is too faint on some papers) and a tick, not colour alone.
-                  active ? "outline-ink outline-2 outline-offset-1" : "motion-safe:hover:-translate-y-0.5",
+                  active
+                    ? "outline-ink outline-2 outline-offset-1"
+                    : // Hovered, a deeper shadow and an underlined name as well as the lift: feedback that doesn't move.
+                      "hover:shadow-[0_1px_1px_rgba(0,0,0,.1),0_10px_16px_-8px_rgba(0,0,0,.55)] motion-safe:hover:-translate-y-0.5",
                 )}
                 href={version.path}
                 scroll={false}
@@ -50,7 +53,9 @@ export function AlbumVersions({ title, versions, selectedId, onSelect }: AlbumVe
               >
                 <Image alt="" className="size-11 shrink-0 object-cover" height={44} sizes="44px" src={version.cover} width={44} />
                 <span className="min-w-0">
-                  <span className="line-clamp-2 block text-[14px] leading-tight font-bold">{version.name}</span>
+                  <span className={cn("line-clamp-2 block text-[14px] leading-tight font-bold", !active && "underline-offset-2 group-hover:underline")}>
+                    {version.name}
+                  </span>
                   <span className="text-soft block text-[12.5px] leading-tight">{version.released.slice(0, 4)}</span>
                 </span>
                 {active && (
