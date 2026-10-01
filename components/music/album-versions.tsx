@@ -34,9 +34,7 @@ export function AlbumVersions({ title, versions, selectedId, onSelect, claimFocu
 
   return (
     <div className="mt-6 max-w-[640px]">
-      <p className="font-hand text-soft text-[22px] leading-tight font-bold">
-        every version ({versions.length})
-      </p>
+      <p className="font-hand text-soft text-[22px] leading-tight font-bold">every version ({versions.length})</p>
       <ul ref={list} aria-label={`Versions of ${title}`} className="mt-2 flex flex-wrap gap-2.5">
         {versions.map((version) => {
           const active = version.id === selectedId;

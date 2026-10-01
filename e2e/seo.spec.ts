@@ -108,12 +108,12 @@ test.describe("sitemap.xml", () => {
 
     const paths = sitemap.locs.map(pathOf);
 
-		expect(new Set(paths).size, "no URL listed twice").toBe(paths.length);
-		expect(paths).toEqual(expect.arrayContaining(INDEXABLE));
-		// Every other Album has a page of its own: a Taylor's Version, for one.
-		expect(paths).toContain("/music/fearless-taylors-version");
-		for (const path of [...NOINDEX, "/sign-in?redirect_url=%2Fswiftter"]) expect(paths).not.toContain(path);
-	});
+    expect(new Set(paths).size, "no URL listed twice").toBe(paths.length);
+    expect(paths).toEqual(expect.arrayContaining(INDEXABLE));
+    // Every other Album has a page of its own: a Taylor's Version, for one.
+    expect(paths).toContain("/music/fearless-taylors-version");
+    for (const path of [...NOINDEX, "/sign-in?redirect_url=%2Fswiftter"]) expect(paths).not.toContain(path);
+  });
 
   test("lists Swiftter threads, never seed or demo ones", async ({ request }) => {
     const sitemap = await (await request.get("/sitemap.xml")).text();
@@ -124,12 +124,12 @@ test.describe("sitemap.xml", () => {
     expect(threads.filter((id) => id.startsWith("5eed0000-") || id.startsWith("5d1c0a3e-"))).toEqual([]);
   });
 
-	test("every link to Music on Home, Music and the Tour pages is a sitemap URL or a Version's own page", async ({ page, request }) => {
-		const sitemap = await (await request.get("/sitemap.xml")).text();
-		const listed = new Set([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) => pathOf(loc.trim())));
-		const versionPages = new Set(CATALOGUE.flatMap((album) => (album.versions ?? []).map(({ slug }) => `/music/${album.slug}/${slug}`)));
-		const pages = ["/", ...[...listed].filter((path) => path.startsWith("/music") || path.startsWith("/tours/"))];
-		let checked = 0;
+  test("every link to Music on Home, Music and the Tour pages is a sitemap URL or a Version's own page", async ({ page, request }) => {
+    const sitemap = await (await request.get("/sitemap.xml")).text();
+    const listed = new Set([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) => pathOf(loc.trim())));
+    const versionPages = new Set(CATALOGUE.flatMap((album) => (album.versions ?? []).map(({ slug }) => `/music/${album.slug}/${slug}`)));
+    const pages = ["/", ...[...listed].filter((path) => path.startsWith("/music") || path.startsWith("/tours/"))];
+    let checked = 0;
 
     for (const path of pages) {
       const hrefs = await page.evaluate(
@@ -165,21 +165,21 @@ test.describe("llms.txt", () => {
     expect(response.headers()["content-type"]).toContain("text/plain");
     const text = await response.text();
 
-		// Answer first: the name, then a one-paragraph summary.
-		expect(text).toMatch(/^# Taylor's Secret Garden\n\n> .*unofficial Taylor Swift fan site/);
-		for (const heading of ["## Sections", "## Albums by Era", "## Tours"]) expect(text).toContain(`\n${heading}\n`);
-		for (const [name, path] of [
-			["Home", "/"],
-			["Music", "/music"],
-			["Tours", "/tours"],
-			["Swiftter", "/swiftter"],
-		]) {
-			expect(text).toContain(`[${name}](${SITE}${path})`);
-		}
-		expect(text).toContain("### Fearless Era (2008)");
-		expect(text).toContain(`[Fearless (Taylor's Version)](${SITE}/music/fearless-taylors-version)`);
-		expect(text).toContain(`[The Long Pond Studio Sessions](${SITE}/music/folklore/the-long-pond-studio-sessions) (November 25, 2020)`);
-		for (const { tour, slug } of tours) expect(text).toContain(`[${tour}](${SITE}/tours/${slug})`);
+    // Answer first: the name, then a one-paragraph summary.
+    expect(text).toMatch(/^# Taylor's Secret Garden\n\n> .*unofficial Taylor Swift fan site/);
+    for (const heading of ["## Sections", "## Albums by Era", "## Tours"]) expect(text).toContain(`\n${heading}\n`);
+    for (const [name, path] of [
+      ["Home", "/"],
+      ["Music", "/music"],
+      ["Tours", "/tours"],
+      ["Swiftter", "/swiftter"],
+    ]) {
+      expect(text).toContain(`[${name}](${SITE}${path})`);
+    }
+    expect(text).toContain("### Fearless Era (2008)");
+    expect(text).toContain(`[Fearless (Taylor's Version)](${SITE}/music/fearless-taylors-version)`);
+    expect(text).toContain(`[The Long Pond Studio Sessions](${SITE}/music/folklore/the-long-pond-studio-sessions) (November 25, 2020)`);
+    for (const { tour, slug } of tours) expect(text).toContain(`[${tour}](${SITE}/tours/${slug})`);
 
     const links = [...text.matchAll(/\]\((\S+?)\)/g)].map(([, url]) => url);
 
@@ -189,9 +189,11 @@ test.describe("llms.txt", () => {
   test("gives each Album's song count, running time and label, as its page does", async ({ request }) => {
     const text = await (await request.get("/llms.txt")).text();
 
-		expect(text).toMatch(new RegExp(`^- \\[reputation\\]\\(${RegExp.escape(SITE)}/music/reputation\\): released November 10, 2017; 15 songs, \\d+ min, label .+\\.$`, "m"));
-		expect(text).toMatch(/^- \[Midnights\]\(.+\): released October 21, 2022; 23 songs, 1 h \d{2} min, label /m);
-	});
+    expect(text).toMatch(
+      new RegExp(`^- \\[reputation\\]\\(${RegExp.escape(SITE)}/music/reputation\\): released November 10, 2017; 15 songs, \\d+ min, label .+\\.$`, "m"),
+    );
+    expect(text).toMatch(/^- \[Midnights\]\(.+\): released October 21, 2022; 23 songs, 1 h \d{2} min, label /m);
+  });
 
   test("/llms-full.txt lists every Album's tracklist", async ({ request }) => {
     const response = await request.get("/llms-full.txt");
@@ -200,11 +202,11 @@ test.describe("llms.txt", () => {
     expect(response.headers()["content-type"]).toContain("text/plain");
     const text = await response.text();
 
-		expect(text).toMatch(/^# Taylor's Secret Garden: every tracklist\n/);
-		expect(text).toContain(`## reputation\n\n${SITE}/music/reputation\n`);
-		expect(text).toContain("\n1. ...Ready For It? (3:28)\n");
-		expect(text.match(/^## /gm)).toHaveLength(CATALOGUE.length);
-	});
+    expect(text).toMatch(/^# Taylor's Secret Garden: every tracklist\n/);
+    expect(text).toContain(`## reputation\n\n${SITE}/music/reputation\n`);
+    expect(text).toContain("\n1. ...Ready For It? (3:28)\n");
+    expect(text.match(/^## /gm)).toHaveLength(CATALOGUE.length);
+  });
 });
 
 test.describe("JSON-LD", () => {
@@ -266,43 +268,43 @@ test.describe("JSON-LD", () => {
     expect(others).toEqual([]);
     expect(debut).toMatchObject({ "@type": "MusicAlbum", name: "Taylor Swift", datePublished: "2006-10-24", url: `${SITE}/music`, byArtist: TAYLOR_SWIFT });
 
-		const [album] = await structuredData(page, request, "/music/fearless-taylors-version");
+    const [album] = await structuredData(page, request, "/music/fearless-taylors-version");
 
-		expect(album).toMatchObject({
-			"@type": "MusicAlbum",
-			name: "Fearless (Taylor's Version)",
-			byArtist: TAYLOR_SWIFT,
-			datePublished: "2021-04-09",
-			url: `${SITE}/music/fearless-taylors-version`,
-			image: expect.stringMatching(/^https:\/\//),
-			albumProductionType: "https://schema.org/StudioAlbum",
-			albumReleaseType: "https://schema.org/AlbumRelease",
-			// A Taylor's Version is based on its original.
-			isBasedOn: { "@type": "MusicAlbum", name: "Fearless", url: `${SITE}/music/fearless` },
-			albumRelease: {
-				"@type": "MusicRelease",
-				recordLabel: { "@type": "Organization", name: expect.any(String) },
-				releaseOf: expect.objectContaining({ "@type": "MusicAlbum", url: `${SITE}/music/fearless-taylors-version` }),
-			},
-		});
-		expect(album.numTracks).toBeGreaterThanOrEqual(26);
-		expectTracks(album);
-	});
+    expect(album).toMatchObject({
+      "@type": "MusicAlbum",
+      name: "Fearless (Taylor's Version)",
+      byArtist: TAYLOR_SWIFT,
+      datePublished: "2021-04-09",
+      url: `${SITE}/music/fearless-taylors-version`,
+      image: expect.stringMatching(/^https:\/\//),
+      albumProductionType: "https://schema.org/StudioAlbum",
+      albumReleaseType: "https://schema.org/AlbumRelease",
+      // A Taylor's Version is based on its original.
+      isBasedOn: { "@type": "MusicAlbum", name: "Fearless", url: `${SITE}/music/fearless` },
+      albumRelease: {
+        "@type": "MusicRelease",
+        recordLabel: { "@type": "Organization", name: expect.any(String) },
+        releaseOf: expect.objectContaining({ "@type": "MusicAlbum", url: `${SITE}/music/fearless-taylors-version` }),
+      },
+    });
+    expect(album.numTracks).toBeGreaterThanOrEqual(26);
+    expectTracks(album);
+  });
 
-	test("a Version's page describes the Version itself, as a release of its Album", async ({ page, request }) => {
-		const [version] = await structuredData(page, request, "/music/folklore/the-long-pond-studio-sessions");
+  test("a Version's page describes the Version itself, as a release of its Album", async ({ page, request }) => {
+    const [version] = await structuredData(page, request, "/music/folklore/the-long-pond-studio-sessions");
 
-		expect(version).toMatchObject({
-			"@type": "MusicAlbum",
-			name: "folklore, The Long Pond Studio Sessions",
-			datePublished: "2020-11-25",
-			url: `${SITE}/music/folklore/the-long-pond-studio-sessions`,
-			albumProductionType: "https://schema.org/LiveAlbum",
-			albumRelease: { "@type": "MusicRelease", releaseOf: expect.objectContaining({ name: "folklore", url: `${SITE}/music/folklore` }) },
-		});
-		expectTracks(version);
+    expect(version).toMatchObject({
+      "@type": "MusicAlbum",
+      name: "folklore, The Long Pond Studio Sessions",
+      datePublished: "2020-11-25",
+      url: `${SITE}/music/folklore/the-long-pond-studio-sessions`,
+      albumProductionType: "https://schema.org/LiveAlbum",
+      albumRelease: { "@type": "MusicRelease", releaseOf: expect.objectContaining({ name: "folklore", url: `${SITE}/music/folklore` }) },
+    });
+    expectTracks(version);
 
-		const [chapter] = await structuredData(page, request, "/music/red-taylors-version/from-the-vault-chapter");
+    const [chapter] = await structuredData(page, request, "/music/red-taylors-version/from-the-vault-chapter");
 
     expect(chapter).toMatchObject({ name: "Red (Taylor's Version), From The Vault Chapter", albumProductionType: "https://schema.org/CompilationAlbum" });
   });
@@ -373,28 +375,32 @@ test.describe("links between clusters", () => {
       await htmlOf(request, path),
     );
 
-	test("a Tour page links its Era's Albums, named, at their canonical addresses", async ({ page, request }) => {
-		expect(await linksOf(page, request, "/tours/the-red-tour")).toEqual(
-			expect.arrayContaining([
-				{ href: "/music/red", text: "Red tracklist · 2012" },
-				{ href: "/music/red-taylors-version", text: "Red (Taylor's Version) tracklist · 2021" },
-			]),
-		);
-		// The Eras Tour spans every Era: it links the Music shelf.
-		expect(await linksOf(page, request, "/tours/the-eras-tour")).toEqual(expect.arrayContaining([{ href: "/music", text: "Taylor Swift's Albums, on the Music shelf" }]));
-	});
+  test("a Tour page links its Era's Albums, named, at their canonical addresses", async ({ page, request }) => {
+    expect(await linksOf(page, request, "/tours/the-red-tour")).toEqual(
+      expect.arrayContaining([
+        { href: "/music/red", text: "Red tracklist · 2012" },
+        { href: "/music/red-taylors-version", text: "Red (Taylor's Version) tracklist · 2021" },
+      ]),
+    );
+    // The Eras Tour spans every Era: it links the Music shelf.
+    expect(await linksOf(page, request, "/tours/the-eras-tour")).toEqual(
+      expect.arrayContaining([{ href: "/music", text: "Taylor Swift's Albums, on the Music shelf" }]),
+    );
+  });
 
-	test("a Taylor's Version links its original and back, and each Album its Era's Tour", async ({ page, request }) => {
-		const taylorsVersion = await linksOf(page, request, "/music/fearless-taylors-version");
+  test("a Taylor's Version links its original and back, and each Album its Era's Tour", async ({ page, request }) => {
+    const taylorsVersion = await linksOf(page, request, "/music/fearless-taylors-version");
 
-		expect(taylorsVersion).toEqual(
-			expect.arrayContaining([
-				{ href: "/music/fearless", text: "Fearless (2008)" },
-				{ href: "/tours/fearless-tour", text: "Fearless Tour (2009–2010)" },
-			]),
-		);
-		expect(await linksOf(page, request, "/music/fearless")).toEqual(expect.arrayContaining([{ href: "/music/fearless-taylors-version", text: "Fearless (Taylor's Version)" }]));
-	});
+    expect(taylorsVersion).toEqual(
+      expect.arrayContaining([
+        { href: "/music/fearless", text: "Fearless (2008)" },
+        { href: "/tours/fearless-tour", text: "Fearless Tour (2009–2010)" },
+      ]),
+    );
+    expect(await linksOf(page, request, "/music/fearless")).toEqual(
+      expect.arrayContaining([{ href: "/music/fearless-taylors-version", text: "Fearless (Taylor's Version)" }]),
+    );
+  });
 });
 
 // In the browser, once the page has run: an h1 rendered on the client counts too.
@@ -406,12 +412,12 @@ test.describe("one h1 per page", () => {
     await page.route(/\/api\/auth\/get-session(\?|$)/, (route) => route.fulfill({ json: null }));
   });
 
-	for (const path of [...INDEXABLE, "/music/folklore", "/music/folklore/the-long-pond-studio-sessions", ...NOINDEX, SEEDED_THREAD]) {
-		test(`${path} has exactly one h1`, async ({ page }) => {
-			await page.goto(path);
-			await expect(page.locator("h1")).toHaveCount(1);
-		});
-	}
+  for (const path of [...INDEXABLE, "/music/folklore", "/music/folklore/the-long-pond-studio-sessions", ...NOINDEX, SEEDED_THREAD]) {
+    test(`${path} has exactly one h1`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.locator("h1")).toHaveCount(1);
+    });
+  }
 });
 
 test.describe("the old production address", () => {

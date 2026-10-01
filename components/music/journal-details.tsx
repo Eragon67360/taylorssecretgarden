@@ -61,13 +61,7 @@ export function JournalDetails({ albumId, versionId, details }: JournalDetailsPr
       )}
 
       {album && versions.length > 0 && (
-        <AlbumVersions
-          claimFocus={claimVersionFocus}
-          selectedId={selection?.versionId}
-          title={album.name}
-          versions={versions}
-          onSelect={selectVersion}
-        />
+        <AlbumVersions claimFocus={claimVersionFocus} selectedId={selection?.versionId} title={album.name} versions={versions} onSelect={selectVersion} />
       )}
 
       <div className="mt-10">

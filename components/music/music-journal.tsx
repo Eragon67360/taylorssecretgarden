@@ -205,7 +205,13 @@ export function MusicJournal({ shelf, versions, links, children }: MusicJournalP
             <p className="text-soft text-[11px] font-bold tracking-[.26em] uppercase">
               Era No. {eraNumber} · {look.year}
             </p>
-            <h2 className={title.length > 18 ? "font-display mt-2 text-[clamp(2rem,4.6vw,3.6rem)] leading-[1.05] break-words" : "font-display mt-2 text-[clamp(2.5rem,6.5vw,5.2rem)] leading-[1.02] break-words"}>
+            <h2
+              className={
+                title.length > 18
+                  ? "font-display mt-2 text-[clamp(2rem,4.6vw,3.6rem)] leading-[1.05] break-words"
+                  : "font-display mt-2 text-[clamp(2.5rem,6.5vw,5.2rem)] leading-[1.02] break-words"
+              }
+            >
               {title}
               {/* The release's full name, for search results and screen readers; the handwritten line below shows it. */}
               {album && fullNameSuffix && <span className="sr-only">{fullNameSuffix}</span>}

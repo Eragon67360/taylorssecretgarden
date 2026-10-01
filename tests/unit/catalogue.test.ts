@@ -150,20 +150,20 @@ describe("GET /api/albums", () => {
   ID Deezer answered, so here Fearless is on it under its twin's ID.
 */
 describe("findAlbum, pathOfDeezerId and selectRelease", () => {
-	const shelf: ShelfAlbum[] = CATALOGUE.map((entry) => ({
-		id: entry.id === FEARLESS ? FEARLESS_TWIN : entry.id,
-		catalogueId: entry.id,
-		path: albumPath(entry),
-		name: entry.title,
-		images: [],
-		era: entry.era,
-		title: entry.title,
-		edition: entry.edition ?? null,
-		year: 0,
-		released: entry.released,
-		taylorsVersion: !!entry.reRecords,
-		reRecords: entry.reRecords ?? null,
-	}));
+  const shelf: ShelfAlbum[] = CATALOGUE.map((entry) => ({
+    id: entry.id === FEARLESS ? FEARLESS_TWIN : entry.id,
+    catalogueId: entry.id,
+    path: albumPath(entry),
+    name: entry.title,
+    images: [],
+    era: entry.era,
+    title: entry.title,
+    edition: entry.edition ?? null,
+    year: 0,
+    released: entry.released,
+    taylorsVersion: !!entry.reRecords,
+    reRecords: entry.reRecords ?? null,
+  }));
 
   it.each([
     ["the Album's own ID", "227786", "227786"],
@@ -186,54 +186,58 @@ describe("findAlbum, pathOfDeezerId and selectRelease", () => {
     expect(findAlbum(id)).toBeUndefined();
   });
 
-	// Where each old /music?album=<id> link is sent (proxy.ts).
-	it.each([
-		["the first Album's ID", "227786", "/music"],
-		["the first Album's alias", "81389452", "/music"],
-		["the first Album's Version", "874936972", "/music/taylor-swift/standard-edition"],
-		["the catalogue's ID", FEARLESS, "/music/fearless"],
-		["the twin Deezer answers with", FEARLESS_TWIN, "/music/fearless"],
-		["another twin", "81389432", "/music/fearless"],
-		["a Version", "283925", "/music/fearless/international-version"],
-		["a Taylor's Version", FEARLESS_TV, "/music/fearless-taylors-version"],
-		["a Chapter of Red (Taylor's Version)", "289970772", "/music/red-taylors-version/from-the-vault-chapter"],
-		["a Version of folklore", "188803732", "/music/folklore/the-long-pond-studio-sessions"],
-		["an alias of Midnights", "368474237", "/music/midnights"],
-	])("pathOfDeezerId sends %s to its page", (_, id, path) => {
-		expect(pathOfDeezerId(id)).toBe(path);
-	});
+  // Where each old /music?album=<id> link is sent (proxy.ts).
+  it.each([
+    ["the first Album's ID", "227786", "/music"],
+    ["the first Album's alias", "81389452", "/music"],
+    ["the first Album's Version", "874936972", "/music/taylor-swift/standard-edition"],
+    ["the catalogue's ID", FEARLESS, "/music/fearless"],
+    ["the twin Deezer answers with", FEARLESS_TWIN, "/music/fearless"],
+    ["another twin", "81389432", "/music/fearless"],
+    ["a Version", "283925", "/music/fearless/international-version"],
+    ["a Taylor's Version", FEARLESS_TV, "/music/fearless-taylors-version"],
+    ["a Chapter of Red (Taylor's Version)", "289970772", "/music/red-taylors-version/from-the-vault-chapter"],
+    ["a Version of folklore", "188803732", "/music/folklore/the-long-pond-studio-sessions"],
+    ["an alias of Midnights", "368474237", "/music/midnights"],
+  ])("pathOfDeezerId sends %s to its page", (_, id, path) => {
+    expect(pathOfDeezerId(id)).toBe(path);
+  });
 
-	it.each([["nothing", undefined], ["an unknown ID", "1"], ["an ignored release", "1211619"]])("pathOfDeezerId has no page for %s", (_, id) => {
-		expect(pathOfDeezerId(id)).toBeUndefined();
-	});
+  it.each([
+    ["nothing", undefined],
+    ["an unknown ID", "1"],
+    ["an ignored release", "1211619"],
+  ])("pathOfDeezerId has no page for %s", (_, id) => {
+    expect(pathOfDeezerId(id)).toBeUndefined();
+  });
 
-	it.each([
-		["/music: the first Album", [], "227786", "227786"],
-		["an Album: on the ID on the shelf", ["fearless"], FEARLESS, FEARLESS_TWIN],
-		["a Version", ["fearless", "international-version"], FEARLESS, "283925"],
-		["the US Standard Edition", ["fearless", "standard-edition"], FEARLESS, "130714702"],
-		["the first Album's Version", ["taylor-swift", "standard-edition"], "227786", "874936972"],
-		["a Taylor's Version", ["fearless-taylors-version"], FEARLESS_TV, FEARLESS_TV],
-		["a Chapter of Red (Taylor's Version)", ["red-taylors-version", "from-the-vault-chapter"], "272247412", "289970772"],
-	])("selectRelease opens %s", (_, slugs, catalogueId, versionId) => {
-		const selected = selectRelease(shelf, slugs);
+  it.each([
+    ["/music: the first Album", [], "227786", "227786"],
+    ["an Album: on the ID on the shelf", ["fearless"], FEARLESS, FEARLESS_TWIN],
+    ["a Version", ["fearless", "international-version"], FEARLESS, "283925"],
+    ["the US Standard Edition", ["fearless", "standard-edition"], FEARLESS, "130714702"],
+    ["the first Album's Version", ["taylor-swift", "standard-edition"], "227786", "874936972"],
+    ["a Taylor's Version", ["fearless-taylors-version"], FEARLESS_TV, FEARLESS_TV],
+    ["a Chapter of Red (Taylor's Version)", ["red-taylors-version", "from-the-vault-chapter"], "272247412", "289970772"],
+  ])("selectRelease opens %s", (_, slugs, catalogueId, versionId) => {
+    const selected = selectRelease(shelf, slugs);
 
-		expect(selected?.album.catalogueId).toBe(catalogueId);
-		expect(selected?.albumId).toBe(byCatalogueId(shelf, catalogueId).id);
-		expect(selected?.versionId).toBe(versionId);
-	});
+    expect(selected?.album.catalogueId).toBe(catalogueId);
+    expect(selected?.albumId).toBe(byCatalogueId(shelf, catalogueId).id);
+    expect(selected?.versionId).toBe(versionId);
+  });
 
-	it.each([
-		["an unknown Album", ["fearless-deluxe"]],
-		["an unknown Version", ["fearless", "3am-edition"]],
-		["another Album's Version", ["reputation", "standard-edition"]],
-	])("selectRelease opens nothing for %s", (_, slugs) => {
-		expect(selectRelease(shelf, slugs)).toBeUndefined();
-	});
+  it.each([
+    ["an unknown Album", ["fearless-deluxe"]],
+    ["an unknown Version", ["fearless", "3am-edition"]],
+    ["another Album's Version", ["reputation", "standard-edition"]],
+  ])("selectRelease opens nothing for %s", (_, slugs) => {
+    expect(selectRelease(shelf, slugs)).toBeUndefined();
+  });
 
-	it("selectRelease opens nothing on an empty shelf", () => {
-		expect(selectRelease([], [])).toBeUndefined();
-	});
+  it("selectRelease opens nothing on an empty shelf", () => {
+    expect(selectRelease([], [])).toBeUndefined();
+  });
 });
 
 /*
@@ -242,43 +246,43 @@ describe("findAlbum, pathOfDeezerId and selectRelease", () => {
   a Version's, an alias or a regional twin) still finds its page.
 */
 describe("the catalogue's slugs", () => {
-	const URL_SAFE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  const URL_SAFE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-	it("are lowercase words joined by hyphens", () => {
-		for (const album of CATALOGUE) {
-			expect(album.slug, albumName(album)).toMatch(URL_SAFE);
-			for (const version of album.versions ?? []) expect(version.slug, `${albumName(album)}, ${version.name}`).toMatch(URL_SAFE);
-		}
-	});
+  it("are lowercase words joined by hyphens", () => {
+    for (const album of CATALOGUE) {
+      expect(album.slug, albumName(album)).toMatch(URL_SAFE);
+      for (const version of album.versions ?? []) expect(version.slug, `${albumName(album)}, ${version.name}`).toMatch(URL_SAFE);
+    }
+  });
 
-	it("give every Album and every Version a page of its own", () => {
-		const paths = CATALOGUE.flatMap((album) => [albumPath(album), ...(album.versions ?? []).map((version) => versionPath(album, version))]);
+  it("give every Album and every Version a page of its own", () => {
+    const paths = CATALOGUE.flatMap((album) => [albumPath(album), ...(album.versions ?? []).map((version) => versionPath(album, version))]);
 
-		expect(new Set(CATALOGUE.map(({ slug }) => slug)).size).toBe(CATALOGUE.length);
-		expect(new Set(paths).size).toBe(paths.length);
-	});
+    expect(new Set(CATALOGUE.map(({ slug }) => slug)).size).toBe(CATALOGUE.length);
+    expect(new Set(paths).size).toBe(paths.length);
+  });
 
-	it("name Taylor's Versions as such", () => {
-		expect(CATALOGUE.filter(isTaylorsVersion).map(({ slug }) => slug)).toEqual([
-			"fearless-taylors-version",
-			"speak-now-taylors-version",
-			"red-taylors-version",
-			"1989-taylors-version",
-		]);
-	});
+  it("name Taylor's Versions as such", () => {
+    expect(CATALOGUE.filter(isTaylorsVersion).map(({ slug }) => slug)).toEqual([
+      "fearless-taylors-version",
+      "speak-now-taylors-version",
+      "red-taylors-version",
+      "1989-taylors-version",
+    ]);
+  });
 
-	it("open every page from its own address", () => {
-		for (const album of CATALOGUE) {
-			expect(findRelease(album.slug)).toEqual({ album, version: undefined });
-			for (const version of album.versions ?? []) expect(findRelease(album.slug, version.slug)).toEqual({ album, version });
-		}
-		expect(findRelease()).toEqual({ album: CATALOGUE[0], version: undefined });
-	});
+  it("open every page from its own address", () => {
+    for (const album of CATALOGUE) {
+      expect(findRelease(album.slug)).toEqual({ album, version: undefined });
+      for (const version of album.versions ?? []) expect(findRelease(album.slug, version.slug)).toEqual({ album, version });
+    }
+    expect(findRelease()).toEqual({ album: CATALOGUE[0], version: undefined });
+  });
 
-	it("still lead every Deezer ID an old link may carry to its page", () => {
-		for (const album of CATALOGUE) {
-			for (const id of [album.id, ...(album.aliases ?? [])]) expect(pathOfDeezerId(id), id).toBe(albumPath(album));
-			for (const version of album.versions ?? []) expect(pathOfDeezerId(version.id), version.id).toBe(versionPath(album, version));
-		}
-	});
+  it("still lead every Deezer ID an old link may carry to its page", () => {
+    for (const album of CATALOGUE) {
+      for (const id of [album.id, ...(album.aliases ?? [])]) expect(pathOfDeezerId(id), id).toBe(albumPath(album));
+      for (const version of album.versions ?? []) expect(pathOfDeezerId(version.id), version.id).toBe(versionPath(album, version));
+    }
+  });
 });

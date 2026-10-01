@@ -11,17 +11,7 @@ import { formatReleaseDate } from "@/components/music/format";
 import { JournalDetails } from "@/components/music/journal-details";
 import { selectRelease } from "@/components/music/selection";
 import { JsonLd, TAYLOR_SWIFT, isoDuration } from "@/components/json-ld";
-import {
-  type AlbumVersion,
-  type CatalogueAlbum,
-  CATALOGUE,
-  albumName,
-  albumYear,
-  findRelease,
-  originalOf,
-  releaseName,
-  versionKind,
-} from "@/lib/catalogue";
+import { type AlbumVersion, type CatalogueAlbum, CATALOGUE, albumName, albumYear, findRelease, originalOf, releaseName, versionKind } from "@/lib/catalogue";
 import { absoluteUrl, albumPath, pageMetadata, versionPath } from "@/lib/metadata";
 import { getAlbumDetails } from "@/service/deezer";
 

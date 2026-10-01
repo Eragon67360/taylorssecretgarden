@@ -88,7 +88,9 @@ export const CATALOGUE: readonly CatalogueAlbum[] = [
     title: "Fearless",
     released: "2021-04-09",
     reRecords: "426350",
-    versions: [{ id: "418639447", slug: "the-more-fearless-taylors-version-chapter", name: "The More Fearless (Taylor's Version) Chapter", released: "2023-03-17" }],
+    versions: [
+      { id: "418639447", slug: "the-more-fearless-taylors-version-chapter", name: "The More Fearless (Taylor's Version) Chapter", released: "2023-03-17" },
+    ],
   },
   {
     id: "689149",
