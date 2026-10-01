@@ -67,6 +67,7 @@ export function DELETE(request: Request) {
 
       return new NextResponse(null, { status: 204, headers: PRIVATE });
     },
-    { body: false },
+    // Leaving never waits on a confirmed email address.
+    { body: false, verifiedEmail: false },
   );
 }

@@ -26,6 +26,7 @@ export function DELETE(request: Request, { params }: Context) {
         return errorResponse(error, "Tearing up your note");
       }
     },
-    { body: false },
+    // Taking one's own words back never waits on a confirmed email address.
+    { body: false, verifiedEmail: false },
   );
 }
