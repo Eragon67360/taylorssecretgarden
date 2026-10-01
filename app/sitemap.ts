@@ -42,6 +42,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/tours",
     ...tours.map(({ slug }) => `/tours/${slug}`),
     "/swiftter",
+    "/terms",
+    "/privacy",
+    "/legal",
   ];
 
   return [...paths.map((path) => ({ url: absoluteUrl(path) })), ...(await threadPaths())];

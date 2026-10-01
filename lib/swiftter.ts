@@ -97,6 +97,13 @@ export type Thread = {
 /** The most visible characters a note may have (graphemes: an emoji counts as one). */
 export const MAX_NOTE_CHARACTERS = 1000;
 
+/**
+ * The youngest a Member may be: France's age of digital consent (GDPR art. 8,
+ * loi Informatique et Libertés art. 45). Stated on sign-up and in the terms;
+ * no date of birth is asked.
+ */
+export const MINIMUM_AGE = 15;
+
 /** How many of each write a Member may make in a window of time. */
 export const LIMITS = {
 	post: { count: 5, minutes: 10 },

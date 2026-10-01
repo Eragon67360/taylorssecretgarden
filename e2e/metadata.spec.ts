@@ -106,6 +106,9 @@ const canonicalPages = [
 	{ path: "/tours", canonical: "/tours", title: "Taylor Swift's Tours · Taylor's Secret Garden" },
 	...tours.map(({ slug, tour, date }) => ({ path: `/tours/${slug}`, canonical: `/tours/${slug}`, title: `${tour}: Taylor Swift's ${date.replace("-", "–")} tour · Taylor's Secret Garden` })),
 	{ path: "/swiftter", canonical: "/swiftter", title: "Swiftter · Taylor's Secret Garden" },
+	{ path: "/terms", canonical: "/terms", title: "Terms and community rules · Taylor's Secret Garden" },
+	{ path: "/privacy", canonical: "/privacy", title: "Privacy policy · Taylor's Secret Garden" },
+	{ path: "/legal", canonical: "/legal", title: "Legal notice (mentions légales) · Taylor's Secret Garden" },
 	// A thread (seeded, scripts/seed-data.ts): the site's card and name, its title under the layout's template.
 	{ path: `/swiftter/p/${SEEDED_THREAD}`, canonical: `/swiftter/p/${SEEDED_THREAD}`, title: "Wren Holloway's note on Swiftter · Taylor's Secret Garden" },
 	{ path: "/sign-in?redirect_url=%2Fswiftter", canonical: "/sign-in", title: "Sign in · Taylor's Secret Garden" },

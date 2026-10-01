@@ -1,6 +1,15 @@
+import Link from "next/link";
+
 import { Bracelet, Highlight, PressedFlower } from "@/components/scrapbook";
 
-/** The journal's last page: credits, and a reminder that this is a fan site. */
+/** The legal pages, on every page: the privacy policy, the terms and the legal notice (in French first). */
+const SMALL_PRINT = [
+  { href: "/privacy", name: "Privacy" },
+  { href: "/terms", name: "Terms and community rules" },
+  { href: "/legal", name: "Mentions légales", lang: "fr" },
+];
+
+/** The journal's last page: credits, a reminder that this is a fan site, and the small print. */
 export function SiteFooter() {
   return (
     <footer className="bg-paper paper-grain border-line relative z-40 overflow-hidden border-t" id="site-footer">
@@ -20,6 +29,17 @@ export function SiteFooter() {
           </a>
           . An unofficial fan site, not affiliated with Taylor Swift, her team or her labels.
         </p>
+        <nav aria-label="The small print">
+          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-1 text-[14px]">
+            {SMALL_PRINT.map(({ href, name, lang }) => (
+              <li key={href} lang={lang}>
+                <Link className="text-ink focus-ring inline-flex min-h-11 items-center rounded-sm font-semibold underline underline-offset-2" href={href}>
+                  {name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
     </footer>
   );

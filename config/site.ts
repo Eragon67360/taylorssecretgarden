@@ -11,6 +11,11 @@ export const siteConfig = {
   url: previewUrl ? `https://${previewUrl}` : PRODUCTION_URL,
   description:
     "A fan's scrapbook of every Taylor Swift Era: the Albums and their tracklists, the Tours, and Swiftter, where Swifties pass notes.",
+  /** Who publishes the site, as the legal notice, privacy policy and terms name him: a private individual. */
+  publisher: "Thomas Moser",
+  /** Where Members and visitors write: rights requests, reports, human reviews, the legal notice's contact. */
+  // TODO(owner): confirm the contact address
+  contactEmail: "contact@taylorssecretgarden.com",
   /** The journal's colours, for images drawn outside the CSS (icons, the Open Graph card). */
   colors: {
     paper: "#f3eadb",
