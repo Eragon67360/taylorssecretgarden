@@ -101,7 +101,7 @@ describe("POST /api/auth-email", () => {
     expect(sent.text).toContain("This code works for 5 minutes.");
   });
 
-  it("sends a password reset link, with the link Neon Auth gave and its hour", async () => {
+  it("sends a password reset link on the site's own address, with Neon Auth's token and its hour", async () => {
     const network = stubNetwork();
     const event = linkEvent();
 
@@ -109,7 +109,8 @@ describe("POST /api/auth-email", () => {
     const sent = JSON.parse(String(network.resendCalls()[0].init?.body));
 
     expect(sent.subject).toBe("Choose a new password");
-    expect(sent.text).toContain(`Choose a new password: ${event.event_data.link_url}`);
+    expect(sent.text).toContain("Choose a new password: https://www.taylorssecretgarden.com/reset-password?token=tok3nTok3n");
+    expect(sent.html).not.toContain("neonauth");
     expect(sent.text).toContain("This link works for 1 hour, and only once.");
     expect(new Headers(network.resendCalls()[0].init?.headers).get("idempotency-key")).toBe(`neon-auth/${event.event_id}`);
   });
@@ -211,7 +212,7 @@ describe("POST /api/auth-email", () => {
     const all = logged();
 
     expect(all).toContain("Account email sent (email-verification code)");
-    for (const secret of ["member@example.com", "Jane Smith", "123456", "tok3n", "neonauth.example/neondb/auth/reset"]) expect(all).not.toContain(secret);
+    for (const secret of ["member@example.com", "Jane Smith", "123456", "tok3nTok3n", "neonauth.example/neondb/auth/reset"]) expect(all).not.toContain(secret);
   });
 });
 
