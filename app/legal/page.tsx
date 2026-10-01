@@ -83,9 +83,9 @@ export default function LegalNoticePage() {
         </p>
         <p>
           Les pochettes d&apos;albums, les listes de titres et les extraits de 30 secondes sont fournis par{" "}
-          <a href="https://www.deezer.com/">Deezer</a>, au moyen de son interface publique. Les photographies sont créditées lorsque leur
-          auteur est connu. Tout titulaire de droits qui souhaite le retrait d&apos;un contenu ou la correction d&apos;un crédit peut écrire à{" "}
-          <ContactEmail /> : le contenu sera retiré ou corrigé dans les meilleurs délais.
+          <a href="https://www.deezer.com/">Deezer</a>, au moyen de son interface publique. Les photographies sont{" "}
+          <Link href="/credits">créditées</Link> lorsque leur auteur est connu. Tout titulaire de droits qui souhaite le retrait d&apos;un
+          contenu ou la correction d&apos;un crédit peut écrire à <ContactEmail /> : le contenu sera retiré ou corrigé dans les meilleurs délais.
         </p>
         <p>
           Les textes et le code du site sont de {siteConfig.publisher} ; le code source est publié sur <a href={REPOSITORY}>GitHub</a> sous
@@ -128,7 +128,7 @@ export default function LegalNoticePage() {
         </p>
         <p>
           Album covers, tracklists and 30-second previews come from <a href="https://www.deezer.com/">Deezer</a>, through its public API.
-          Photographs are credited where their author is known. Any rights holder who wants something removed or a credit corrected can write
+          Photographs are <Link href="/credits">credited</Link> where their author is known. Any rights holder who wants something removed or a credit corrected can write
           to <ContactEmail />: it will be removed or corrected promptly.
         </p>
         <p>

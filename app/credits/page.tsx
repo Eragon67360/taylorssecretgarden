@@ -1,3 +1,6 @@
+import Link from "next/link";
+
+import { siteConfig } from "@/config/site";
 import { DeezerLogo } from "@/components/deezer-logo";
 import { Scribble } from "@/components/scrapbook";
 import { type Credit } from "@/lib/credits";
@@ -10,8 +13,6 @@ export const metadata = pageMetadata({
   path: "/credits",
   noindex: true,
 });
-
-const ISSUES = "https://github.com/Eragon67360/taylorssecretgarden/issues";
 
 const link = "text-ink focus-ring rounded-sm font-semibold underline decoration-1 underline-offset-2 hover:decoration-2";
 
@@ -43,11 +44,15 @@ export default function CreditsPage() {
       </h1>
       <p className="text-soft mt-8 max-w-[38rem] text-[17px] leading-relaxed">
         The posters, photos and footage in this scrapbook are not ours: they belong to the people and companies below. If one of them is yours and
-        you would like it credited differently or taken out,{" "}
-        <a className={link} href={ISSUES}>
-          open an issue
+        you would like it credited differently or taken out, write to{" "}
+        <a className={link} href={`mailto:${siteConfig.contactEmail}`}>
+          {siteConfig.contactEmail}
         </a>{" "}
-        and we will sort it out.
+        and it will be corrected or removed promptly (see the{" "}
+        <Link className={link} href="/legal">
+          legal notice
+        </Link>
+        ).
       </p>
 
       <section aria-labelledby="credits-tours" className="mt-14">

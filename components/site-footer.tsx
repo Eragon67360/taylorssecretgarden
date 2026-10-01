@@ -1,11 +1,13 @@
 import Link from "next/link";
 
+import { DeezerLogo } from "@/components/deezer-logo";
 import { Bracelet, Highlight, PressedFlower } from "@/components/scrapbook";
 
-/** The legal pages, on every page: the privacy policy, the terms and the legal notice (in French first). */
+/** The legal pages, on every page: the privacy policy, the terms, whose pictures these are, and the legal notice (in French first). */
 const SMALL_PRINT = [
   { href: "/privacy", name: "Privacy" },
   { href: "/terms", name: "Terms and community rules" },
+  { href: "/credits", name: "Credits" },
   { href: "/legal", name: "Mentions légales", lang: "fr" },
 ];
 
@@ -23,11 +25,13 @@ export function SiteFooter() {
           <Highlight color="#F9D9E3">this is NOT Taylor&apos;s version.</Highlight>
         </p>
         <p className="text-soft max-w-[40rem] text-[14px] leading-relaxed">
-          Album data and 30-second previews courtesy of{" "}
+          {/* Deezer's API terms: its logo, clearly visible, and the previews' terms told to listeners (IV). */}
+          Album data, covers and 30-second previews courtesy of{" "}
           <a className="text-ink focus-ring rounded-sm font-semibold underline underline-offset-2" href="https://www.deezer.com/">
-            Deezer
+            <DeezerLogo />
           </a>
-          . An unofficial fan site, not affiliated with Taylor Swift, her team or her labels.
+          , for private listening only. An unofficial fan site, not affiliated with Taylor Swift, her team or her labels; its photos and footage belong to
+          their owners.
         </p>
         <nav aria-label="The small print">
           <ul className="flex flex-wrap justify-center gap-x-6 gap-y-1 text-[14px]">

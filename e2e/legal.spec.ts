@@ -63,6 +63,7 @@ test("the footer links the small print on every page", async ({ page }) => {
 		for (const [name, href] of [
 			["Privacy", "/privacy"],
 			["Terms and community rules", "/terms"],
+			["Credits", "/credits"],
 			["Mentions légales", "/legal"],
 		])
 			await expect(smallPrint.getByRole("link", { name, exact: true }), `${name} on ${path}`).toHaveAttribute("href", href);
