@@ -1,11 +1,13 @@
 import "server-only";
 
-import { sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 import { type Database, getDb } from "@/db/client";
+import { bare, type Narrowed, type NotNull, type RawValue, type RowOf } from "@/db/rows";
 import { allowedAvatarUrl } from "@/lib/avatar";
 import { displayNameOf } from "@/lib/display-name";
-import { members } from "@/db/schema";
+import { members, moderationDecisions, posts, reshares } from "@/db/schema";
 import {
 	type Author,
 	characterCount,
@@ -94,6 +96,18 @@ export const isUuid = (value: unknown): value is string => typeof value === "str
 
 type Executor = Pick<Database, "execute">;
 
+/*
+  The raw queries name tables and columns through db/schema.ts, under these
+  aliases (`${p.threadId}` is "p"."thread_id"), and type their rows from it
+  (db/rows.ts), so renaming a column fails the typecheck here.
+*/
+/** The note a query is about. */
+const p = alias(posts, "p");
+/** Its author. */
+const a = alias(members, "a");
+/** A reply in its thread (child), counted or checked for. */
+const c = alias(posts, "c");
+
 /** A timestamp from a raw query (node-postgres through Drizzle answers text: `2026-09-30 02:13:28.123456+00`) as ISO 8601. */
 export function iso(value: Date | string): string {
 	if (value instanceof Date) return value.toISOString();
@@ -159,17 +173,18 @@ export function preparePost(html: string): string {
 // ---------------------------------------------------------------------------
 // Limits
 
+// Each write the limit counts, as `made_at`.
 const LIMIT_COUNTS: Record<LimitedWrite, (memberId: string, minutes: number) => ReturnType<typeof sql>> = {
 	post: (memberId, minutes) => sql`
-		select created_at from posts
-		where member_id = ${memberId} and parent_id is null and created_at > now() - make_interval(mins => ${minutes})`,
+		select ${posts.createdAt} as made_at from ${posts}
+		where ${posts.memberId} = ${memberId} and ${posts.parentId} is null and ${posts.createdAt} > now() - make_interval(mins => ${minutes})`,
 	reply: (memberId, minutes) => sql`
-		select created_at from posts
-		where member_id = ${memberId} and parent_id is not null and created_at > now() - make_interval(mins => ${minutes})`,
+		select ${posts.createdAt} as made_at from ${posts}
+		where ${posts.memberId} = ${memberId} and ${posts.parentId} is not null and ${posts.createdAt} > now() - make_interval(mins => ${minutes})`,
 	// Undone reshares still count: undo and redo cannot dodge the limit.
 	reshare: (memberId, minutes) => sql`
-		select created_at from reshares
-		where member_id = ${memberId} and created_at > now() - make_interval(mins => ${minutes})`,
+		select ${reshares.createdAt} as made_at from ${reshares}
+		where ${reshares.memberId} = ${memberId} and ${reshares.createdAt} > now() - make_interval(mins => ${minutes})`,
 };
 
 /**
@@ -182,8 +197,8 @@ export async function limitWait(memberId: string, kind: LimitedWrite, db: Execut
 	const { count, minutes } = LIMITS[kind];
 	const { rows } = await db.execute<{ count: number; wait: number | null }>(sql`
 		select count(*)::int as count,
-			ceil(extract(epoch from min(created_at) + make_interval(mins => ${minutes}) - now()))::int as wait
-		from (${LIMIT_COUNTS[kind](memberId, minutes)} order by created_at desc limit ${count}) as recent
+			ceil(extract(epoch from min(made_at) + make_interval(mins => ${minutes}) - now()))::int as wait
+		from (${LIMIT_COUNTS[kind](memberId, minutes)} order by made_at desc limit ${count}) as recent
 	`);
 	const [{ count: made, wait }] = rows;
 
@@ -211,6 +226,9 @@ export type WriteOutcome =
 /** The moderation step, replaceable in tests. */
 export type Moderate = (text: string) => Promise<ModerationResult>;
 
+/** The note a reply answers. */
+const parent = alias(posts, "parent");
+
 /**
  * Writes a note as the given Member: a Post, or with `parentId` a reply to a
  * public note (PostNotFoundError otherwise). The note is stored pending first,
@@ -227,14 +245,16 @@ export async function writeNote(memberId: string, html: string, parentId?: strin
 		await lockMember(tx, memberId);
 		await checkLimit(tx, memberId, parentId ? "reply" : "post");
 
-		const { rows } = parentId
-			? await tx.execute<{ id: string }>(sql`
-				insert into posts (member_id, content, parent_id, root_id)
-				select ${memberId}, ${content}, parent.id, parent.thread_id
-				from posts parent
-				where parent.id = ${parentId} and parent.published_at is not null and parent.deleted_at is null
-				returning id`)
-			: await tx.execute<{ id: string }>(sql`insert into posts (member_id, content) values (${memberId}, ${content}) returning id`);
+		const rows = parentId
+			? (
+					await tx.execute<RowOf<typeof posts, "id">>(sql`
+						insert into ${posts} (${bare(posts.memberId)}, ${bare(posts.content)}, ${bare(posts.parentId)}, ${bare(posts.rootId)})
+						select ${memberId}, ${content}, ${parent.id}, ${parent.threadId}
+						from ${posts} ${parent}
+						where ${parent.id} = ${parentId} and ${parent.publishedAt} is not null and ${parent.deletedAt} is null
+						returning ${posts.id}`)
+				).rows
+			: await tx.insert(posts).values({ memberId, content }).returning({ id: posts.id });
 
 		if (!rows[0]) throw new PostNotFoundError();
 
@@ -267,24 +287,27 @@ async function judge(id: string, content: string, moderate: Moderate): Promise<W
 
 	await getDb().transaction(async (tx) => {
 		if (!result) {
-			await tx.execute(sql`
-				insert into moderation_decisions (post_id, outcome, model, duration_ms)
-				values (${id}, 'unavailable', ${model}, ${durationMs})`);
+			await tx.insert(moderationDecisions).values({ postId: id, outcome: "unavailable", model, durationMs });
 
 			return;
 		}
 
 		const approved = result.verdict === "allowed";
-		const { rows } = await tx.execute<{ id: string }>(sql`
-			update posts set status = ${approved ? "approved" : "blocked"}, published_at = ${approved ? sql`now()` : sql`null`}
-			where id = ${id} and status = 'pending' and deleted_at is null
-			returning id`);
+		const rows = await tx
+			.update(posts)
+			.set({ status: approved ? "approved" : "blocked", publishedAt: approved ? sql`now()` : null })
+			.where(and(eq(posts.id, id), eq(posts.status, "pending"), isNull(posts.deletedAt)))
+			.returning({ id: posts.id });
 
 		// Torn up (or already judged) meanwhile: the verdict is kept as history only.
-		await tx.execute(sql`
-			insert into moderation_decisions (post_id, outcome, category, reason, model, duration_ms)
-			values (${id}, ${approved ? "approved" : "blocked"}, ${result.verdict === "rejected" ? result.category : null},
-				${rows[0] ? result.reason : null}, ${model}, ${durationMs})`);
+		await tx.insert(moderationDecisions).values({
+			postId: id,
+			outcome: approved ? "approved" : "blocked",
+			category: result.verdict === "rejected" ? result.category : null,
+			reason: rows[0] ? result.reason : null,
+			model,
+			durationMs,
+		});
 	});
 
 	return outcomeOf(id);
@@ -292,11 +315,11 @@ async function judge(id: string, content: string, moderate: Moderate): Promise<W
 
 /** The note's current state, as the Member who wrote it sees it. */
 async function outcomeOf(id: string): Promise<WriteOutcome> {
-	const [public_] = await selectPublicPosts(sql`p.id = ${id}`);
+	const [public_] = await selectPublicPosts(sql`${p.id} = ${id}`);
 
 	if (public_) return { status: "approved", note: public_ };
 
-	const [held] = await selectHeld(sql`p.id = ${id}`);
+	const [held] = await selectHeld(sql`${p.id} = ${id}`);
 
 	if (!held) throw new PostNotFoundError();
 
@@ -311,14 +334,14 @@ async function outcomeOf(id: string): Promise<WriteOutcome> {
 export async function checkAgain(memberId: string, id: string, moderate: Moderate = moderatePost): Promise<WriteOutcome> {
 	if (!isUuid(id)) throw new PostNotFoundError();
 
-	const [held] = await selectHeld(sql`p.id = ${id} and p.member_id = ${memberId}`);
+	const [held] = await selectHeld(sql`${p.id} = ${id} and ${p.memberId} = ${memberId}`);
 
 	if (!held || held.status !== "pending") throw new PostNotFoundError();
 	if (!held.canCheckAgain) throw new NoMoreChecksError();
 
-	const { rows } = await getDb().execute<{ content: string }>(sql`select content from posts where id = ${id}`);
+	const [{ content }] = await getDb().select({ content: posts.content }).from(posts).where(eq(posts.id, id));
 
-	return judge(id, rows[0].content, moderate);
+	return judge(id, content, moderate);
 }
 
 /**
@@ -330,13 +353,14 @@ export async function checkAgain(memberId: string, id: string, moderate: Moderat
  */
 const dueForCheck = sql`(
 	d.last_at is null
-	or (p.created_at > now() - make_interval(hours => ${MODERATION_RETRY.hourlyForHours}) and d.last_at < now() - interval '50 minutes')
-	or (p.created_at > now() - make_interval(days => ${MODERATION_RETRY.days}) and d.last_at < now() - interval '23 hours 50 minutes')
-	or (p.created_at <= now() - make_interval(days => ${MODERATION_RETRY.days}) and d.last_at < p.created_at + make_interval(days => ${MODERATION_RETRY.days}))
+	or (${p.createdAt} > now() - make_interval(hours => ${MODERATION_RETRY.hourlyForHours}) and d.last_at < now() - interval '50 minutes')
+	or (${p.createdAt} > now() - make_interval(days => ${MODERATION_RETRY.days}) and d.last_at < now() - interval '23 hours 50 minutes')
+	or (${p.createdAt} <= now() - make_interval(days => ${MODERATION_RETRY.days}) and d.last_at < ${p.createdAt} + make_interval(days => ${MODERATION_RETRY.days}))
 )`;
 
 /** A pending note `p` whose last check (`lastAt`) came after its week was up: given up on. */
-const givenUp = (lastAt = sql`d.last_at`) => sql`(p.status = 'pending' and ${lastAt} >= p.created_at + make_interval(days => ${MODERATION_RETRY.days}))`;
+const givenUp = (lastAt = sql`d.last_at`) =>
+	sql`(${p.status} = 'pending' and ${lastAt} >= ${p.createdAt} + make_interval(days => ${MODERATION_RETRY.days}))`;
 
 /** Consecutive notes left without a verdict after which a run stops: the Gateway is down, the rest keep their turn. */
 const STOP_AFTER_NO_VERDICTS = 3;
@@ -349,13 +373,13 @@ const STOP_AFTER_NO_VERDICTS = 3;
  * and the last check still had no verdict): each is reported once.
  */
 export async function recheckPending({ batch = 20, moderate = moderatePost, ids }: { batch?: number; moderate?: Moderate; ids?: string[] } = {}) {
-	const only = ids ? sql`and p.id in (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})` : sql``;
-	const { rows } = await getDb().execute<{ id: string; content: string; final: boolean }>(sql`
-		select p.id, p.content, p.created_at <= now() - make_interval(days => ${MODERATION_RETRY.days}) as final
-		from posts p
-		join lateral (select max(created_at) as last_at from moderation_decisions where post_id = p.id) d on true
-		where p.status = 'pending' and p.deleted_at is null and ${dueForCheck} ${only}
-		order by d.last_at nulls first, p.created_at
+	const only = ids ? sql`and ${p.id} in (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})` : sql``;
+	const { rows } = await getDb().execute<RowOf<typeof posts, "id" | "content"> & { final: boolean }>(sql`
+		select ${p.id}, ${p.content}, ${p.createdAt} <= now() - make_interval(days => ${MODERATION_RETRY.days}) as final
+		from ${posts} ${p}
+		join lateral (select max(${moderationDecisions.createdAt}) as last_at from ${moderationDecisions} where ${moderationDecisions.postId} = ${p.id}) d on true
+		where ${p.status} = 'pending' and ${p.deletedAt} is null and ${dueForCheck} ${only}
+		order by d.last_at nulls first, ${p.createdAt}
 		limit ${batch}`);
 	const outcomes: WriteOutcome["status"][] = [];
 	let gaveUp = 0;
@@ -381,23 +405,19 @@ export async function recheckPending({ batch = 20, moderate = moderatePost, ids 
 // ---------------------------------------------------------------------------
 // Reading
 
-type PostRow = {
-	id: string;
-	content: string;
-	is_demo: boolean;
-	created_at: Date | string;
-	published_at: Date | string;
-	author_id: string;
-	display_name: string;
-	username: string | null;
-	avatar_url: string | null;
-	reply_count: number;
-	reshare_count: number;
-};
+/** A reshare of the note, counted. */
+const s = alias(reshares, "s");
+
+/** The author of a note (`a`), as postColumns and getThread select it. */
+type AuthorRow = { author_id: RawValue<typeof members.id> } & RowOf<typeof members, "displayName" | "username" | "avatarUrl">;
+
+type PostRow = RowOf<typeof posts, "id" | "content" | "isDemo" | "createdAt"> &
+	NotNull<RowOf<typeof posts, "publishedAt">> &
+	AuthorRow & { reply_count: number; reshare_count: number };
 
 // Rows stored before avatars were checked may hold a picture next/image
 // refuses (a Clerk avatar): those Members show their initials.
-const authorOf = (row: { author_id: string; display_name: string; username: string | null; avatar_url: string | null }): Author => ({
+const authorOf = (row: AuthorRow): Author => ({
 	id: row.author_id,
 	displayName: row.display_name,
 	username: row.username,
@@ -418,18 +438,21 @@ const toFeedPost = (row: PostRow): FeedPost => ({
 	reshareCount: row.reshare_count,
 });
 
+/** A public reply to `p`, as reply_count counts them (and listSitemapPosts checks for one). */
+const publicReplyOfP = sql`${c.rootId} = ${p.id} and ${c.publishedAt} is not null and ${c.deletedAt} is null`;
+
 const postColumns = sql`
-	p.id, p.content, p.is_demo, p.created_at, p.published_at,
-	a.id as author_id, a.display_name, a.username, a.avatar_url,
-	(select count(*)::int from posts c where c.root_id = p.id and c.published_at is not null and c.deleted_at is null) as reply_count,
-	(select count(*)::int from reshares s where s.post_id = p.id and s.deleted_at is null) as reshare_count`;
+	${p.id}, ${p.content}, ${p.isDemo}, ${p.createdAt}, ${p.publishedAt},
+	${a.id} as author_id, ${a.displayName}, ${a.username}, ${a.avatarUrl},
+	(select count(*)::int from ${posts} ${c} where ${publicReplyOfP}) as reply_count,
+	(select count(*)::int from ${reshares} ${s} where ${s.postId} = ${p.id} and ${s.deletedAt} is null) as reshare_count`;
 
 /** Public Posts (not replies) matching a condition on `p`. */
 async function selectPublicPosts(where: ReturnType<typeof sql>): Promise<FeedPost[]> {
 	const { rows } = await getDb().execute<PostRow>(sql`
 		select ${postColumns}
-		from posts p join members a on a.id = p.member_id
-		where ${where} and p.published_at is not null and p.deleted_at is null`);
+		from ${posts} ${p} join ${members} ${a} on ${a.id} = ${p.memberId}
+		where ${where} and ${p.publishedAt} is not null and ${p.deletedAt} is null`);
 
 	return rows.map(toFeedPost);
 }
@@ -450,18 +473,25 @@ function decodeCursor(cursor: string): { at: string; id: string } {
 	throw new InvalidCursorError("Invalid cursor");
 }
 
-type FeedRow = PostRow & {
-	kind: "post" | "reshare";
-	item_id: string;
-	/** The item's time as Postgres prints it (microseconds): the exact cursor. */
-	at_text: string;
-	at: Date | string;
-	deleted_at: Date | string | null;
-	resharer_id: string | null;
-	resharer_name: string | null;
-	resharer_username: string | null;
-	resharer_avatar: string | null;
-};
+/** A reshare in the feed. */
+const r = alias(reshares, "r");
+/** The Member who reshared it. */
+const rm = alias(members, "rm");
+
+type FeedRow = PostRow &
+	RowOf<typeof posts, "deletedAt"> & {
+		kind: "post" | "reshare";
+		/** The Post's id, or the reshare's. */
+		item_id: RawValue<typeof posts.id> | RawValue<typeof reshares.id>;
+		/** The item's time as Postgres prints it (microseconds): the exact cursor. */
+		at_text: string;
+		at: NonNullable<RawValue<typeof posts.publishedAt>> | RawValue<typeof reshares.createdAt>;
+		// From the left join: null for a Post.
+		resharer_id: RawValue<typeof members.id> | null;
+		resharer_name: RawValue<typeof members.displayName> | null;
+		resharer_username: RawValue<typeof members.username>;
+		resharer_avatar: RawValue<typeof members.avatarUrl>;
+	};
 
 /**
  * One page of the feed: public Posts and reshares (a reshare of a Post since
@@ -478,24 +508,24 @@ export async function listFeed(cursor?: string | null, pageSize = PAGE_SIZE, db:
 
 	const { rows } = await db.execute<FeedRow>(sql`
 		with page as (
-			(select 'post'::text as kind, p.id as item_id, p.published_at as at, p.id as post_id, null::text as resharer_id
-				from posts p
-				where p.parent_id is null and p.published_at is not null and p.deleted_at is null ${before(sql`p.published_at`, sql`p.id`)}
-				order by p.published_at desc, p.id desc
+			(select 'post'::text as kind, ${p.id} as item_id, ${p.publishedAt} as at, ${p.id} as post_id, null::text as resharer_id
+				from ${posts} ${p}
+				where ${p.parentId} is null and ${p.publishedAt} is not null and ${p.deletedAt} is null ${before(sql`${p.publishedAt}`, sql`${p.id}`)}
+				order by ${p.publishedAt} desc, ${p.id} desc
 				limit ${take})
 			union all
-			(select 'reshare'::text, r.id, r.created_at, r.post_id, r.member_id
-				from reshares r
-				where r.deleted_at is null ${before(sql`r.created_at`, sql`r.id`)}
-				order by r.created_at desc, r.id desc
+			(select 'reshare'::text, ${r.id}, ${r.createdAt}, ${r.postId}, ${r.memberId}
+				from ${reshares} ${r}
+				where ${r.deletedAt} is null ${before(sql`${r.createdAt}`, sql`${r.id}`)}
+				order by ${r.createdAt} desc, ${r.id} desc
 				limit ${take})
 		)
-		select page.kind, page.item_id, page.at, page.at::text as at_text, p.deleted_at, ${postColumns},
-			rm.id as resharer_id, rm.display_name as resharer_name, rm.username as resharer_username, rm.avatar_url as resharer_avatar
+		select page.kind, page.item_id, page.at, page.at::text as at_text, ${p.deletedAt}, ${postColumns},
+			${rm.id} as resharer_id, ${rm.displayName} as resharer_name, ${rm.username} as resharer_username, ${rm.avatarUrl} as resharer_avatar
 		from page
-		join posts p on p.id = page.post_id
-		join members a on a.id = p.member_id
-		left join members rm on rm.id = page.resharer_id
+		join ${posts} ${p} on ${p.id} = page.post_id
+		join ${members} ${a} on ${a.id} = ${p.memberId}
+		left join ${members} ${rm} on ${rm.id} = page.resharer_id
 		order by page.at desc, page.item_id desc
 		limit ${take}`);
 
@@ -528,19 +558,9 @@ export function meetsIndexingBar(rootHtml: string, publicReplies: number): boole
 	return publicReplies > 0 || characterCount(postPlainText(rootHtml).replace(/\s+/g, " ").trim()) >= INDEXING_BAR_CHARACTERS;
 }
 
-type ThreadRow = {
-	id: string;
-	parent_id: string | null;
-	content: string;
-	is_demo: boolean;
-	created_at: Date | string;
-	published_at: Date | string;
-	deleted_at: Date | string | null;
-	author_id: string;
-	display_name: string;
-	username: string | null;
-	avatar_url: string | null;
-};
+type ThreadRow = RowOf<typeof posts, "id" | "parentId" | "content" | "isDemo" | "isSeed" | "createdAt" | "deletedAt"> &
+	NotNull<RowOf<typeof posts, "publishedAt">> &
+	AuthorRow & { reshare_count: number };
 
 /**
  * The thread a note belongs to: its first Post and every reply that is public
@@ -550,14 +570,14 @@ type ThreadRow = {
 export async function getThread(id: string): Promise<Thread | null> {
 	if (!isUuid(id)) return null;
 
-	const { rows } = await getDb().execute<ThreadRow & { reshare_count: number; is_seed: boolean }>(sql`
-		select p.id, p.parent_id, p.content, p.is_demo, p.is_seed, p.created_at, p.published_at, p.deleted_at,
-			a.id as author_id, a.display_name, a.username, a.avatar_url,
-			(select count(*)::int from reshares s where s.post_id = p.id and s.deleted_at is null) as reshare_count
-		from posts p join members a on a.id = p.member_id
-		where p.thread_id = (select thread_id from posts where id = ${id} and published_at is not null)
-			and p.published_at is not null
-		order by p.created_at, p.id`);
+	const { rows } = await getDb().execute<ThreadRow>(sql`
+		select ${p.id}, ${p.parentId}, ${p.content}, ${p.isDemo}, ${p.isSeed}, ${p.createdAt}, ${p.publishedAt}, ${p.deletedAt},
+			${a.id} as author_id, ${a.displayName}, ${a.username}, ${a.avatarUrl},
+			(select count(*)::int from ${reshares} ${s} where ${s.postId} = ${p.id} and ${s.deletedAt} is null) as reshare_count
+		from ${posts} ${p} join ${members} ${a} on ${a.id} = ${p.memberId}
+		where ${p.threadId} = (select ${posts.threadId} from ${posts} where ${posts.id} = ${id} and ${posts.publishedAt} is not null)
+			and ${p.publishedAt} is not null
+		order by ${p.createdAt}, ${p.id}`);
 	const notes = rows.map(
 		(row): ThreadNote & { reshareCount: number } => ({
 			id: row.id,
@@ -586,29 +606,27 @@ export async function getThread(id: string): Promise<Thread | null> {
 	};
 }
 
-type HeldRow = {
-	id: string;
-	content: string;
-	status: "pending" | "blocked";
-	root_id: string | null;
-	parent_id: string | null;
-	created_at: Date | string;
-	attempts: number;
-	given_up: boolean;
-	category: RefusalCategory | null;
-	reason: string | null;
-};
+type HeldRow = RowOf<typeof posts, "id" | "content" | "rootId" | "parentId" | "createdAt"> &
+	Narrowed<RowOf<typeof posts, "status">, Exclude<RawValue<typeof posts.status>, "approved">> &
+	Narrowed<RowOf<typeof moderationDecisions, "category">, RefusalCategory | null> &
+	RowOf<typeof moderationDecisions, "reason"> & { attempts: number; given_up: boolean };
+
+/** The last refusal of a held note. */
+const last = alias(moderationDecisions, "last");
 
 async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 	const { rows } = await getDb().execute<HeldRow>(sql`
-		select p.id, p.content, p.status, p.root_id, p.parent_id, p.created_at, d.attempts, coalesce(${givenUp()}, false) as given_up, last.category, last.reason
-		from posts p
-		join lateral (select count(*)::int as attempts, max(created_at) as last_at from moderation_decisions where post_id = p.id) d on true
+		select ${p.id}, ${p.content}, ${p.status}, ${p.rootId}, ${p.parentId}, ${p.createdAt}, d.attempts, coalesce(${givenUp()}, false) as given_up, ${last.category}, ${last.reason}
+		from ${posts} ${p}
+		join lateral (
+			select count(*)::int as attempts, max(${moderationDecisions.createdAt}) as last_at from ${moderationDecisions} where ${moderationDecisions.postId} = ${p.id}
+		) d on true
 		left join lateral (
-			select category, reason from moderation_decisions where post_id = p.id and outcome = 'blocked' order by created_at desc limit 1
-		) last on true
-		where ${where} and p.status in ('pending', 'blocked') and p.deleted_at is null
-		order by p.created_at desc`);
+			select ${moderationDecisions.category}, ${moderationDecisions.reason} from ${moderationDecisions}
+			where ${moderationDecisions.postId} = ${p.id} and ${moderationDecisions.outcome} = 'blocked' order by ${moderationDecisions.createdAt} desc limit 1
+		) ${last} on true
+		where ${where} and ${p.status} in ('pending', 'blocked') and ${p.deletedAt} is null
+		order by ${p.createdAt} desc`);
 
 	return rows.map((row) => ({
 		id: row.id,
@@ -626,14 +644,18 @@ async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 }
 
 /** The Member's own notes that are not public: waiting for a check, or refused. */
-export const listHeld = (memberId: string) => selectHeld(sql`p.member_id = ${memberId}`);
+export const listHeld = (memberId: string) => selectHeld(sql`${p.memberId} = ${memberId}`);
 
 /** The Posts the Member reshares now (most recent 500). */
 export async function listOwnReshares(memberId: string): Promise<string[]> {
-	const { rows } = await getDb().execute<{ post_id: string }>(sql`
-		select post_id from reshares where member_id = ${memberId} and deleted_at is null order by created_at desc limit 500`);
+	const rows = await getDb()
+		.select({ postId: reshares.postId })
+		.from(reshares)
+		.where(and(eq(reshares.memberId, memberId), isNull(reshares.deletedAt)))
+		.orderBy(desc(reshares.createdAt))
+		.limit(500);
 
-	return rows.map((row) => row.post_id);
+	return rows.map((row) => row.postId);
 }
 
 /**
@@ -643,14 +665,14 @@ export async function listOwnReshares(memberId: string): Promise<string[]> {
 export async function listSitemapPosts(limit = 5000): Promise<{ id: string; publishedAt: string }[]> {
 	// A note's stored HTML is never shorter than its visible text: the length
 	// check in SQL only skips notes that cannot meet the bar.
-	const { rows } = await getDb().execute<{ id: string; published_at: Date | string; content: string; reply_count: number }>(sql`
-		select p.id, p.published_at, p.content,
-			(select count(*)::int from posts c where c.root_id = p.id and c.published_at is not null and c.deleted_at is null) as reply_count
-		from posts p
-		where p.parent_id is null and p.published_at is not null and p.deleted_at is null and not p.is_demo and not p.is_seed
-			and (char_length(p.content) >= ${INDEXING_BAR_CHARACTERS}
-				or exists (select 1 from posts c where c.root_id = p.id and c.published_at is not null and c.deleted_at is null))
-		order by p.published_at desc limit ${limit}`);
+	const { rows } = await getDb().execute<RowOf<typeof posts, "id" | "content"> & NotNull<RowOf<typeof posts, "publishedAt">> & { reply_count: number }>(sql`
+		select ${p.id}, ${p.publishedAt}, ${p.content},
+			(select count(*)::int from ${posts} ${c} where ${publicReplyOfP}) as reply_count
+		from ${posts} ${p}
+		where ${p.parentId} is null and ${p.publishedAt} is not null and ${p.deletedAt} is null and not ${p.isDemo} and not ${p.isSeed}
+			and (char_length(${p.content}) >= ${INDEXING_BAR_CHARACTERS}
+				or exists (select 1 from ${posts} ${c} where ${publicReplyOfP}))
+		order by ${p.publishedAt} desc limit ${limit}`);
 
 	return rows
 		.filter((row) => meetsIndexingBar(sanitisePostHtml(row.content), row.reply_count))
