@@ -21,6 +21,11 @@ import type { EraSlug } from "./eras";
 export type CatalogueAlbum = {
   /** The Deezer ID of the edition shown. */
   id: string;
+  /**
+   * Its address on Music, /music/<slug>: its name in lowercase words, "fearless-taylors-version".
+   * Published, so never changed (links out there use it); a new Album's follows its name.
+   */
+  slug: string;
   era: EraSlug;
   /** The Album's title as fans write it, without edition or "(Taylor's Version)". */
   title: string;
@@ -42,6 +47,8 @@ export type CatalogueAlbum = {
 /** Another version of an Album on Deezer: another edition, a live or acoustic album, a compilation. */
 export type AlbumVersion = {
   id: string;
+  /** Its address under its Album's, /music/<album>/<slug>: "the-long-pond-studio-sessions". Never changed once published. */
+  slug: string;
   /** How fans call it: "Standard Edition", "3am Edition", "The Long Pond Studio Sessions". */
   name: string;
   /** Its own release date. */
@@ -51,146 +58,160 @@ export type AlbumVersion = {
 export const CATALOGUE: readonly CatalogueAlbum[] = [
   {
     id: "227786",
+    slug: "taylor-swift",
     era: "debut",
     title: "Taylor Swift",
     edition: "Deluxe Edition",
     released: "2006-10-24",
-    versions: [{ id: "874936972", name: "Standard Edition", released: "2006-10-24" }],
+    versions: [{ id: "874936972", slug: "standard-edition", name: "Standard Edition", released: "2006-10-24" }],
     aliases: ["81389452", "72093192", "321177137"],
   },
   {
     id: "426350",
+    slug: "fearless",
     era: "fearless",
     title: "Fearless",
     edition: "Platinum Edition",
     released: "2008-11-11",
     versions: [
       // The US release, seen from Deezer's US catalogue only.
-      { id: "130714702", name: "Standard Edition", released: "2008-11-11" },
-      { id: "283925", name: "International Version", released: "2009-03-09" },
-      { id: "142920532", name: "Live From Clear Channel Stripped 2008", released: "2020-04-24" },
+      { id: "130714702", slug: "standard-edition", name: "Standard Edition", released: "2008-11-11" },
+      { id: "283925", slug: "international-version", name: "International Version", released: "2009-03-09" },
+      { id: "142920532", slug: "live-from-clear-channel-stripped-2008", name: "Live From Clear Channel Stripped 2008", released: "2020-04-24" },
     ],
     aliases: ["81389432", "272284", "130714712"],
   },
   {
     id: "221543452",
+    slug: "fearless-taylors-version",
     era: "fearless",
     title: "Fearless",
     released: "2021-04-09",
     reRecords: "426350",
-    versions: [{ id: "418639447", name: "The More Fearless (Taylor's Version) Chapter", released: "2023-03-17" }],
+    versions: [{ id: "418639447", slug: "the-more-fearless-taylors-version-chapter", name: "The More Fearless (Taylor's Version) Chapter", released: "2023-03-17" }],
   },
   {
     id: "689149",
+    slug: "speak-now",
     era: "speak-now",
     title: "Speak Now",
     edition: "Deluxe Edition",
     released: "2010-10-25",
     versions: [
-      { id: "689148", name: "Standard Edition", released: "2010-10-25" },
-      { id: "320370867", name: "Speak Now World Tour Live", released: "2011-11-21" },
+      { id: "689148", slug: "standard-edition", name: "Standard Edition", released: "2010-10-25" },
+      { id: "320370867", slug: "speak-now-world-tour-live", name: "Speak Now World Tour Live", released: "2011-11-21" },
     ],
     aliases: ["130716982", "130716972"],
   },
-  { id: "461146065", era: "speak-now", title: "Speak Now", released: "2023-07-07", reRecords: "689149" },
+  { id: "461146065", slug: "speak-now-taylors-version", era: "speak-now", title: "Speak Now", released: "2023-07-07", reRecords: "689149" },
   {
     id: "68491961",
+    slug: "red",
     era: "red",
     title: "Red",
     edition: "Deluxe Edition",
     released: "2012-10-22",
-    versions: [{ id: "68496491", name: "Standard Edition", released: "2012-10-22" }],
+    versions: [{ id: "68496491", slug: "standard-edition", name: "Standard Edition", released: "2012-10-22" }],
     aliases: ["130721292", "130716962"],
   },
   {
     id: "272247412",
+    slug: "red-taylors-version",
     era: "red",
     title: "Red",
     released: "2021-11-12",
     reRecords: "68491961",
     versions: [
-      { id: "286778242", name: "Could You Be The One Chapter", released: "2022-01-13" },
-      { id: "287187352", name: "She Wrote A Song About Me Chapter", released: "2022-01-18" },
-      { id: "288395152", name: "The Slow Motion Chapter", released: "2022-01-25" },
-      { id: "289970772", name: "From The Vault Chapter", released: "2022-01-31" },
-      { id: "417939037", name: "The More Red (Taylor's Version) Chapter", released: "2023-03-17" },
+      { id: "286778242", slug: "could-you-be-the-one-chapter", name: "Could You Be The One Chapter", released: "2022-01-13" },
+      { id: "287187352", slug: "she-wrote-a-song-about-me-chapter", name: "She Wrote A Song About Me Chapter", released: "2022-01-18" },
+      { id: "288395152", slug: "the-slow-motion-chapter", name: "The Slow Motion Chapter", released: "2022-01-25" },
+      { id: "289970772", slug: "from-the-vault-chapter", name: "From The Vault Chapter", released: "2022-01-31" },
+      { id: "417939037", slug: "the-more-red-taylors-version-chapter", name: "The More Red (Taylor's Version) Chapter", released: "2023-03-17" },
     ],
   },
   {
     id: "9007781",
+    slug: "1989",
     era: "1989",
     title: "1989",
     edition: "Deluxe Edition",
     released: "2014-10-27",
-    versions: [{ id: "9007779", name: "Standard Edition", released: "2014-10-27" }],
+    versions: [{ id: "9007779", slug: "standard-edition", name: "Standard Edition", released: "2014-10-27" }],
     aliases: ["72335572", "302068167"],
   },
   {
     id: "505316961",
+    slug: "1989-taylors-version",
     era: "1989",
     title: "1989",
     edition: "Deluxe Edition",
     released: "2023-10-27",
     reRecords: "9007781",
-    versions: [{ id: "504180521", name: "Standard Edition", released: "2023-10-27" }],
+    versions: [{ id: "504180521", slug: "standard-edition", name: "Standard Edition", released: "2023-10-27" }],
   },
-  { id: "52612062", era: "reputation", title: "reputation", released: "2017-11-10" },
+  { id: "52612062", slug: "reputation", era: "reputation", title: "reputation", released: "2017-11-10" },
   {
     id: "108447472",
+    slug: "lover",
     era: "lover",
     title: "Lover",
     released: "2019-08-23",
-    versions: [{ id: "418639457", name: "The More Lover Chapter", released: "2023-03-17" }],
+    versions: [{ id: "418639457", slug: "the-more-lover-chapter", name: "The More Lover Chapter", released: "2023-03-17" }],
   },
   {
     id: "167766152",
+    slug: "folklore",
     era: "folklore",
     title: "folklore",
     edition: "Deluxe Edition",
     released: "2020-07-24",
     versions: [
-      { id: "162683632", name: "Standard Edition", released: "2020-07-24" },
-      { id: "188803732", name: "The Long Pond Studio Sessions", released: "2020-11-25" },
+      { id: "162683632", slug: "standard-edition", name: "Standard Edition", released: "2020-07-24" },
+      { id: "188803732", slug: "the-long-pond-studio-sessions", name: "The Long Pond Studio Sessions", released: "2020-11-25" },
     ],
   },
   {
     id: "198167862",
+    slug: "evermore",
     era: "evermore",
     title: "evermore",
     edition: "Deluxe Edition",
     released: "2020-12-11",
-    versions: [{ id: "192580112", name: "Standard Edition", released: "2020-12-11" }],
+    versions: [{ id: "192580112", slug: "standard-edition", name: "Standard Edition", released: "2020-12-11" }],
   },
   {
     id: "446218925",
+    slug: "midnights",
     era: "midnights",
     title: "Midnights",
     edition: "The Til Dawn Edition",
     released: "2022-10-21",
     versions: [
-      { id: "368474187", name: "Standard Edition", released: "2022-10-21" },
-      { id: "368506677", name: "3am Edition", released: "2022-10-21" },
+      { id: "368474187", slug: "standard-edition", name: "Standard Edition", released: "2022-10-21" },
+      { id: "368506677", slug: "3am-edition", name: "3am Edition", released: "2022-10-21" },
     ],
     aliases: ["368474237"],
   },
   {
     id: "575252501",
+    slug: "the-tortured-poets-department",
     era: "ttpd",
     title: "The Tortured Poets Department",
     edition: "The Anthology",
     released: "2024-04-19",
-    versions: [{ id: "574109801", name: "Standard Edition", released: "2024-04-19" }],
+    versions: [{ id: "574109801", slug: "standard-edition", name: "Standard Edition", released: "2024-04-19" }],
   },
   {
     id: "1103662682",
+    slug: "the-life-of-a-showgirl",
     era: "showgirl",
     title: "The Life of a Showgirl",
     edition: "The Encore",
     released: "2025-10-03",
     versions: [
-      { id: "829966251", name: "Standard Edition", released: "2025-10-03" },
-      { id: "835672072", name: "Track by Track Version", released: "2025-10-07" },
-      { id: "852049722", name: "+ Acoustic Collection", released: "2025-11-07" },
+      { id: "829966251", slug: "standard-edition", name: "Standard Edition", released: "2025-10-03" },
+      { id: "835672072", slug: "track-by-track-version", name: "Track by Track Version", released: "2025-10-07" },
+      { id: "852049722", slug: "acoustic-collection", name: "+ Acoustic Collection", released: "2025-11-07" },
     ],
   },
 ];
@@ -228,17 +249,46 @@ export function findAlbum(id: string | undefined): CatalogueAlbum | undefined {
 }
 
 /**
- * An Album's page on Music, by its catalogue ID: its canonical URL, whichever
- * ID Deezer answered with (Deezer serves regional twins to some countries,
- * the US among them). The first Album is the one /music opens on, so its page
- * is /music.
+ * An Album's page on Music, its canonical URL: /music/<slug>, from the
+ * catalogue, whichever ID Deezer answered with (Deezer serves regional twins
+ * to some countries, the US among them). The first Album is the one /music
+ * opens on, so its page is /music.
  */
 export function albumPath(album: CatalogueAlbum): string {
-  return album === CATALOGUE[0] ? "/music" : `/music?album=${album.id}`;
+  return album === CATALOGUE[0] ? "/music" : `/music/${album.slug}`;
 }
 
-/** A Version's page on Music: its own ID, since it has a tracklist of its own. */
-export const versionPath = (version: AlbumVersion) => `/music?album=${version.id}`;
+/** A Version's page on Music, under its Album's (the first Album's included): it has a tracklist of its own. */
+export const versionPath = (album: CatalogueAlbum, version: AlbumVersion) => `/music/${album.slug}/${version.slug}`;
+
+/**
+ * The release a Music address opens, from its slugs: none is the first
+ * Album (/music); an Album's slug, that Album; with a Version's, that Version.
+ * Undefined for anything else.
+ */
+export function findRelease(albumSlug?: string, versionSlug?: string): { album: CatalogueAlbum; version?: AlbumVersion } | undefined {
+  const album = albumSlug === undefined ? CATALOGUE[0] : CATALOGUE.find(({ slug }) => slug === albumSlug);
+  const version = versionSlug === undefined ? undefined : album?.versions?.find(({ slug }) => slug === versionSlug);
+
+  if (!album || (versionSlug !== undefined && !version)) return undefined;
+
+  return { album, version };
+}
+
+/**
+ * Where an old Music link, /music?album=<Deezer ID>, now lives: the Album's
+ * page, whichever of its Deezer IDs it named (a regional twin, an alias), or
+ * the Version's when it named one of its Versions. Undefined for an ID the
+ * catalogue does not know.
+ */
+export function pathOfDeezerId(id: string | undefined): string | undefined {
+  const album = findAlbum(id);
+  const version = album?.versions?.find((entry) => entry.id === id);
+
+  if (!album) return undefined;
+
+  return version ? versionPath(album, version) : albumPath(album);
+}
 
 /**
  * What kind of record a Version is: a live album ("Speak Now World Tour

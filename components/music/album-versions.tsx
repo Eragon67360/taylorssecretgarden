@@ -4,6 +4,7 @@ import type { AlbumVersionCard } from "./catalogue";
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,8 @@ type AlbumVersionsProps = {
   versions: AlbumVersionCard[];
   selectedId: string | undefined;
   onSelect: (version: AlbumVersionCard) => void;
+  /** Whether this list comes in for a version just picked from the list before it: it then takes the focus. */
+  claimFocus: () => boolean;
 };
 
 /**
@@ -21,11 +24,20 @@ type AlbumVersionsProps = {
  * page (the Album's own for its shelf edition); followed in the same tab, it switches the
  * tracklist in place, like the shelf.
  */
-export function AlbumVersions({ title, versions, selectedId, onSelect }: AlbumVersionsProps) {
+export function AlbumVersions({ title, versions, selectedId, onSelect, claimFocus }: AlbumVersionsProps) {
+  const list = useRef<HTMLUListElement>(null);
+
+  // The version's page replaces the one whose list had the focus: the focus moves to the same place in the new list.
+  useEffect(() => {
+    if (claimFocus()) list.current?.querySelector<HTMLElement>("[aria-current=true]")?.focus({ preventScroll: true });
+  }, [claimFocus]);
+
   return (
     <div className="mt-6 max-w-[640px]">
-      <p className="font-hand text-soft text-[22px] leading-tight font-bold">every version ({versions.length})</p>
-      <ul aria-label={`Versions of ${title}`} className="mt-2 flex flex-wrap gap-2.5">
+      <p className="font-hand text-soft text-[22px] leading-tight font-bold">
+        every version ({versions.length})
+      </p>
+      <ul ref={list} aria-label={`Versions of ${title}`} className="mt-2 flex flex-wrap gap-2.5">
         {versions.map((version) => {
           const active = version.id === selectedId;
 
