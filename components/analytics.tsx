@@ -5,8 +5,9 @@ import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import { redactUrl } from "@/lib/analytics";
 
 /**
- * Vercel Web Analytics: page views, without cookies, on production only (the
- * package sends nothing in development or on previews unless told to). Every
+ * Vercel Web Analytics: page views, without cookies. The root layout renders
+ * it on Vercel's production deployment only (previews and local builds have no
+ * /_vercel/insights to load the script from). Every
  * address is cleaned of private query parameters first (lib/analytics.ts).
  */
 export function Analytics() {

@@ -59,7 +59,8 @@ export default function RootLayout({
           </main>
           <SiteFooter />
         </Providers>
-        <Analytics />
+        {/* Vercel serves the Analytics script (/_vercel/insights) on its deployments only: elsewhere it would 404. */}
+        {process.env.VERCEL_ENV === "production" && <Analytics />}
       </body>
     </html>
   );
