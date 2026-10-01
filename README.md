@@ -168,7 +168,7 @@ A Member's id is the end of their Member page's address (`/swiftter/m/<id>`). Th
 
 **On production**, through the **Grant moderator** workflow ([`.github/workflows/grant-moderator.yml`](.github/workflows/grant-moderator.yml)), which fetches the connection string from Neon's API like Migrate production, so no laptop needs production's credentials. Its log is public: it takes a Member id only, never an email. The owner grants himself first, once the release with migration 0006 is out:
 
-1. Actions → **Migrate production** → Run workflow (`dev`, type `production`), if 0006 is not applied yet.
+1. Once the release with migration 0006 is merged: Actions → **Migrate production** → Run workflow on `main`, type `production` (skip if 0006 is already applied).
 2. Sign in on the site and open your Member page (your name on one of your notes, or "Your Member page" on `/guestbook`): your id is the end of its address. Never wrote a note? Open `/api/auth/get-session` while signed in: it is `user.id`.
 3. Actions → **Grant moderator** → Run workflow, branch `main`, action `grant`, member: that id. The last step lists the moderators' ids.
 4. Reload any page: the header shows "Moderation". Revoking is the same workflow with `revoke`.
