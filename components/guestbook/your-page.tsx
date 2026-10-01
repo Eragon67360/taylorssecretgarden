@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 
-import { WashiTape } from "@/components/scrapbook";
+import { Button, WashiTape } from "@/components/scrapbook";
 import { setSessionMember } from "@/lib/auth/member-hint";
 
 const CONNECTION = "That didn't go through. Check your connection and try again.";
@@ -78,13 +78,9 @@ export function YourPage() {
             {error}
           </p>
         )}
-        <button
-          className="bg-pen focus-ring mt-4 inline-flex min-h-11 items-center rounded-[4px] px-5 text-[15px] font-bold tracking-wide text-white"
-          type="button"
-          onClick={() => dialog.current?.showModal()}
-        >
+        <Button className="mt-4" variant="danger" onClick={() => dialog.current?.showModal()}>
           Delete my account
-        </button>
+        </Button>
       </section>
 
       <dialog
@@ -102,25 +98,18 @@ export function YourPage() {
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
           {/* First, so Enter or a stray tap keeps the account. */}
-          <button
+          <Button
             // eslint-disable-next-line jsx-a11y/no-autofocus -- the safe choice takes focus when the dialog opens
             autoFocus
-            className="focus-ring text-ink min-h-11 rounded-[4px] px-3 text-[15px] font-bold underline underline-offset-2"
             disabled={deleting}
-            type="button"
+            variant="text"
             onClick={() => dialog.current?.close()}
           >
             Keep it
-          </button>
-          <button
-            aria-busy={deleting}
-            className="bg-pen focus-ring inline-flex min-h-11 items-center rounded-[4px] px-5 text-[15px] font-bold tracking-wide text-white disabled:opacity-60"
-            disabled={deleting}
-            type="button"
-            onClick={deleteAccount}
-          >
+          </Button>
+          <Button aria-busy={deleting} disabled={deleting} variant="danger" onClick={deleteAccount}>
             {deleting ? "Deleting…" : "Delete it"}
-          </button>
+          </Button>
         </div>
       </dialog>
     </div>

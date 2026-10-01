@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useRef, useState } from "react";
 
 import { DEFAULT_REDIRECT, GOOGLE_ERROR } from "@/components/guestbook/guestbook";
+import { Button } from "@/components/scrapbook";
 import { trackEvent } from "@/lib/analytics";
 import { type AuthFailure, signInEmail, signInSocial, signUpEmail } from "@/lib/auth/client";
 import { BOT_REFUSAL } from "@/lib/botid-routes";
-import { cn } from "@/lib/utils";
 
 type Mode = "sign-in" | "sign-up";
 
@@ -248,18 +248,15 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
           />
         </Field>
 
-        <button
+        {/* Inked like a stamp, as wide as the fields. */}
+        <Button
           aria-busy={pending === "email"}
-          className={cn(
-            "bg-accent text-on-accent focus-ring mt-1 min-h-11 w-full rounded-[0.25rem] px-5 font-bold tracking-[0.02em]",
-            "shadow-[2px_3px_0_color-mix(in_srgb,var(--ink)_30%,transparent)] transition-[background-color,translate] duration-200",
-            "hover:bg-[color-mix(in_srgb,var(--accent)_88%,black)] disabled:opacity-70 motion-safe:active:translate-y-px",
-          )}
+          className="mt-1 w-full text-[16px] shadow-[2px_3px_0_color-mix(in_srgb,var(--ink)_30%,transparent)]"
           disabled={pending !== null}
           type="submit"
         >
           {pending === "email" ? copy.pending : copy.submit}
-        </button>
+        </Button>
       </form>
 
       <p className="border-line text-soft border-t border-dashed pt-4 text-[0.95rem]">
