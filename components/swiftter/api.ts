@@ -1,4 +1,4 @@
-import type { FeedPage, FeedPost, HeldNote, RefusalCategory } from "@/lib/swiftter";
+import type { FeedPage, FeedPost, HeldNote, ModerationAction, ModerationItem, RefusalCategory } from "@/lib/swiftter";
 
 /*
   Swiftter's API, as the browser calls it (app/api/swiftter). Every call
@@ -42,14 +42,14 @@ export const fetchMemberPosts = (memberId: string, cursor: string) => fetchPage(
 
 /**
  * How many replies others wrote to the signed-in Member's notes since `since`
- * (an earlier answer's `at`; none starts counting now), and the `at` to send
- * next; null if it could not be read.
+ * (an earlier answer's `at`; none starts counting now), the `at` to send
+ * next, and whether they are a moderator; null if it could not be read.
  */
-export async function fetchNewReplies(since: string | null): Promise<{ count: number; at: string } | null> {
+export async function fetchNewReplies(since: string | null): Promise<{ count: number; at: string; moderator: boolean } | null> {
   try {
     const response = await fetch(since ? `/api/swiftter/me/replies?since=${encodeURIComponent(since)}` : "/api/swiftter/me/replies", { cache: "no-store" });
 
-    return response.ok ? ((await response.json()) as { count: number; at: string }) : null;
+    return response.ok ? ((await response.json()) as { count: number; at: string; moderator: boolean }) : null;
   } catch {
     return null;
   }
@@ -130,6 +130,38 @@ export async function reportNote(id: string, reason: string): Promise<{ ok: true
     return response.ok ? { ok: true, already: response.status === 200 } : failure(response, "That note couldn't be reported just now. Try again in a moment.");
   } catch {
     return { ok: false, message: CONNECTION, status: 0 };
+  }
+}
+
+/** The moderation page's list, read again (moderators only), or null if it could not be read. */
+export async function fetchModerationQueue(): Promise<{ items: ModerationItem[]; total: number } | null> {
+  try {
+    const response = await fetch("/api/swiftter/moderation", { cache: "no-store" });
+
+    return response.ok ? ((await response.json()) as { items: ModerationItem[]; total: number }) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A moderator's decision on a note, with their optional note for the record.
+ * `handled`: someone got there first (409), so the note leaves the list all
+ * the same, and `message` says why.
+ */
+export async function decideOnNote(id: string, action: ModerationAction, note: string): Promise<{ ok: true } | (Failure & { handled: boolean })> {
+  try {
+    const response = await fetch(`/api/swiftter/moderation/${id}`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(note.trim() ? { action, note } : { action }),
+    });
+
+    if (response.ok) return { ok: true };
+
+    return { ...(await failure(response, "That decision couldn't be recorded just now. Try again in a moment.")), handled: response.status === 409 };
+  } catch {
+    return { ok: false, message: CONNECTION, status: 0, handled: false };
   }
 }
 
