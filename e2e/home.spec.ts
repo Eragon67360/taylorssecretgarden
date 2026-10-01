@@ -28,7 +28,9 @@ test.describe("Home", () => {
     await page.goto("/");
 
     await expect(page.getByRole("heading", { level: 1, name: "Taylor's Secret Garden" })).toBeVisible();
-    await expect(page.getByRole("img", { name: /Taylor Swift singing on stage/ })).toBeVisible();
+    await expect(page.getByRole("img", { name: /Taylor Swift twirling in the flowing blue folklore dress/ })).toBeVisible();
+    // A free-licensed photo: its author and licence under it (lib/credits.ts).
+    await expect(page.locator("figcaption small").first()).toHaveText("© Paolo V · CC BY 2.0");
     await expect(page.getByText("Who is Taylor Swift anyway?")).toBeVisible();
     await expect(page.getByRole("img", { name: /Stamp: This is NOT Taylor's Version/i })).toBeVisible();
   });
@@ -59,7 +61,7 @@ test.describe("Home", () => {
   test("the taped photo, the first screen's largest picture, is fetched first and sized for the screen", async ({ page }) => {
     await page.goto("/");
 
-    const photo = page.getByRole("img", { name: /Taylor Swift singing on stage/ });
+    const photo = page.getByRole("img", { name: /Taylor Swift twirling in the flowing blue folklore dress/ });
 
     await expect(photo).toHaveAttribute("fetchpriority", "high");
     await expect(photo).toHaveAttribute("loading", "eager");

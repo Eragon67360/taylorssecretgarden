@@ -29,8 +29,8 @@ export function SiteFooter() {
           <a className="text-ink focus-ring rounded-sm font-semibold underline underline-offset-2" href="https://www.deezer.com/">
             <DeezerLogo />
           </a>
-          , for private listening only. An unofficial fan site, not affiliated with Taylor Swift, her team or her labels; its photos and footage belong to their
-          owners.
+          , for private listening only. An unofficial fan site, not affiliated with Taylor Swift, her team or her labels; its concert photos are fans&apos;,
+          shared under Creative Commons licences and credited.
         </p>
         <nav aria-label="The small print">
           <ul className="flex flex-wrap justify-center gap-x-6 gap-y-1 text-[14px]">

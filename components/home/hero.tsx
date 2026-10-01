@@ -4,15 +4,15 @@ import { getImageProps } from "next/image";
 
 import { IntentLink } from "@/components/intent-link";
 import { Arrow, Bracelet, ButtonLink, Polaroid, PressedFlower, RubberStamp, Scribble, StickyNote } from "@/components/scrapbook";
-import { homePhoto } from "@/lib/cloudinary";
+import { HOME_PHOTO } from "@/lib/credits";
 import { cn } from "@/lib/utils";
 
 import styles from "./home.module.css";
 
-// Resized by Next's image optimiser from a Cloudinary crop (lib/cloudinary.ts).
+// Resized by Next's image optimiser from the 4:5 print in public/img (lib/credits.ts).
 const { props: heroPhoto } = getImageProps({
-  alt: "Taylor Swift singing on stage in the orange sequinned Eras Tour two-piece",
-  src: homePhoto(1100),
+  alt: HOME_PHOTO.alt,
+  src: HOME_PHOTO.src,
   width: 420,
   height: 525,
   quality: 60,
@@ -78,16 +78,17 @@ export function Hero() {
             taped
             caption={
               <>
-                the orange one. <span className="text-pen">I screamed.</span>
+                the folklore dress. <span className="text-pen">I sobbed.</span>
               </>
             }
             className="z-10 mx-auto w-[86%]"
+            credit={HOME_PHOTO.credit}
             tilt={2.5}
           >
             {/*
               The largest paint on the page, so it is fetched eagerly at high
               priority, straight from the HTML, and from this origin (Next's
-              image optimiser) rather than a new connection to Cloudinary. The
+              image optimiser). The
               <picture> keeps React from hoisting a <link rel="preload"> for it:
               that hint would also ride along in Home's prefetched payload on
               every page linking here, and go unused there.

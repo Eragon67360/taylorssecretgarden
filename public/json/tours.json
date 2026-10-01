@@ -12,59 +12,97 @@
       "Its concert film became the highest-grossing concert film of all time."
     ],
     "note": "the one that broke Ticketmaster (and us)",
-    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
-    "posterSize": [300, 428],
+    "imageUrl": "/img/tours/the-eras-tour/poster.jpg",
+    "posterSize": [640, 960],
+    "imageAlt": "Taylor Swift singing in a blue fringed two-piece in the 1989 set of the Eras Tour",
     "imageCredit": {
-      "work": "Taylor Swift: The Eras Tour (2023), theatrical poster",
-      "author": "Taylor Swift Productions and AMC Theatres Distribution",
-      "licence": "All rights reserved"
+      "work": "The Eras Tour, SoFi Stadium, Inglewood, 9 August 2023: the 1989 set",
+      "author": "Paolo V",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "Cropped and resized",
+      "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_The_Eras_Tour_1989_Era_Set_(53108951152).jpg"
     },
-    "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
-    "videoCredit": {
-      "work": "Taylor Swift: The Eras Tour (2023), the film's trailer",
-      "author": "Taylor Swift Productions",
-      "licence": "All rights reserved"
+    "trailer": {
+      "youtubeId": "KudedLV0tP0",
+      "name": "the Eras Tour film trailer",
+      "title": "Taylor Swift | The Eras Tour Concert Film, official trailer",
+      "credit": {
+        "work": "Official trailer of Taylor Swift | The Eras Tour (2023), embedded from YouTube",
+        "author": "Taylor Swift Productions",
+        "licence": "All rights reserved; embedded from Taylor Swift's official YouTube channel",
+        "url": "https://www.youtube.com/watch?v=KudedLV0tP0"
+      },
+      "still": {
+        "src": "/img/tours/the-eras-tour/trailer.jpg",
+        "alt": "",
+        "caption": "on repeat",
+        "size": [960, 540],
+        "credit": {
+          "work": "The Eras Tour, SoFi Stadium, Inglewood, 9 August 2023: the folklore set",
+          "author": "Paolo V",
+          "licence": "CC BY 2.0",
+          "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+          "changes": "Cropped and resized",
+          "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_Eras_08092023-576.jpg"
+        }
+      }
     },
     "gallery": [
       {
-        "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/center",
-        "alt": "Taylor Swift on stage at the Eras Tour",
+        "src": "/img/tours/the-eras-tour/reputation-set.jpg",
+        "alt": "Taylor Swift in the snake bodysuit of the reputation set, far across the stadium",
         "caption": "front row energy (from row 40)",
-        "size": [500, 500],
+        "size": [640, 640],
         "credit": {
-          "work": "Taylor Swift at Soldier Field, Chicago, 2 June 2023, cut out onto a glitter background",
-          "author": "Natasha Moustache/TAS23/Getty Images for TAS Rights Management",
-          "licence": "All rights reserved; editorial use only",
-          "url": "https://www.gettyimages.com/detail/1495555898"
+          "work": "The Eras Tour, Inglewood, 9 August 2023: the reputation set",
+          "author": "Paolo V",
+          "licence": "CC BY 2.0",
+          "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+          "changes": "Cropped and resized",
+          "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_The_Eras_Tour_Reputation_Era_Set_(53109437566).jpg"
         }
       },
       {
-        "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/gallery",
-        "alt": "Taylor Swift singing in stage smoke",
+        "src": "/img/tours/the-eras-tour/red-set.jpg",
+        "alt": "Taylor Swift singing in the Red set as stage smoke billows behind her",
         "caption": "the smoke machine had a big night",
-        "size": [500, 489]
-      },
-      {
-        "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/outfits",
-        "alt": "Illustration of the Eras Tour outfits, one per Era",
-        "caption": "every Era, every outfit",
-        "size": [500, 667],
+        "size": [640, 853],
         "credit": {
-          "work": "The Eras Tour, art print",
-          "author": "EmmaRoseee24",
-          "licence": "All rights reserved",
-          "url": "https://www.redbubble.com/people/emmaroseee24/shop"
+          "work": "The Eras Tour, Inglewood, 9 August 2023: the Red set",
+          "author": "Paolo V",
+          "licence": "CC BY 2.0",
+          "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+          "changes": "Cropped and resized",
+          "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_The_Eras_Tour_The_Red_Era_Set_(53109764406).jpg"
         }
       },
       {
-        "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/watch",
-        "alt": "Taylor Swift with a guitar in a sparkly bodysuit at the Eras Tour",
-        "caption": "the Lover bodysuit. obviously",
-        "size": [500, 281],
+        "src": "/img/tours/the-eras-tour/fearless-set.jpg",
+        "alt": "Taylor Swift singing in the gold fringed dress of the Fearless set",
+        "caption": "the Fearless fringe. still sparkling",
+        "size": [640, 853],
         "credit": {
-          "work": "Taylor Swift: The Eras Tour (2023), a still from the film",
-          "author": "Taylor Swift Productions",
-          "licence": "All rights reserved"
+          "work": "The Eras Tour, Inglewood, 9 August 2023: the Fearless set",
+          "author": "Paolo V",
+          "licence": "CC BY 2.0",
+          "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+          "changes": "Cropped and resized",
+          "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_The_Eras_Tour_Fearless_Set_Era_(53109405681).jpg"
+        }
+      },
+      {
+        "src": "/img/tours/the-eras-tour/lover-set.jpg",
+        "alt": "Taylor Swift in a sparkly bodysuit on the big screen and on stage during the Lover set",
+        "caption": "the Lover bodysuit. obviously",
+        "size": [640, 480],
+        "credit": {
+          "work": "The Eras Tour, Inglewood, 9 August 2023: the Lover set",
+          "author": "Paolo V",
+          "licence": "CC BY 2.0",
+          "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+          "changes": "Cropped and resized",
+          "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_The_Eras_Tour_Lover_Set_(53109377766).jpg"
         }
       }
     ]
@@ -82,14 +120,31 @@
       "The concert film premiered on Netflix on December 31, 2018."
     ],
     "note": "a giant snake on stage. normal Tuesday",
-    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation",
-    "posterSize": [300, 309],
+    "imageUrl": "/img/tours/reputation-tour/poster.jpg",
+    "posterSize": [640, 960],
+    "imageAlt": "Taylor Swift singing Delicate on a raised platform under blue stage lights, Minneapolis",
     "imageCredit": {
-      "work": "A fan-made poster on the reputation announcement artwork (2017)",
-      "author": "Big Machine Records (artwork)",
-      "licence": "All rights reserved"
+      "work": "Reputation Stadium Tour, U.S. Bank Stadium, Minneapolis, 31 August 2018: Delicate",
+      "author": "Michael Hicks",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "Cropped and resized",
+      "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_performs_Delicate_during_Taylor_Swift_Reputation_Tour_in_Minneapolis_-_2018.jpg"
     },
-    "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation"
+    "stage": {
+      "src": "/img/tours/reputation-tour/stage.jpg",
+      "alt": "The Reputation Stadium Tour stage in gold and the stadium crowd, Minneapolis",
+      "caption": "from the stands",
+      "size": [960, 540],
+      "credit": {
+        "work": "Reputation Stadium Tour, Minneapolis, 31 August 2018",
+        "author": "Michael Hicks",
+        "licence": "CC BY 2.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+        "changes": "Cropped and resized",
+        "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_Reputation_Tour_Minneapolis_(43680805584).jpg"
+      }
+    }
   },
   {
     "tour": "The 1989 World Tour",
@@ -104,18 +159,30 @@
       "The highest-grossing tour of 2015, at over $250 million."
     ],
     "note": "surprise guests every night, somehow",
-    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/1989",
-    "posterSize": [300, 445],
+    "imageUrl": "/img/tours/1989-tour/poster.jpg",
+    "posterSize": [640, 960],
+    "imageAlt": "Taylor Swift singing in a sequinned jacket and a blue skirt, Detroit",
     "imageCredit": {
-      "work": "The 1989 World Tour Live (2015), poster",
-      "author": "Apple Music",
-      "licence": "All rights reserved"
+      "work": "The 1989 World Tour, Ford Field, Detroit, 30 May 2015",
+      "author": "GabboT",
+      "licence": "CC BY-SA 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "changes": "Cropped and resized; this version is shared under CC BY-SA 2.0 too",
+      "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_-_The_1989_World_Tour_-_Ford_Field_001_(18116917298).jpg"
     },
-    "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/nineteeneightynine",
-    "videoCredit": {
-      "work": "A fan edit of The 1989 World Tour Live (2015)",
-      "author": "taylor croatia (edit)",
-      "licence": "All rights reserved"
+    "stage": {
+      "src": "/img/tours/1989-tour/stage.jpg",
+      "alt": "Taylor Swift in a long tulle gown at a curving glass piano, Los Angeles",
+      "caption": "Wildest Dreams, at the piano",
+      "size": [960, 540],
+      "credit": {
+        "work": "The 1989 World Tour, Staples Center, Los Angeles, 22 August 2015: Wildest Dreams and Enchanted",
+        "author": "Denielle",
+        "licence": "CC BY-SA 2.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0/",
+        "changes": "Cropped and resized; this version is shared under CC BY-SA 2.0 too",
+        "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_-_The_1989_World_Tour_-_LOS_ANGELES_-_Wildest_Dreams_%26_Enchanted.jpg"
+      }
     }
   },
   {
@@ -131,14 +198,31 @@
       "Grossed over $150 million, then a record for a country tour."
     ],
     "note": "22 on the B-stage, hat included",
-    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/red",
-    "posterSize": [300, 450],
+    "imageUrl": "/img/tours/the-red-tour/poster.jpg",
+    "posterSize": [640, 960],
+    "imageAlt": "Taylor Swift singing in a black top and a white tulle skirt",
     "imageCredit": {
-      "work": "A fan-made poster on the cover photo of the single Red (2012)",
-      "author": "Big Machine Records (photo)",
-      "licence": "All rights reserved"
+      "work": "The Red Tour, 2013",
+      "author": "jazills",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "Cropped and resized",
+      "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_-_Red_Tour_18.jpg"
     },
-    "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red"
+    "stage": {
+      "src": "/img/tours/the-red-tour/stage.jpg",
+      "alt": "Taylor Swift singing on a platform lifted high above the stage in a beam of light",
+      "caption": "up in the air, in a spotlight",
+      "size": [960, 540],
+      "credit": {
+        "work": "The Red Tour, 2013",
+        "author": "raffik",
+        "licence": "CC BY 2.0",
+        "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+        "changes": "Cropped and resized",
+        "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_-_Red_Tour_01.jpg"
+      }
+    }
   },
   {
     "tour": "Speak Now World Tour",
@@ -153,12 +237,16 @@
       "Released as the live album and concert film Speak Now World Tour – Live (2011)."
     ],
     "note": "the ballgown era. there was a tree.",
-    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/speak_now",
-    "posterSize": [300, 450],
+    "imageUrl": "/img/tours/speak-now-world-tour/poster.jpg",
+    "posterSize": [640, 960],
+    "imageAlt": "Taylor Swift in a lilac dress, arms raised over her head, Pittsburgh",
     "imageCredit": {
-      "work": "Speak Now World Tour – Live (2011), cover",
-      "author": "Big Machine Records",
-      "licence": "All rights reserved"
+      "work": "Speak Now World Tour, Pittsburgh, 18 June 2011",
+      "author": "Ronald Woan",
+      "licence": "CC BY 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "Cropped and resized",
+      "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_Speak_Now_Tour_2011.jpg"
     }
   },
   {
@@ -174,12 +262,16 @@
       "Its story was told in the concert special Journey to Fearless (2010)."
     ],
     "note": "where it all started. sparkles included",
-    "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/fearless",
-    "posterSize": [300, 433],
+    "imageUrl": "/img/tours/fearless-tour/poster.jpg",
+    "posterSize": [640, 960],
+    "imageAlt": "Taylor Swift playing an acoustic guitar on a stool in a blue dress, Newark",
     "imageCredit": {
-      "work": "Fearless Tour 2009/2010, programme cover",
-      "author": "Big Machine Records",
-      "licence": "All rights reserved"
+      "work": "Fearless Tour, Prudential Center, Newark, 13 May 2010",
+      "author": "alexahalasan",
+      "licence": "CC BY-SA 2.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by-sa/2.0/",
+      "changes": "Cropped and resized; this version is shared under CC BY-SA 2.0 too",
+      "url": "https://commons.wikimedia.org/wiki/File:Taylor_Swift_-_Fearless_Tour_Prudential_Center_Newark_(May_13,_2010).jpg"
     }
   }
 ]

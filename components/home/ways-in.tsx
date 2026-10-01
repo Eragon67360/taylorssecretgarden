@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 import styles from "./home.module.css";
 import { SectionHead } from "./section-head";
-import { WALL_TOURS, tourPoster } from "./tour-posters";
+import { WALL_TOURS } from "./tour-posters";
 
 /** Three ways into the garden: an envelope of Album covers (Music), a ticket stub (Tours), a passed note (Swiftter). */
 export function WaysIn({ covers }: { covers: EraAlbum[] }) {
@@ -109,10 +109,7 @@ function Ticket() {
         <TicketStub
           kicker="Admit one · floor"
           meta="SEC 13 · ROW 13 · SEAT 13"
-          picture={
-            // eslint-disable-next-line @next/next/no-img-element -- Cloudinary resizes and encodes it (tour-posters.ts)
-            <img alt="" decoding="async" height={150} loading="lazy" src={tourPoster(ERAS_TOUR.poster, 200)} width={100} />
-          }
+          picture={<Image alt="" height={150} sizes="110px" src={ERAS_TOUR.poster} width={100} />}
           tilt={-4}
           title={<span className="text-accent">The Tours</span>}
         />

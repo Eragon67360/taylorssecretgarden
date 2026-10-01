@@ -2,8 +2,8 @@ import { ImageResponse } from "next/og";
 
 import { siteConfig } from "@/config/site";
 import { GardenMark } from "@/components/garden-mark";
-import { homePhoto } from "@/lib/cloudinary";
-import { googleFont, imageDataUrl } from "@/lib/og";
+import { HOME_PHOTO } from "@/lib/credits";
+import { googleFont, publicJpegDataUrl } from "@/lib/og";
 
 // The link preview (Open Graph and X): the journal's opening spread as a
 // 1200x630 card, drawn once at build time with the site's own faces.
@@ -12,17 +12,19 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const KICKER = "dear diary: est. 2006, still not over it";
-const CAPTION = "the orange one. I screamed.";
+const CAPTION = "the folklore dress. I sobbed.";
 const BLURB = "Every Era's Albums and tracklists, every Tour, and Swiftter, where Swifties pass notes. An unofficial fan scrapbook.";
+// The card travels without the site: the photo's licence asks for its credit on it too.
+const PHOTO_CREDIT = `Photo © ${HOME_PHOTO.credit.author}, ${HOME_PHOTO.credit.licence}, cropped`;
 const { paper, card, ink, soft, accent, tape } = siteConfig.colors;
 
 export default async function OpenGraphImage() {
   const [photo, ...fonts] = await Promise.all([
-    imageDataUrl(homePhoto(660, "jpg")),
+    publicJpegDataUrl(HOME_PHOTO.src),
     googleFont({ name: "Fraunces", weight: 600, style: "normal" }, "Fraunces", "wght@600", "Taylor'sGarden"),
     googleFont({ name: "Fraunces Italic", weight: 400, style: "italic" }, "Fraunces", "ital,wght@1,400", "Secret"),
     googleFont({ name: "Caveat", weight: 700, style: "normal" }, "Caveat", "wght@700", KICKER + CAPTION),
-    googleFont({ name: "Karla", weight: 500, style: "normal" }, "Karla", "wght@500", BLURB),
+    googleFont({ name: "Karla", weight: 500, style: "normal" }, "Karla", "wght@500", BLURB + PHOTO_CREDIT),
   ]);
 
   return new ImageResponse(
@@ -64,6 +66,9 @@ export default async function OpenGraphImage() {
         <div style={{ display: "flex", position: "absolute", top: 36, left: 12, transform: "rotate(-14deg)" }}>
           <GardenMark petals={accent} size={96} />
         </div>
+        {photo && (
+          <div style={{ display: "flex", position: "absolute", bottom: 10, right: 20, fontFamily: "Karla", fontSize: 15, color: soft }}>{PHOTO_CREDIT}</div>
+        )}
       </div>
     </div>,
     {

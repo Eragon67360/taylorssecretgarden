@@ -9,7 +9,7 @@ const [first, last] = [TOURS.at(-1)!, TOURS[0]];
 
 export const metadata = pageMetadata({
   title: "Taylor Swift's Tours",
-  description: `Taylor Swift's ${TOURS.length} Tours, from the ${first.tour} (${tourYears(first)}) to ${last.tour} (${tourYears(last)}): years, shows, legs and facts, with tickets, posters and footage.`,
+  description: `Taylor Swift's ${TOURS.length} Tours, from the ${first.tour} (${tourYears(first)}) to ${last.tour} (${tourYears(last)}): years, shows, legs and facts, with tickets, photos and a trailer.`,
   path: "/tours",
 });
 
@@ -38,8 +38,8 @@ export default function ToursPage() {
               <Scribble className="absolute -bottom-3 left-0 h-4 w-full" />
             </h1>
             <p className="text-soft mt-8 max-w-[34rem] text-[17px] leading-relaxed sm:text-lg">
-              {TOURS.length} Tours, one diary: a ticket stub, a poster off the bedroom wall and a bit of footage for each, from the first headline shows of 2009
-              to three and a half hours of the Eras Tour.
+              {TOURS.length} Tours, one diary: a ticket stub and a poster off the bedroom wall for each, and a photo from the stands, from the first headline
+              shows of 2009 to three and a half hours of the Eras Tour.
             </p>
           </div>
 

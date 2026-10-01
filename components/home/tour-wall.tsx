@@ -1,10 +1,11 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { Paper, Pin, Scribble, StickyNote } from "@/components/scrapbook";
 import { cn } from "@/lib/utils";
 
 import { SectionHead } from "./section-head";
-import { WALL_TOURS, tourPoster } from "./tour-posters";
+import { WALL_TOURS } from "./tour-posters";
 
 const PIN_COLOURS = ["#C8323C", "#3D6FB4", "#E1A628", "#7E4BB0", "#2E8B6E", "#D0598A"];
 const TILTS = [-3, 2.5, -1.5, 3, -2.5, 1.5];
@@ -37,14 +38,12 @@ export function TourWall() {
                 <Pin className="-top-2 left-1/2 -translate-x-1/2" color={PIN_COLOURS[index % PIN_COLOURS.length]} />
                 {/* The poster swings a little on its pin; its shadow deepens and its name underlines too, which reduced motion keeps. */}
                 <div className="bg-photo origin-top p-1.5 shadow-[0_16px_24px_-14px_rgba(0,0,0,.6)] transition-[rotate,box-shadow] duration-300 ease-out group-hover:shadow-[0_20px_28px_-12px_rgba(0,0,0,.7)] motion-safe:group-hover:-rotate-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary resizes and encodes it (tour-posters.ts) */}
-                  <img
+                  <Image
                     alt=""
                     className="aspect-[2/3] w-full object-cover"
-                    decoding="async"
                     height={330}
-                    loading="lazy"
-                    src={tourPoster(tour.poster, 440)}
+                    sizes="(min-width: 1024px) 180px, (min-width: 640px) 30vw, 45vw"
+                    src={tour.poster}
                     width={220}
                   />
                 </div>

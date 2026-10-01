@@ -9,8 +9,9 @@ import { Bracelet, PressedFlower, RuledList, RuledListItem, StickyNote } from "@
 import { TourGallery } from "@/components/tours/tour-gallery";
 import { TourPoster } from "@/components/tours/tour-poster";
 import { TourScope } from "@/components/tours/tour-scope";
+import { TourStagePhoto } from "@/components/tours/tour-stage-photo";
 import { TourNote, TourStub } from "@/components/tours/tour-stub";
-import { TourVideo } from "@/components/tours/tour-video";
+import { TourTrailer } from "@/components/tours/tour-trailer";
 import { albumName, albumPath, albumYear, eraAlbums } from "@/lib/catalogue";
 import { ERA_LOOKS } from "@/lib/eras";
 import { absoluteUrl, pageMetadata } from "@/lib/metadata";
@@ -120,7 +121,7 @@ export default async function TourPage({ params }: TourPageProps) {
           </div>
         </div>
 
-        {/* The facts, on a notebook page, with the footage or the Era's note beside them. */}
+        {/* The facts, on a notebook page, with the trailer or a stage photo and the Era's note beside them. */}
         <div className="mt-20 grid items-start gap-14 lg:grid-cols-12 lg:gap-10">
           <section aria-labelledby="facts" className="lg:col-span-7">
             <h2 className="font-serif text-[clamp(2rem,4vw,2.6rem)] leading-tight font-semibold" id="facts">
@@ -137,9 +138,8 @@ export default async function TourPage({ params }: TourPageProps) {
           </section>
 
           <div className="flex flex-col items-center gap-12 lg:col-span-5 lg:pt-16">
-            {tour.videoUrl && (
-              <TourVideo caption="on repeat" className="w-full max-w-[440px]" credit={tour.videoCredit} src={tour.videoUrl} tilt={-2} tour={tour.tour} />
-            )}
+            {tour.trailer && <TourTrailer className="w-full max-w-[440px]" tilt={-2} trailer={tour.trailer} width={440} />}
+            {tour.stage && <TourStagePhoto className="w-full max-w-[440px]" photo={tour.stage} tilt={-2} width={440} />}
             {era ? (
               <StickyNote attach="tape" className="w-[260px]" tilt={3} tone="era">
                 {era.note}
