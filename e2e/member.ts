@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -18,12 +19,13 @@ export type TestMember = { name: string; email: string; password: string };
 
 /** A fresh test Member for this run: unique email, random password. */
 export function newTestMember(): TestMember {
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = `${Date.now()}-${randomBytes(4).toString("hex")}`;
 
   return {
     name: "Swiftter Tester",
     email: `swiftter-e2e-${id}@example.com`,
-    password: `Eras-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`,
+    // From crypto: a password, even a test one, should not come from Math.random().
+    password: `Eras-${randomBytes(18).toString("base64url")}`,
   };
 }
 
