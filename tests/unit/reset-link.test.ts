@@ -6,9 +6,12 @@ const BASE = "https://ep-autumn-union-b7nub2bh.neonauth.c-13.us-east-1.aws.neon.
 const neonLink = (token: string, callback = "https://www.taylorssecretgarden.com/reset-password") =>
   `${BASE}/reset-password/${token}?callbackURL=${encodeURIComponent(callback)}`;
 
+/** A made-up token in Better Auth's shape (24 URL-safe characters), never a real one. */
+const TOKEN = "test".repeat(6);
+
 describe("siteResetLink", () => {
   it("points Neon Auth's reset link at the site's own page, with the same token", () => {
-    expect(siteResetLink(neonLink("5ILj2CXedlnnDfCq582t1tk2"), BASE)).toBe("https://www.taylorssecretgarden.com/reset-password?token=5ILj2CXedlnnDfCq582t1tk2");
+    expect(siteResetLink(neonLink(TOKEN), BASE)).toBe(`https://www.taylorssecretgarden.com/reset-password?token=${TOKEN}`);
   });
 
   it("keeps the apex domain when that is where the reset was asked from", () => {
