@@ -8,6 +8,7 @@ import { siteConfig } from "@/config/site";
 // unused (a console warning on every other page).
 import "@/config/era-fonts";
 import { fontBody, fontHand, fontSerif, fontSerifItalic } from "@/config/fonts";
+import { Analytics } from "@/components/analytics";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { isIndexable } from "@/lib/indexing";
@@ -58,6 +59,8 @@ export default function RootLayout({
           </main>
           <SiteFooter />
         </Providers>
+        {/* Vercel serves the Analytics script (/_vercel/insights) on its deployments only: elsewhere it would 404. */}
+        {process.env.VERCEL_ENV === "production" && <Analytics />}
       </body>
     </html>
   );

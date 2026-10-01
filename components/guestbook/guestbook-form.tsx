@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useRef, useState } from "react";
 
 import { DEFAULT_REDIRECT, GOOGLE_ERROR } from "@/components/guestbook/guestbook";
+import { trackEvent } from "@/lib/analytics";
 import { type AuthFailure, signInEmail, signInSocial, signUpEmail } from "@/lib/auth/client";
 import { BOT_REFUSAL } from "@/lib/botid-routes";
 import { cn } from "@/lib/utils";
@@ -136,6 +137,7 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
 
       return;
     }
+    trackEvent(mode === "sign-up" ? { name: "Sign up" } : { name: "Sign in" });
     router.push(redirectTo);
     router.refresh();
   };
@@ -145,6 +147,8 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
     setError(null);
     setFieldsInvalid(false);
     const here = window.location.origin;
+
+    trackEvent({ name: "Google sign-in started" });
     // On success the browser leaves for Google, and Neon Auth brings it back to callbackURL.
     const { error: failure } = await signInSocial({
       provider: "google",

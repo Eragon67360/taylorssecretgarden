@@ -168,6 +168,7 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
     user && replyingTo === note.id ? (
       <div className="mt-6 max-w-[560px]">
         <Composer
+          reply
           member={{ name: displayNameOf(user), avatarUrl: user.image || null }}
           placeholder="say it kindly (and about Taylor)"
           submitLabel="Reply"

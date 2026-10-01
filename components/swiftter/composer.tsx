@@ -7,6 +7,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
 import { type FormEvent, type ReactNode, useId, useState } from "react";
 
+import { trackEvent } from "@/lib/analytics";
 import { characterCount, MAX_NOTE_CHARACTERS } from "@/lib/swiftter";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,8 @@ type ComposerProps = {
   placeholder?: string;
   /** The submit button's label. */
   submitLabel?: string;
+  /** Whether this composer answers a note (counted apart in Analytics). */
+  reply?: boolean;
 };
 
 /** From how many characters the counter shows, before the limit. */
@@ -45,6 +48,7 @@ export default function Composer({
   title = "Pass a note",
   placeholder = "ok but did you hear the bridge on track 5??",
   submitLabel = "Pass note",
+  reply = false,
 }: ComposerProps) {
   const headingId = useId();
   const [publishing, setPublishing] = useState(false);
@@ -98,7 +102,10 @@ export default function Composer({
     try {
       const result = await onPublish(withoutTrailingBlankLines(editor.getHTML()));
 
-      if (result.published) editor.commands.clearContent(true);
+      if (result.published) {
+        editor.commands.clearContent(true);
+        trackEvent({ name: "Note passed", reply });
+      }
       else setRefusal(result.message);
     } finally {
       setPublishing(false);
