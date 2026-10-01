@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { EraScope } from "@/components/era-scope";
@@ -35,6 +36,13 @@ export default function Styleguide() {
         <p className="text-soft mt-4 max-w-[40rem] text-[17px] leading-relaxed">
           The scrapbook kit (components/scrapbook) and every Era&apos;s look (lib/eras.ts). An Era applies by overriding the journal&apos;s colour variables and
           display face on a container (components/era-scope.tsx).
+        </p>
+        <p className="text-soft mt-2 text-[17px]">
+          The account emails have a page of their own:{" "}
+          <Link className="text-ink focus-ring rounded-sm font-bold underline underline-offset-4" href="/styleguide/emails">
+            Account emails
+          </Link>
+          .
         </p>
       </div>
 

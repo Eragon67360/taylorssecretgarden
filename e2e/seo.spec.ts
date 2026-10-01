@@ -20,7 +20,7 @@ const INDEXABLE = ["/", "/music", "/tours", ...TOUR_PAGES, "/swiftter", "/terms"
 /** A seeded Swiftter thread (scripts/seed-data.ts): a page of its own, not indexed (seed content). */
 const SEEDED_THREAD = "/swiftter/p/5eed0000-0000-4000-8000-000000000001";
 /** Pages kept out of search results everywhere. */
-const NOINDEX = ["/sign-in", "/sign-up", "/forgot-password", "/reset-password", "/styleguide"];
+const NOINDEX = ["/sign-in", "/sign-up", "/forgot-password", "/reset-password", "/styleguide", "/styleguide/emails"];
 
 /** A URL as a path on the site: "https://www.taylorssecretgarden.com/swiftter?page=2" → "/swiftter?page=2". */
 const pathOf = (url: string) => {
