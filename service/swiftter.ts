@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import { type Database, getDb } from "@/db/client";
@@ -693,24 +693,26 @@ export async function reshare(memberId: string, postId: string): Promise<void> {
 	await getDb().transaction(async (tx) => {
 		await lockMember(tx, memberId);
 
-		const { rows: targets } = await tx.execute<{ member_id: string }>(sql`
-			select member_id from posts where id = ${postId} and parent_id is null and published_at is not null and deleted_at is null`);
+		const targets = await tx
+			.select({ memberId: posts.memberId })
+			.from(posts)
+			.where(and(eq(posts.id, postId), isNull(posts.parentId), isNotNull(posts.publishedAt), isNull(posts.deletedAt)));
 
 		if (!targets[0]) throw new PostNotFoundError();
-		if (targets[0].member_id === memberId) throw new SelfReshareError("You can't reshare your own note.");
+		if (targets[0].memberId === memberId) throw new SelfReshareError("You can't reshare your own note.");
 
-		const { rows: existing } = await tx.execute<{ deleted_at: Date | string | null }>(sql`
-			select deleted_at from reshares where member_id = ${memberId} and post_id = ${postId}`);
+		const theirs = and(eq(reshares.memberId, memberId), eq(reshares.postId, postId));
+		const existing = await tx.select({ deletedAt: reshares.deletedAt }).from(reshares).where(theirs);
 
-		if (existing[0] && !existing[0].deleted_at) throw new AlreadyResharedError("You already reshare this note.");
+		if (existing[0] && !existing[0].deletedAt) throw new AlreadyResharedError("You already reshare this note.");
 		if (existing[0]) {
-			await tx.execute(sql`update reshares set deleted_at = null where member_id = ${memberId} and post_id = ${postId}`);
+			await tx.update(reshares).set({ deletedAt: null }).where(theirs);
 
 			return;
 		}
 
 		await checkLimit(tx, memberId, "reshare");
-		await tx.execute(sql`insert into reshares (member_id, post_id) values (${memberId}, ${postId})`);
+		await tx.insert(reshares).values({ memberId, postId });
 	});
 }
 
@@ -718,8 +720,11 @@ export async function reshare(memberId: string, postId: string): Promise<void> {
 export async function unreshare(memberId: string, postId: string): Promise<void> {
 	if (!isUuid(postId)) throw new PostNotFoundError();
 
-	const { rows } = await getDb().execute(sql`
-		update reshares set deleted_at = now() where member_id = ${memberId} and post_id = ${postId} and deleted_at is null returning id`);
+	const rows = await getDb()
+		.update(reshares)
+		.set({ deletedAt: sql`now()` })
+		.where(and(eq(reshares.memberId, memberId), eq(reshares.postId, postId), isNull(reshares.deletedAt)))
+		.returning({ id: reshares.id });
 
 	if (!rows[0]) throw new PostNotFoundError();
 }
@@ -739,17 +744,21 @@ export async function deletePost(memberId: string, postId: string): Promise<void
 	if (!isUuid(postId)) throw new PostNotFoundError();
 
 	await getDb().transaction(async (tx) => {
-		const { rows } = await tx.execute(sql`
-			update posts set content = '', deleted_at = now()
-			where id = ${postId} and member_id = ${memberId} and deleted_at is null
-			returning id`);
+		const rows = await tx
+			.update(posts)
+			.set({ content: "", deletedAt: sql`now()` })
+			.where(and(eq(posts.id, postId), eq(posts.memberId, memberId), isNull(posts.deletedAt)))
+			.returning({ id: posts.id });
 
 		if (!rows[0]) throw new PostNotFoundError();
-		await tx.execute(sql`update moderation_decisions set reason = null where post_id = ${postId}`);
+		await tx.update(moderationDecisions).set({ reason: null }).where(eq(moderationDecisions.postId, postId));
 	});
 
 	await purgeTombstones(memberId);
 }
+
+/** A note `p` that no reply answers and no reshare (even undone) points at: its row can go. */
+const unreferenced = sql`not exists (select 1 from ${posts} ${c} where ${c.parentId} = ${p.id}) and not exists (select 1 from ${reshares} ${r} where ${r.postId} = ${p.id})`;
 
 /**
  * Removes the Member's tombstones that nothing refers to and that no longer
@@ -761,11 +770,10 @@ async function purgeTombstones(memberId: string) {
 
 	try {
 		await getDb().execute(sql`
-			delete from posts p
-			where p.member_id = ${memberId} and p.deleted_at is not null
-				and p.created_at <= now() - make_interval(mins => ${window})
-				and not exists (select 1 from posts c where c.parent_id = p.id)
-				and not exists (select 1 from reshares r where r.post_id = p.id)`);
+			delete from ${posts} ${p}
+			where ${p.memberId} = ${memberId} and ${p.deletedAt} is not null
+				and ${p.createdAt} <= now() - make_interval(mins => ${window})
+				and ${unreferenced}`);
 	} catch (error) {
 		// eslint-disable-next-line no-console
 		console.warn("Tombstone purge skipped", error instanceof Error ? error.message : error);
@@ -799,52 +807,61 @@ const isoOrNull = (value: Date | string | null) => (value === null ? null : iso(
 /** The Member's row, notes (every state, torn up included), reshares (undone included) and every moderation decision on their notes. */
 export async function exportMemberData(memberId: string): Promise<MemberExport> {
 	const db = getDb();
-	const [member, notes, reshares, decisions] = await Promise.all([
-		db.execute<{ id: string; display_name: string; username: string | null; avatar_url: string | null; created_at: Date | string }>(sql`
-			select id, display_name, username, avatar_url, created_at from members where id = ${memberId}`),
-		db.execute<{
-			id: string;
-			parent_id: string | null;
-			root_id: string | null;
-			content: string;
-			status: "pending" | "approved" | "blocked";
-			created_at: Date | string;
-			published_at: Date | string | null;
-			deleted_at: Date | string | null;
-		}>(sql`
-			select id, parent_id, root_id, content, status, created_at, published_at, deleted_at
-			from posts where member_id = ${memberId} order by created_at, id`),
-		db.execute<{ post_id: string; created_at: Date | string; deleted_at: Date | string | null }>(sql`
-			select post_id, created_at, deleted_at from reshares where member_id = ${memberId} order by created_at, id`),
-		db.execute<{ post_id: string; outcome: string; category: string | null; reason: string | null; model: string; created_at: Date | string }>(sql`
-			select d.post_id, d.outcome, d.category, d.reason, d.model, d.created_at
-			from moderation_decisions d join posts p on p.id = d.post_id
-			where p.member_id = ${memberId} order by d.created_at, d.id`),
+	const [member, notes, entries, decisions] = await Promise.all([
+		db
+			.select({ id: members.id, displayName: members.displayName, username: members.username, avatarUrl: members.avatarUrl, createdAt: members.createdAt })
+			.from(members)
+			.where(eq(members.id, memberId)),
+		db
+			.select({
+				id: posts.id,
+				parentId: posts.parentId,
+				rootId: posts.rootId,
+				content: posts.content,
+				status: posts.status,
+				createdAt: posts.createdAt,
+				publishedAt: posts.publishedAt,
+				deletedAt: posts.deletedAt,
+			})
+			.from(posts)
+			.where(eq(posts.memberId, memberId))
+			.orderBy(posts.createdAt, posts.id),
+		db
+			.select({ postId: reshares.postId, createdAt: reshares.createdAt, deletedAt: reshares.deletedAt })
+			.from(reshares)
+			.where(eq(reshares.memberId, memberId))
+			.orderBy(reshares.createdAt, reshares.id),
+		db
+			.select({
+				postId: moderationDecisions.postId,
+				outcome: moderationDecisions.outcome,
+				category: moderationDecisions.category,
+				reason: moderationDecisions.reason,
+				model: moderationDecisions.model,
+				createdAt: moderationDecisions.createdAt,
+			})
+			.from(moderationDecisions)
+			.innerJoin(posts, eq(posts.id, moderationDecisions.postId))
+			.where(eq(posts.memberId, memberId))
+			.orderBy(moderationDecisions.createdAt, moderationDecisions.id),
 	]);
-	const row = member.rows[0];
+	const row = member[0];
 
 	return {
-		member: row ? { id: row.id, displayName: row.display_name, username: row.username, avatarUrl: row.avatar_url, createdAt: iso(row.created_at) } : null,
-		notes: notes.rows.map((note) => ({
+		member: row ? { ...row, createdAt: iso(row.createdAt) } : null,
+		notes: notes.map((note) => ({
 			id: note.id,
-			kind: note.parent_id ? "reply" : "post",
-			parentId: note.parent_id,
-			rootId: note.root_id,
-			content: note.deleted_at ? "" : sanitisePostHtml(note.content),
+			kind: note.parentId ? "reply" : "post",
+			parentId: note.parentId,
+			rootId: note.rootId,
+			content: note.deletedAt ? "" : sanitisePostHtml(note.content),
 			status: note.status,
-			createdAt: iso(note.created_at),
-			publishedAt: isoOrNull(note.published_at),
-			tornUpAt: isoOrNull(note.deleted_at),
+			createdAt: iso(note.createdAt),
+			publishedAt: isoOrNull(note.publishedAt),
+			tornUpAt: isoOrNull(note.deletedAt),
 		})),
-		reshares: reshares.rows.map((entry) => ({ postId: entry.post_id, createdAt: iso(entry.created_at), undoneAt: isoOrNull(entry.deleted_at) })),
-		moderationDecisions: decisions.rows.map((decision) => ({
-			postId: decision.post_id,
-			outcome: decision.outcome,
-			category: decision.category,
-			reason: decision.reason,
-			model: decision.model,
-			createdAt: iso(decision.created_at),
-		})),
+		reshares: entries.map((entry) => ({ postId: entry.postId, createdAt: iso(entry.createdAt), undoneAt: isoOrNull(entry.deletedAt) })),
+		moderationDecisions: decisions.map((decision) => ({ ...decision, createdAt: iso(decision.createdAt) })),
 	};
 }
 
@@ -865,10 +882,16 @@ export async function exportMemberData(memberId: string): Promise<MemberExport> 
 export async function deleteMemberAccount(memberId: string): Promise<void> {
 	await getDb().transaction(async (tx) => {
 		await lockMember(tx, memberId);
-		await tx.execute(sql`update posts set content = '', deleted_at = coalesce(deleted_at, now()) where member_id = ${memberId}`);
-		await tx.execute(sql`update moderation_decisions set reason = null where post_id in (select id from posts where member_id = ${memberId})`);
-		await tx.execute(sql`delete from reshares where member_id = ${memberId}`);
-		await tx.execute(sql`update members set display_name = '', username = null, avatar_url = null where id = ${memberId}`);
+		await tx
+			.update(posts)
+			.set({ content: "", deletedAt: sql`coalesce(${posts.deletedAt}, now())` })
+			.where(eq(posts.memberId, memberId));
+		await tx
+			.update(moderationDecisions)
+			.set({ reason: null })
+			.where(inArray(moderationDecisions.postId, tx.select({ id: posts.id }).from(posts).where(eq(posts.memberId, memberId))));
+		await tx.delete(reshares).where(eq(reshares.memberId, memberId));
+		await tx.update(members).set({ displayName: "", username: null, avatarUrl: null }).where(eq(members.id, memberId));
 		await tx.execute(sql`delete from neon_auth."user" where id::text = ${memberId}`);
 	});
 
@@ -897,30 +920,30 @@ const MAX_TOMBSTONE_DEPTH = 50;
  */
 export async function purgeExpired(db: Executor = getDb()) {
 	const window = Math.max(LIMITS.post.minutes, LIMITS.reply.minutes);
-	const unreferenced = sql`not exists (select 1 from posts c where c.parent_id = p.id) and not exists (select 1 from reshares r where r.post_id = p.id)`;
-
 	const undoneReshares = await db.execute(sql`
-		delete from reshares r using posts p
-		where p.id = r.post_id and r.deleted_at is not null and p.deleted_at is not null`);
+		delete from ${reshares} ${r} using ${posts} ${p}
+		where ${p.id} = ${r.postId} and ${r.deletedAt} is not null and ${p.deletedAt} is not null`);
 	let tombstones = 0;
 
 	// One level of a thread at a time: a tombstone answered only by tombstones goes once they have.
 	for (let depth = 0; depth < MAX_TOMBSTONE_DEPTH; depth++) {
 		const { rowCount } = await db.execute(sql`
-			delete from posts p
-			where p.deleted_at is not null and p.created_at <= now() - make_interval(mins => ${window}) and ${unreferenced}`);
+			delete from ${posts} ${p}
+			where ${p.deletedAt} is not null and ${p.createdAt} <= now() - make_interval(mins => ${window}) and ${unreferenced}`);
 
 		if (!rowCount) break;
 		tombstones += rowCount;
 	}
 
 	const held = await db.execute(sql`
-		delete from posts p
-		where p.deleted_at is null and p.created_at < now() - make_interval(days => ${RETENTION_DAYS})
-			and (p.status = 'blocked' or ${givenUp(sql`(select max(created_at) from moderation_decisions where post_id = p.id)`)}) and ${unreferenced}`);
+		delete from ${posts} ${p}
+		where ${p.deletedAt} is null and ${p.createdAt} < now() - make_interval(days => ${RETENTION_DAYS})
+			and (${p.status} = 'blocked' or ${givenUp(sql`(select max(${moderationDecisions.createdAt}) from ${moderationDecisions} where ${moderationDecisions.postId} = ${p.id})`)})
+			and ${unreferenced}`);
 	const reasons = await db.execute(sql`
-		update moderation_decisions set reason = null
-		where outcome = 'approved' and reason is not null and created_at < now() - make_interval(days => ${RETENTION_DAYS})`);
+		update ${moderationDecisions} set ${bare(moderationDecisions.reason)} = null
+		where ${moderationDecisions.outcome} = 'approved' and ${moderationDecisions.reason} is not null
+			and ${moderationDecisions.createdAt} < now() - make_interval(days => ${RETENTION_DAYS})`);
 
 	return { undoneReshares: undoneReshares.rowCount ?? 0, tombstones, heldNotes: held.rowCount ?? 0, reasons: reasons.rowCount ?? 0 };
 }
