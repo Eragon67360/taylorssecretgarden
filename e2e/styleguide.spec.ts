@@ -19,6 +19,7 @@ const KIT = [
 	"Sticky note",
 	"Rubber stamp",
 	"Ticket stub",
+	"Buttons",
 	"Ruled list",
 ];
 
@@ -116,6 +117,55 @@ test.describe("Styleguide", () => {
 		expect(unlabelled, "SVGs exposed to assistive tech without a label").toEqual([]);
 		await expect(page.getByRole("img", { name: "Swiftie", exact: true }).first()).toBeVisible();
 		await expect(page.getByRole("img", { name: /NOT Taylor's Version/i }).first()).toBeVisible();
+	});
+
+	test("the button variants work as buttons and as links, with the ink focus ring", async ({ page }) => {
+		await page.goto("/styleguide");
+		const spread = page.locator("[data-era]").filter({ has: page.getByRole("heading", { name: "Buttons", exact: true }) }).first();
+
+		for (const name of ["Try again", "Pass it on", "Tear it up", "Keep it"]) {
+			await expect(spread.getByRole("button", { name, exact: true })).toBeVisible();
+		}
+		await expect(spread.getByRole("button", { name: "Pass it on" })).toHaveAttribute("aria-disabled", "true");
+		await expect(spread.getByRole("link", { name: "Open the music journal" })).toHaveAttribute("href", "/music");
+		await expect(spread.getByRole("link", { name: "A link, as a button" })).toHaveAttribute("href", "/swiftter");
+
+		// A key press first, so the focus that follows is keyboard focus (:focus-visible).
+		await page.keyboard.press("Shift");
+		const primary = spread.getByRole("button", { name: "Try again" });
+
+		await primary.focus();
+		await expect(primary).toBeFocused();
+		const ring = await primary.evaluate((button) => {
+			const { outlineStyle, outlineWidth, outlineColor } = getComputedStyle(button);
+
+			// The ink of the Era around it.
+			return { outlineStyle, outlineWidth: parseFloat(outlineWidth), outlineColor, ink: getComputedStyle(button.closest("[data-era]")!).color };
+		});
+
+		expect(ring.outlineStyle).toBe("solid");
+		expect(ring.outlineWidth).toBeGreaterThanOrEqual(2);
+		expect(ring.outlineColor).toBe(ring.ink);
+	});
+
+	test("under reduced motion a hovered button still shows it, by underlining its label, and stays put", async ({ page }) => {
+		await page.emulateMedia({ reducedMotion: "reduce" });
+		await page.goto("/styleguide");
+		const spread = page.locator("[data-era]").filter({ has: page.getByRole("heading", { name: "Buttons", exact: true }) }).first();
+		const underline = (name: string) =>
+			spread.getByRole("button", { name }).evaluate((button) => getComputedStyle(button.firstElementChild!).textDecorationLine);
+		const translate = (name: string) => spread.getByRole("button", { name }).evaluate((button) => getComputedStyle(button).translate);
+
+		for (const name of ["Try again", "Tear it up"]) {
+			expect(await underline(name)).toBe("none");
+			await spread.getByRole("button", { name }).hover();
+			await expect.poll(() => underline(name)).toBe("underline");
+			expect(await translate(name)).toBe("none");
+		}
+
+		// An aria-disabled button stays focusable but doesn't react.
+		await spread.getByRole("button", { name: "Pass it on" }).hover();
+		expect(await underline("Pass it on")).toBe("none");
 	});
 
 	test("picking an Era re-colours the sandbox with a colour transition", async ({ page }) => {

@@ -2,7 +2,7 @@
 
 import { useId, useRef } from "react";
 
-import { WashiTape } from "@/components/scrapbook";
+import { Button, WashiTape } from "@/components/scrapbook";
 
 import { noteExcerpt } from "./words";
 
@@ -60,22 +60,17 @@ export function DeletePost({ onDelete, content }: DeletePostProps) {
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
           {/* First, so Enter or a stray tap keeps the note. */}
-          <button
+          <Button
             // eslint-disable-next-line jsx-a11y/no-autofocus -- the safe choice takes focus when the dialog opens
             autoFocus
-            className="focus-ring text-ink min-h-11 rounded-[4px] px-3 text-[15px] font-bold underline underline-offset-2"
-            type="button"
+            variant="text"
             onClick={() => dialog.current?.close()}
           >
             Keep it
-          </button>
-          <button
-            className="bg-pen focus-ring inline-flex min-h-11 items-center rounded-[4px] px-5 text-[15px] font-bold tracking-wide text-white"
-            type="button"
-            onClick={confirm}
-          >
+          </Button>
+          <Button variant="danger" onClick={confirm}>
             Tear it up
-          </button>
+          </Button>
         </div>
       </dialog>
     </>

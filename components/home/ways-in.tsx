@@ -45,8 +45,9 @@ function WayIn({ href, title, cta, object, children }: { href: string; title: st
     <li className="group relative mx-auto w-full max-w-[340px]">
       <div className="relative h-[250px]">{object}</div>
       <h3 className="font-serif mt-4 text-[28px] leading-tight font-semibold">
+        {/* Hovering the card underlines its title too, which reduced motion keeps when the object stops playing. */}
         <Link
-          className="rounded-sm outline-none after:absolute after:-inset-3 after:rounded-md focus-visible:after:outline-[2.5px] focus-visible:after:outline-offset-2 focus-visible:after:outline-[var(--ink)] focus-visible:after:outline-solid"
+          className="rounded-sm decoration-[1.5px] underline-offset-4 outline-none group-hover:underline after:absolute after:-inset-3 after:rounded-md focus-visible:after:outline-[2.5px] focus-visible:after:outline-offset-2 focus-visible:after:outline-[var(--ink)] focus-visible:after:outline-solid"
           href={href}
         >
           {title}

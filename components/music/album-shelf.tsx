@@ -62,12 +62,13 @@ export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
                 aria-current={active ? "true" : undefined}
                 aria-label={album.name}
                 className={cn(
-                  "bg-photo focus-ring relative block w-[96px] p-1.5 pb-0 lg:w-full",
+                  "group bg-photo focus-ring relative block w-[96px] p-1.5 pb-0 lg:w-full",
                   "shadow-[0_1px_1px_rgba(0,0,0,.1),0_10px_16px_-10px_rgba(0,0,0,.55)]",
                   "motion-safe:transition-[translate,scale,rotate,box-shadow] motion-safe:duration-300 motion-safe:ease-[cubic-bezier(.2,.9,.3,1.25)]",
                   active
                     ? "z-10 -translate-y-2 scale-[1.06] shadow-[0_1px_1px_rgba(0,0,0,.1),0_18px_26px_-12px_rgba(0,0,0,.6)]"
-                    : "motion-safe:hover:-translate-y-1.5 motion-safe:hover:rotate-0!",
+                    : // Hovered, it also casts a deeper shadow and its label underlines: feedback that doesn't move.
+                      "hover:shadow-[0_1px_1px_rgba(0,0,0,.1),0_14px_20px_-10px_rgba(0,0,0,.6)] motion-safe:hover:-translate-y-1.5 motion-safe:hover:rotate-0!",
                 )}
                 href={album.path}
                 scroll={false}
@@ -92,7 +93,13 @@ export function AlbumShelf({ albums, selectedId, onSelect }: AlbumShelfProps) {
                   // Deezer failed this Album (components/music/catalogue.ts): a blank photo, same size.
                   <span aria-hidden="true" className="bg-line block aspect-square w-full" />
                 )}
-                <span aria-hidden="true" className="font-hand block truncate py-1 text-center text-[17px] leading-tight font-bold text-[var(--photo-ink)]">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "font-hand block truncate py-1 text-center text-[17px] leading-tight font-bold text-[var(--photo-ink)]",
+                    !active && "decoration-[1.5px] underline-offset-2 group-hover:underline",
+                  )}
+                >
                   {look.short}
                 </span>
                 {album.taylorsVersion && (

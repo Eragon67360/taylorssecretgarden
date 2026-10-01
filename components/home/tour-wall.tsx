@@ -31,8 +31,8 @@ export function TourWall() {
             <li key={tour.slug} className={cn(index % 2 === 1 && "mt-8 lg:mt-10")}>
               <Link className="group focus-ring relative block rounded-[2px]" href={`/tours/${tour.slug}`} style={{ rotate: `${TILTS[index % TILTS.length]}deg` }}>
                 <Pin className="-top-2 left-1/2 -translate-x-1/2" color={PIN_COLOURS[index % PIN_COLOURS.length]} />
-                {/* The poster swings a little on its pin. */}
-                <div className="bg-photo origin-top p-1.5 shadow-[0_16px_24px_-14px_rgba(0,0,0,.6)] transition-transform duration-300 ease-out motion-safe:group-hover:-rotate-2">
+                {/* The poster swings a little on its pin; its shadow deepens and its name underlines too, which reduced motion keeps. */}
+                <div className="bg-photo origin-top p-1.5 shadow-[0_16px_24px_-14px_rgba(0,0,0,.6)] transition-[rotate,box-shadow] duration-300 ease-out group-hover:shadow-[0_20px_28px_-12px_rgba(0,0,0,.7)] motion-safe:group-hover:-rotate-2">
                   {/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary resizes and encodes it (tour-posters.ts) */}
                   <img
                     alt=""
@@ -46,7 +46,7 @@ export function TourWall() {
                 </div>
                 <div className="mt-3 px-1">
                   <p className="text-[11px] font-bold tracking-[.18em] text-soft uppercase">{tour.years}</p>
-                  <p className="font-serif text-[18px] leading-tight font-semibold">{tour.name}</p>
+                  <p className="font-serif text-[18px] leading-tight font-semibold decoration-[1.5px] underline-offset-[3px] group-hover:underline">{tour.name}</p>
                   {tour.note && <p className="font-hand mt-0.5 text-[19px] leading-tight font-bold text-accent">{tour.note}</p>}
                 </div>
               </Link>

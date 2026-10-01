@@ -72,7 +72,8 @@ function PressedEra({ look, album, number, tilt }: { look: EraLook; album: EraAl
           <span>No. {String(number).padStart(2, "0")}</span>
           <span>{look.year}</span>
         </div>
-        <p className="mt-1.5 text-[clamp(1.35rem,2.6vw,1.9rem)] leading-tight text-balance">
+        {/* Underlined on hover besides the deeper shadow: feedback that doesn't move. */}
+        <p className="mt-1.5 text-[clamp(1.35rem,2.6vw,1.9rem)] leading-tight text-balance decoration-[1.5px] underline-offset-4 group-hover:underline">
           <EraFace>{label(look)}</EraFace>
         </p>
         {album.taylorsVersion && (
