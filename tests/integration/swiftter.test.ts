@@ -5,21 +5,27 @@ import { getDb } from "@/db/client";
 import { LIMITS, MAX_MODERATION_ATTEMPTS, NO_AUTHOR } from "@/lib/swiftter";
 import {
 	AlreadyResharedError,
+	appealNote,
 	checkAgain,
 	deleteMemberAccount,
 	deletePost,
 	exportMemberData,
 	getThread,
+	InvalidReasonError,
 	listFeed,
 	listHeld,
 	listOwnReshares,
+	listReportsToNotify,
 	listSitemapPosts,
+	markReportsNotified,
 	NoMoreChecksError,
 	PostingLimitError,
 	PostNotFoundError,
 	purgeExpired,
 	recheckPending,
+	reportNote,
 	reshare,
+	SelfReportError,
 	SelfReshareError,
 	unreshare,
 	writeNote,
@@ -438,6 +444,134 @@ describe.skipIf(!!skipReason)("Swiftter service against Postgres", () => {
 			const payload = JSON.stringify(thread);
 
 			for (const leak of [alice, "Alice Vanishing", "alice.png"]) expect(payload).not.toContain(leak);
+		});
+	});
+
+	describe("reports and appeals", () => {
+		const reportsOf = async (postId: string) =>
+			(
+				await getDb().execute<{ member_id: string; kind: string; reason: string | null; resolved_at: Date | null }>(sql`
+					select member_id, kind, reason, resolved_at from note_reports where post_id = ${postId} order by created_at`)
+			).rows;
+
+		it("a Member reports someone else's public note or reply, once, with a plain-text reason", async () => {
+			const [alice, bob] = [await newMember(), await newMember()];
+			const { note: post } = await writeNote(alice, note("reportable"), null, allow);
+			const { note: reply } = await writeNote(alice, note("reportable reply"), post.id, allow);
+
+			await expect(reportNote(bob, post.id, "  It\u0000 shares <b>an address</b>  ")).resolves.toEqual({ created: true });
+			await expect(reportNote(bob, post.id, "again")).resolves.toEqual({ created: false });
+			await expect(reportNote(bob, reply.id)).resolves.toEqual({ created: true });
+			expect(await reportsOf(post.id)).toEqual([{ member_id: bob, kind: "report", reason: "It shares <b>an address</b>", resolved_at: null }]);
+		});
+
+		it("only public notes that are not your own can be reported", async () => {
+			const [alice, bob] = [await newMember(), await newMember()];
+			const { note: post } = await writeNote(alice, note("mine"), null, allow);
+			const { note: refused } = await writeNote(alice, note("refused"), null, refuse());
+			const { note: pending } = await writeNote(alice, note("pending"), null, unavailable);
+			const { note: gone } = await writeNote(alice, note("gone"), null, allow);
+
+			await deletePost(alice, gone.id);
+			await expect(reportNote(alice, post.id)).rejects.toBeInstanceOf(SelfReportError);
+			for (const id of [refused.id, pending.id, gone.id, "not-a-uuid", "00000000-0000-4000-8000-000000000000"]) {
+				await expect(reportNote(bob, id)).rejects.toBeInstanceOf(PostNotFoundError);
+			}
+			await expect(reportNote(bob, post.id, "x".repeat(501))).rejects.toBeInstanceOf(InvalidReasonError);
+		});
+
+		it("the report limit refuses the next one with a wait, even sent at once", async () => {
+			const [alice, bob] = [await newMember(), await newMember()];
+			const { count } = LIMITS.report;
+			// Published long ago: at the far end of the shared feed, where no other test replies to them.
+			const { rows } = await getDb().execute<{ id: string }>(sql`
+				insert into posts (member_id, content, status, published_at)
+				select ${alice}, '<p>to report ' || n || '</p>', 'approved', timestamp '2000-01-01' from generate_series(1, ${count + 2}) as n
+				returning id`);
+			const results = await Promise.allSettled(rows.map(({ id }) => reportNote(bob, id)));
+			const refused = results.filter((result) => result.status === "rejected").map((result) => (result as PromiseRejectedResult).reason);
+
+			expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(count);
+			expect(refused).toHaveLength(2);
+			expect(refused[0]).toBeInstanceOf(PostingLimitError);
+			// Reporting one already reported changes nothing, past the limit too.
+			const reported = rows.find((_, index) => results[index].status === "fulfilled")!;
+
+			await expect(reportNote(bob, reported.id)).resolves.toEqual({ created: false });
+		});
+
+		it("an author asks a human to look again at their refused note, once; their held notes say so", async () => {
+			const [alice, bob] = [await newMember(), await newMember()];
+			const { note: refused } = await writeNote(alice, note("misjudged"), null, refuse());
+			const { note: published } = await writeNote(alice, note("fine"), null, allow);
+			const { note: pending } = await writeNote(alice, note("waiting"), null, unavailable);
+
+			expect(await listHeld(alice)).toContainEqual(expect.objectContaining({ id: refused.id, appealed: false }));
+			await expect(appealNote(alice, refused.id)).resolves.toEqual({ created: true });
+			await expect(appealNote(alice, refused.id)).resolves.toEqual({ created: false });
+			expect(await listHeld(alice)).toContainEqual(expect.objectContaining({ id: refused.id, appealed: true }));
+			expect(await listHeld(alice)).toContainEqual(expect.objectContaining({ id: pending.id, appealed: false }));
+			for (const [who, id] of [[bob, refused.id], [alice, published.id], [alice, pending.id], [alice, "nope"]]) {
+				await expect(appealNote(who, id)).rejects.toBeInstanceOf(PostNotFoundError);
+			}
+		});
+
+		it("the owner hears of each once: listed until sent, with only public notes marked public", async () => {
+			const [alice, bob] = [await newMember(), await newMember()];
+			const { note: post } = await writeNote(alice, note("reported"), null, allow);
+			const { note: refused } = await writeNote(bob, note("appealed"), null, refuse());
+
+			await reportNote(bob, post.id, "private words");
+			await appealNote(bob, refused.id);
+			const ours = (await listReportsToNotify(10_000)).filter((report) => [post.id, refused.id].includes(report.postId));
+
+			expect(ours).toEqual([
+				expect.objectContaining({ kind: "report", postId: post.id, isPublic: true }),
+				expect.objectContaining({ kind: "appeal", postId: refused.id, isPublic: false }),
+			]);
+			expect(JSON.stringify(ours)).not.toContain("private words");
+			await markReportsNotified(ours.map((report) => report.id));
+			expect((await listReportsToNotify(10_000)).some((report) => [post.id, refused.id].includes(report.postId))).toBe(false);
+		});
+
+		it("tearing a note up settles its reports; resolved ones are purged after 30 days; they go with their note", async () => {
+			const [alice, bob] = [await newMember(), await newMember()];
+			const { note: post } = await writeNote(alice, note("soon torn up"), null, allow);
+			const { note: other } = await writeNote(alice, note("stays"), null, allow);
+
+			await reportNote(bob, post.id);
+			await reportNote(bob, other.id);
+			await deletePost(alice, post.id);
+			expect((await reportsOf(post.id))[0].resolved_at).not.toBeNull();
+			expect((await listReportsToNotify(10_000)).some((report) => report.postId === post.id)).toBe(false);
+
+			// Resolved a month ago: purged. Unresolved: kept.
+			await getDb().execute(sql`update note_reports set resolved_at = now() - interval '31 days' where post_id = ${post.id}`);
+			await getDb().execute(sql`update note_reports set created_at = now() - interval '60 days' where post_id = ${other.id}`);
+			await purgeExpired();
+			expect(await reportsOf(post.id)).toEqual([]);
+			expect(await reportsOf(other.id)).toHaveLength(1);
+
+			await getDb().execute(sql`delete from posts where id = ${other.id}`);
+			expect(await reportsOf(other.id)).toEqual([]);
+		});
+
+		it("a Member's export holds their reports and appeals; deleting their account removes them", async () => {
+			const [alice, bob] = [await newMember(), await newMember()];
+			const { note: theirs } = await writeNote(bob, note("reported by alice"), null, allow);
+			const { note: refused } = await writeNote(alice, note("alice's refused"), null, refuse());
+
+			await reportNote(alice, theirs.id, "my words");
+			await appealNote(alice, refused.id);
+			expect((await exportMemberData(alice)).reports).toEqual([
+				expect.objectContaining({ postId: theirs.id, kind: "report", reason: "my words", resolvedAt: null }),
+				expect.objectContaining({ postId: refused.id, kind: "appeal", reason: null }),
+			]);
+			expect((await exportMemberData(bob)).reports).toEqual([]);
+
+			await deleteMemberAccount(alice);
+			expect(await reportsOf(theirs.id)).toEqual([]);
+			expect((await exportMemberData(alice)).reports).toEqual([]);
 		});
 	});
 
