@@ -1,5 +1,6 @@
 import data from "@/public/json/tours.json";
 
+import { type Credit } from "./credits";
 import { ERA_LOOKS, type EraPalette, type EraSlug, type Flower, isEraSlug } from "./eras";
 
 /*
@@ -8,7 +9,7 @@ import { ERA_LOOKS, type EraPalette, type EraSlug, type Flower, isEraSlug } from
   spans every Era and has a look of its own (below).
 */
 
-export type GalleryPhoto = { src: string; alt: string; caption: string; size: [number, number] };
+export type GalleryPhoto = { src: string; alt: string; caption: string; size: [number, number]; credit?: Credit };
 
 export type Tour = {
   /** The Tour's name. */
@@ -28,8 +29,12 @@ export type Tour = {
   /** Poster (Cloudinary) and its intrinsic size. */
   imageUrl: string;
   posterSize: [number, number];
+  /** The poster's source, when it is known (lib/credits.ts). */
+  imageCredit?: Credit;
   /** Footage of this Tour or its Era, when there is some (never another Tour's). */
   videoUrl?: string;
+  /** The footage's source, when it is known. */
+  videoCredit?: Credit;
   /** Photos from the Tour (Cloudinary). */
   gallery?: GalleryPhoto[];
 };

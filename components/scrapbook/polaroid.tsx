@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 
 import * as m from "motion/react-m";
 
+import { MediaCredit } from "@/components/media-credit";
+import { type Credit } from "@/lib/credits";
 import { cn } from "@/lib/utils";
 
 import { WashiTape } from "./tape";
@@ -14,6 +16,8 @@ type PolaroidProps = {
   children: ReactNode;
   /** Handwritten caption on the frame's thick bottom edge. */
   caption?: ReactNode;
+  /** The photo's source, in small print under the caption (lib/credits.ts). */
+  credit?: Credit;
   /** Resting tilt, in degrees. */
   tilt?: number;
   /** Tape across the top corners. */
@@ -24,7 +28,7 @@ type PolaroidProps = {
 };
 
 /** An instant photo: white frame, thick bottom edge with a handwritten caption. */
-export function Polaroid({ children, caption, tilt = -2, taped = false, lift = false, className }: PolaroidProps) {
+export function Polaroid({ children, caption, credit, tilt = -2, taped = false, lift = false, className }: PolaroidProps) {
   const motionProps = useLift(tilt, lift);
 
   return (
@@ -46,9 +50,14 @@ export function Polaroid({ children, caption, tilt = -2, taped = false, lift = f
         {/* Photo paper: a little grain over the print. */}
         <span aria-hidden="true" className="paper-grain pointer-events-none absolute inset-0 opacity-40 mix-blend-multiply" />
       </div>
-      {caption ? (
-        <figcaption className="font-hand px-2 pt-3 text-center text-[22px] font-bold leading-tight text-[var(--photo-ink)] sm:text-2xl">
-          {caption}
+      {caption || credit ? (
+        <figcaption className="px-2 pt-3 text-center text-[var(--photo-ink)]">
+          {caption && <span className="font-hand block text-[22px] font-bold leading-tight sm:text-2xl">{caption}</span>}
+          {credit && (
+            <small className={cn("font-body block text-[11px] leading-snug", caption && "mt-1.5")}>
+              <MediaCredit credit={credit} />
+            </small>
+          )}
         </figcaption>
       ) : (
         <span aria-hidden="true" className="block h-8" />

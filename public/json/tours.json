@@ -14,13 +14,29 @@
     "note": "the one that broke Ticketmaster (and us)",
     "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
     "posterSize": [300, 428],
+    "imageCredit": {
+      "work": "Taylor Swift: The Eras Tour (2023), theatrical poster",
+      "author": "Taylor Swift Productions and AMC Theatres Distribution",
+      "licence": "All rights reserved"
+    },
     "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/eras",
+    "videoCredit": {
+      "work": "Taylor Swift: The Eras Tour (2023), the film's trailer",
+      "author": "Taylor Swift Productions",
+      "licence": "All rights reserved"
+    },
     "gallery": [
       {
         "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/center",
         "alt": "Taylor Swift on stage at the Eras Tour",
         "caption": "front row energy (from row 40)",
-        "size": [500, 500]
+        "size": [500, 500],
+        "credit": {
+          "work": "Taylor Swift at Soldier Field, Chicago, 2 June 2023, cut out onto a glitter background",
+          "author": "Natasha Moustache/TAS23/Getty Images for TAS Rights Management",
+          "licence": "All rights reserved; editorial use only",
+          "url": "https://www.gettyimages.com/detail/1495555898"
+        }
       },
       {
         "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/gallery",
@@ -32,13 +48,24 @@
         "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/outfits",
         "alt": "Illustration of the Eras Tour outfits, one per Era",
         "caption": "every Era, every outfit",
-        "size": [500, 667]
+        "size": [500, 667],
+        "credit": {
+          "work": "The Eras Tour, art print",
+          "author": "EmmaRoseee24",
+          "licence": "All rights reserved",
+          "url": "https://www.redbubble.com/people/emmaroseee24/shop"
+        }
       },
       {
         "src": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/the-eras-tour/watch",
         "alt": "Taylor Swift with a guitar in a sparkly bodysuit at the Eras Tour",
         "caption": "the Lover bodysuit. obviously",
-        "size": [500, 281]
+        "size": [500, 281],
+        "credit": {
+          "work": "Taylor Swift: The Eras Tour (2023), a still from the film",
+          "author": "Taylor Swift Productions",
+          "licence": "All rights reserved"
+        }
       }
     ]
   },
@@ -57,6 +84,11 @@
     "note": "a giant snake on stage. normal Tuesday",
     "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation",
     "posterSize": [300, 309],
+    "imageCredit": {
+      "work": "A fan-made poster on the reputation announcement artwork (2017)",
+      "author": "Big Machine Records (artwork)",
+      "licence": "All rights reserved"
+    },
     "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/reputation"
   },
   {
@@ -74,7 +106,17 @@
     "note": "surprise guests every night, somehow",
     "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/1989",
     "posterSize": [300, 445],
-    "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/nineteeneightynine"
+    "imageCredit": {
+      "work": "The 1989 World Tour Live (2015), poster",
+      "author": "Apple Music",
+      "licence": "All rights reserved"
+    },
+    "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/nineteeneightynine",
+    "videoCredit": {
+      "work": "A fan edit of The 1989 World Tour Live (2015)",
+      "author": "taylor croatia (edit)",
+      "licence": "All rights reserved"
+    }
   },
   {
     "tour": "The Red Tour",
@@ -91,6 +133,11 @@
     "note": "22 on the B-stage, hat included",
     "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/red",
     "posterSize": [300, 450],
+    "imageCredit": {
+      "work": "A fan-made poster on the cover photo of the single Red (2012)",
+      "author": "Big Machine Records (photo)",
+      "licence": "All rights reserved"
+    },
     "videoUrl": "https://res.cloudinary.com/dluezegi8/video/upload/f_auto:video,q_auto/v1/images/upload/taylorssecretgarden/tours/red"
   },
   {
@@ -107,7 +154,12 @@
     ],
     "note": "the ballgown era. there was a tree.",
     "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/speak_now",
-    "posterSize": [300, 450]
+    "posterSize": [300, 450],
+    "imageCredit": {
+      "work": "Speak Now World Tour – Live (2011), cover",
+      "author": "Big Machine Records",
+      "licence": "All rights reserved"
+    }
   },
   {
     "tour": "Fearless Tour",
@@ -123,6 +175,11 @@
     ],
     "note": "where it all started. sparkles included",
     "imageUrl": "https://res.cloudinary.com/dluezegi8/image/upload/f_auto,q_auto/v1/images/upload/taylorssecretgarden/tours/fearless",
-    "posterSize": [300, 433]
+    "posterSize": [300, 433],
+    "imageCredit": {
+      "work": "Fearless Tour 2009/2010, programme cover",
+      "author": "Big Machine Records",
+      "licence": "All rights reserved"
+    }
   }
 ]

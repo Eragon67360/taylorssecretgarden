@@ -1,3 +1,5 @@
+import type { Credit } from "../lib/credits";
+
 import tours from "../public/json/tours.json";
 
 import { PHONE, expectNoAxeViolations, expectNoHorizontalOverflow, expectReducedMotion } from "./checks";
@@ -15,6 +17,10 @@ const ERA_NAMES: Record<string, string> = {
 const eraLabel = (era: string | null) => (era ? `${ERA_NAMES[era]} Era` : "Every Era");
 /** "2013-2014" as printed: "2013–2014". */
 const years = (date: string) => date.replace("-", "–");
+
+/** A Tour's recorded credits, in page order: poster, footage, gallery. Only traced sources are recorded (lib/credits.ts). */
+const creditsOf = (tour: (typeof tours)[number]): Credit[] =>
+	[tour.imageCredit, tour.videoCredit, ...(tour.gallery ?? []).map((photo) => photo.credit)].filter((credit) => credit !== undefined);
 
 test.describe("Tours journal", () => {
 	test("has one journal section per Tour, with its years and Era, linking to its Tour page", async ({ page }) => {
@@ -155,6 +161,21 @@ for (const tour of tours) {
 			});
 		}
 
+		const credited = creditsOf(tour);
+
+		if (credited.length > 0) {
+			test("credits its poster, footage and photos under each", async ({ page }) => {
+				await page.goto(path);
+				// The small print on the polaroids, in page order: poster, footage, gallery.
+				const credits = page.getByRole("main").locator("figcaption small");
+
+				await expect(credits).toHaveText(credited.map(({ author }) => `© ${author}`));
+				for (const { author, url } of credited) {
+					if (url) await expect(credits.getByRole("link", { name: author, exact: true })).toHaveAttribute("href", url);
+				}
+			});
+		}
+
 		test("links back to the Tours journal", async ({ page }) => {
 			await page.goto(path);
 			await page.getByRole("link", { name: /back to the tours/i }).click();
@@ -178,6 +199,37 @@ for (const tour of tours) {
 		});
 	});
 }
+
+test.describe("Credits page", () => {
+	test("lists every recorded credit, by Tour, and Deezer", async ({ page }) => {
+		await page.goto("/credits");
+		const main = page.getByRole("main");
+
+		await expect(page.getByRole("heading", { name: "Credits", level: 1 })).toBeVisible();
+		for (const tour of tours) {
+			const credits = creditsOf(tour);
+
+			if (credits.length === 0) continue;
+			const section = main.getByRole("region", { name: tour.tour, exact: true });
+
+			for (const { work, author, licence } of credits) {
+				await expect(section.getByRole("listitem").filter({ hasText: work }).filter({ hasText: author }).filter({ hasText: licence })).toHaveCount(1);
+			}
+		}
+		await expect(main.getByRole("link", { name: "Deezer" })).toHaveAttribute("href", /^https:\/\/www\.deezer\.com/);
+	});
+
+	test("passes axe (WCAG 2.2 AA)", async ({ page }) => {
+		await page.goto("/credits");
+		await expectNoAxeViolations(page);
+	});
+
+	test("fits a 390px phone", async ({ page }) => {
+		await page.setViewportSize(PHONE);
+		await page.goto("/credits");
+		await expectNoHorizontalOverflow(page);
+	});
+});
 
 test("an unknown Tour answers 404", async ({ request }) => {
 	const response = await request.get("/tours/the-imaginary-tour");
