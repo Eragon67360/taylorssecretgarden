@@ -4,6 +4,7 @@ import type { OwnerAlert } from "@/service/owner-alerts";
 
 import { z } from "zod";
 
+import { siteResetLink } from "@/lib/auth/reset-link";
 import { type KeyLookup, jwksKeyLookup, verifyNeonSignature } from "@/lib/auth/webhook-signature";
 import { type AuthEmail, renderAuthEmail } from "@/lib/emails/auth-emails";
 import { sendEmail } from "@/service/resend";
@@ -200,7 +201,8 @@ export async function handleAuthEmailWebhook(request: Request, deps: AuthEmailDe
       : {
           purpose: data.event_data.link_type,
           method: "link",
-          url: data.event_data.link_url,
+          // Password resets point at the site's own address, with Neon Auth's token (lib/auth/reset-link.ts).
+          url: data.event_data.link_type === "forget-password" ? siteResetLink(data.event_data.link_url, baseUrl) : data.event_data.link_url,
           name: data.user.name,
           validForMs: validFor(data.timestamp, data.event_data.expires_at),
         };

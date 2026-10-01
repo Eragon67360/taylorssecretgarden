@@ -55,9 +55,8 @@ export function linkEvent() {
     user: { email: "member@example.com" },
     event_data: {
       link_type: "forget-password",
-      link_url:
-        "https://ep-cool-sound.neonauth.example/neondb/auth/reset-password/tok3n?callbackURL=https%3A%2F%2Fwww.taylorssecretgarden.com%2Freset-password",
-      token: "tok3n",
+      link_url: "https://ep-test.neonauth.example/neondb/auth/reset-password/tok3nTok3n?callbackURL=https%3A%2F%2Fwww.taylorssecretgarden.com%2Freset-password",
+      token: "tok3nTok3n",
       expires_at: "2026-10-01T13:00:00.000Z",
       ip_address: "192.0.2.1",
       user_agent: "Mozilla/5.0",
