@@ -62,6 +62,8 @@ export type HeldNote = {
 	attempts: number;
 	/** Whether "check again" is still allowed. */
 	canCheckAgain: boolean;
+	/** For a refused note: its author already asked a human to look again (an appeal). */
+	appealed: boolean;
 	/**
 	 * Moderation could not be reached for a whole week (MODERATION_RETRY), so
 	 * the scheduled re-check gave up on it: it will never be published as it is.
@@ -112,6 +114,7 @@ export const LIMITS = {
 	post: { count: 5, minutes: 10 },
 	reply: { count: 10, minutes: 10 },
 	reshare: { count: 10, minutes: 10 },
+	report: { count: 10, minutes: 10 },
 } as const;
 
 export type LimitedWrite = keyof typeof LIMITS;
@@ -130,6 +133,12 @@ export const MAX_MODERATION_ATTEMPTS = 4;
  * given up on, and its author told; an outage of a few hours strands nothing.
  */
 export const MODERATION_RETRY = { hourlyForHours: 24, days: 7 } as const;
+
+/** What a Member asks a human for: to look at someone else's public note (`report`), or to look again at their own refused one (`appeal`). */
+export type NoteReportKind = "report" | "appeal";
+
+/** The longest reason a Member may give with a report, in visible characters. */
+export const MAX_REPORT_REASON_CHARACTERS = 500;
 
 /** Visible characters in a string, as a reader counts them. */
 export function characterCount(text: string): number {

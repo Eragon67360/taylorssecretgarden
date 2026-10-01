@@ -7,7 +7,7 @@ import { type Database, getDb } from "@/db/client";
 import { bare, type Narrowed, type NotNull, type RawValue, type RowOf } from "@/db/rows";
 import { allowedAvatarUrl } from "@/lib/avatar";
 import { displayNameOf } from "@/lib/display-name";
-import { members, moderationDecisions, posts, reshares } from "@/db/schema";
+import { members, moderationDecisions, noteReports, posts, reshares } from "@/db/schema";
 import {
 	type Author,
 	characterCount,
@@ -19,8 +19,10 @@ import {
 	type LimitedWrite,
 	MAX_MODERATION_ATTEMPTS,
 	MAX_NOTE_CHARACTERS,
+	MAX_REPORT_REASON_CHARACTERS,
 	MODERATION_RETRY,
 	NO_AUTHOR,
+	type NoteReportKind,
 	type RefusalCategory,
 	type Thread,
 	type ThreadNote,
@@ -66,6 +68,12 @@ export class AlreadyResharedError extends Error {}
 
 /** "Check again" was used up for this note. */
 export class NoMoreChecksError extends Error {}
+
+/** A Member tried to report their own note. */
+export class SelfReportError extends Error {}
+
+/** A report's reason that cannot be kept: not text, or too long. */
+export class InvalidReasonError extends Error {}
 
 /** A feed cursor that does not decode. */
 export class InvalidCursorError extends Error {}
@@ -185,6 +193,10 @@ const LIMIT_COUNTS: Record<LimitedWrite, (memberId: string, minutes: number) => 
 	reshare: (memberId, minutes) => sql`
 		select ${reshares.createdAt} as made_at from ${reshares}
 		where ${reshares.memberId} = ${memberId} and ${reshares.createdAt} > now() - make_interval(mins => ${minutes})`,
+	// Appeals are not counted: one per refused note of the Member's own, which the Post and reply limits already bound.
+	report: (memberId, minutes) => sql`
+		select ${noteReports.createdAt} as made_at from ${noteReports}
+		where ${noteReports.memberId} = ${memberId} and ${noteReports.kind} = 'report' and ${noteReports.createdAt} > now() - make_interval(mins => ${minutes})`,
 };
 
 /**
@@ -382,14 +394,14 @@ export async function recheckPending({ batch = 20, moderate = moderatePost, ids 
 		order by d.last_at nulls first, ${p.createdAt}
 		limit ${batch}`);
 	const outcomes: WriteOutcome["status"][] = [];
-	let gaveUp = 0;
+	const gaveUp: string[] = [];
 	let noVerdicts = 0;
 
 	for (const { id, content, final } of rows) {
 		const { status } = await judge(id, content, moderate);
 
 		outcomes.push(status);
-		if (status === "pending" && final) gaveUp++;
+		if (status === "pending" && final) gaveUp.push(id);
 		noVerdicts = status === "pending" ? noVerdicts + 1 : 0;
 		if (noVerdicts >= STOP_AFTER_NO_VERDICTS) break;
 	}
@@ -398,7 +410,9 @@ export async function recheckPending({ batch = 20, moderate = moderatePost, ids 
 		checked: outcomes.length,
 		approved: outcomes.filter((status) => status === "approved").length,
 		stillPending: outcomes.filter((status) => status === "pending").length,
-		gaveUp,
+		gaveUp: gaveUp.length,
+		/** The notes given up on: held notes, so an owner alert may name them by id only. */
+		gaveUpIds: gaveUp,
 	};
 }
 
@@ -609,14 +623,15 @@ export async function getThread(id: string): Promise<Thread | null> {
 type HeldRow = RowOf<typeof posts, "id" | "content" | "rootId" | "parentId" | "createdAt"> &
 	Narrowed<RowOf<typeof posts, "status">, Exclude<RawValue<typeof posts.status>, "approved">> &
 	Narrowed<RowOf<typeof moderationDecisions, "category">, RefusalCategory | null> &
-	RowOf<typeof moderationDecisions, "reason"> & { attempts: number; given_up: boolean };
+	RowOf<typeof moderationDecisions, "reason"> & { attempts: number; given_up: boolean; appealed: boolean };
 
 /** The last refusal of a held note. */
 const last = alias(moderationDecisions, "last");
 
 async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 	const { rows } = await getDb().execute<HeldRow>(sql`
-		select ${p.id}, ${p.content}, ${p.status}, ${p.rootId}, ${p.parentId}, ${p.createdAt}, d.attempts, coalesce(${givenUp()}, false) as given_up, ${last.category}, ${last.reason}
+		select ${p.id}, ${p.content}, ${p.status}, ${p.rootId}, ${p.parentId}, ${p.createdAt}, d.attempts, coalesce(${givenUp()}, false) as given_up, ${last.category}, ${last.reason},
+			exists (select 1 from ${noteReports} where ${noteReports.postId} = ${p.id} and ${noteReports.kind} = 'appeal') as appealed
 		from ${posts} ${p}
 		join lateral (
 			select count(*)::int as attempts, max(${moderationDecisions.createdAt}) as last_at from ${moderationDecisions} where ${moderationDecisions.postId} = ${p.id}
@@ -636,6 +651,7 @@ async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 		reason: row.status === "blocked" ? row.reason : null,
 		attempts: row.attempts,
 		canCheckAgain: row.status === "pending" && !row.given_up && row.attempts < MAX_MODERATION_ATTEMPTS,
+		appealed: row.status === "blocked" && row.appealed,
 		givenUp: row.given_up,
 		createdAt: iso(row.created_at),
 		rootId: row.root_id,
@@ -752,6 +768,11 @@ export async function deletePost(memberId: string, postId: string): Promise<void
 
 		if (!rows[0]) throw new PostNotFoundError();
 		await tx.update(moderationDecisions).set({ reason: null }).where(eq(moderationDecisions.postId, postId));
+		// Nothing left for a human to look at: reports and appeals of it are settled (and purged in time).
+		await tx
+			.update(noteReports)
+			.set({ resolvedAt: sql`now()` })
+			.where(and(eq(noteReports.postId, postId), isNull(noteReports.resolvedAt)));
 	});
 
 	await purgeTombstones(memberId);
@@ -781,6 +802,130 @@ async function purgeTombstones(memberId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Reports and appeals: asking a human to look
+
+/**
+ * A report's reason as it is kept: plain text (never rendered as HTML),
+ * Unicode-normalised, without control characters, blank lines squeezed, at
+ * most MAX_REPORT_REASON_CHARACTERS; null when none was given. Throws
+ * InvalidReasonError otherwise.
+ */
+export function prepareReason(reason: unknown): string | null {
+	if (reason === undefined || reason === null) return null;
+	if (typeof reason !== "string") throw new InvalidReasonError("A reason is text.");
+	// Checked on the raw text, before any work on it.
+	if (reason.length > MAX_REPORT_REASON_CHARACTERS * 8) throw new InvalidReasonError("This reason is too long.");
+
+	const text = reason
+		.normalize("NFC")
+		.replace(/\r\n?/g, "\n")
+		.replace(/\t/g, " ")
+		// Control characters, and the invisible ones that reorder or hide text.
+		.replace(/[\u0000-\u0009\u000B-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "")
+		.replace(/\n{3,}/g, "\n\n")
+		.trim();
+
+	if (!text) return null;
+	const characters = characterCount(text.replace(/\n/g, ""));
+
+	if (characters > MAX_REPORT_REASON_CHARACTERS) {
+		throw new InvalidReasonError(`This reason is ${characters} characters long; ${MAX_REPORT_REASON_CHARACTERS} is the most it can hold.`);
+	}
+
+	return text;
+}
+
+/**
+ * Reports someone else's public note (a Post or a reply) for a human to look
+ * at, with an optional reason. One report per Member and note: reporting it
+ * again changes nothing and says so (`created: false`). Throws
+ * PostNotFoundError, SelfReportError, InvalidReasonError or PostingLimitError.
+ */
+export async function reportNote(memberId: string, postId: string, reason?: unknown): Promise<{ created: boolean }> {
+	if (!isUuid(postId)) throw new PostNotFoundError();
+
+	const text = prepareReason(reason);
+
+	return getDb().transaction(async (tx) => {
+		await lockMember(tx, memberId);
+
+		const targets = await tx
+			.select({ memberId: posts.memberId })
+			.from(posts)
+			.where(and(eq(posts.id, postId), isNotNull(posts.publishedAt), isNull(posts.deletedAt)));
+
+		if (!targets[0]) throw new PostNotFoundError();
+		if (targets[0].memberId === memberId) throw new SelfReportError("You can't report your own note.");
+
+		const existing = await tx
+			.select({ id: noteReports.id })
+			.from(noteReports)
+			.where(and(eq(noteReports.postId, postId), eq(noteReports.memberId, memberId), eq(noteReports.kind, "report")));
+
+		if (existing[0]) return { created: false };
+		await checkLimit(tx, memberId, "report");
+		await tx.insert(noteReports).values({ postId, memberId, kind: "report", reason: text });
+
+		return { created: true };
+	});
+}
+
+/**
+ * "Ask a human to look again" at one of the Member's own refused notes: an
+ * appeal, once per note (asking again says so: `created: false`). Throws
+ * PostNotFoundError when it is not their refused note.
+ */
+export async function appealNote(memberId: string, postId: string): Promise<{ created: boolean }> {
+	if (!isUuid(postId)) throw new PostNotFoundError();
+
+	return getDb().transaction(async (tx) => {
+		const notes = await tx
+			.select({ id: posts.id })
+			.from(posts)
+			.where(and(eq(posts.id, postId), eq(posts.memberId, memberId), eq(posts.status, "blocked"), isNull(posts.deletedAt)));
+
+		if (!notes[0]) throw new PostNotFoundError();
+		const rows = await tx.insert(noteReports).values({ postId, memberId, kind: "appeal" }).onConflictDoNothing().returning({ id: noteReports.id });
+
+		return { created: !!rows[0] };
+	});
+}
+
+/** A report or appeal waiting to be sent to the owner, as an owner alert may name it: ids and kinds only. */
+export type ReportToNotify = {
+	id: string;
+	kind: NoteReportKind;
+	postId: string;
+	/** Whether the note is public now: only then may an alert link to it (its thread page). Every appeal is of a held note. */
+	isPublic: boolean;
+};
+
+/** Unresolved reports and appeals not yet sent to the owner, oldest first (at most `limit`; the next run takes the rest). */
+export async function listReportsToNotify(limit = 200): Promise<ReportToNotify[]> {
+	return getDb()
+		.select({
+			id: noteReports.id,
+			kind: noteReports.kind,
+			postId: noteReports.postId,
+			isPublic: sql<boolean>`(${posts.publishedAt} is not null and ${posts.deletedAt} is null)`,
+		})
+		.from(noteReports)
+		.innerJoin(posts, eq(posts.id, noteReports.postId))
+		.where(and(isNull(noteReports.notifiedAt), isNull(noteReports.resolvedAt)))
+		.orderBy(noteReports.createdAt, noteReports.id)
+		.limit(limit);
+}
+
+/** Records that the owner alert summing these up went out. */
+export async function markReportsNotified(ids: string[]): Promise<void> {
+	if (!ids.length) return;
+	await getDb()
+		.update(noteReports)
+		.set({ notifiedAt: sql`now()` })
+		.where(inArray(noteReports.id, ids));
+}
+
+// ---------------------------------------------------------------------------
 // A Member's own data: export and account deletion (GDPR arts. 15, 17, 20)
 
 /** Everything Swiftter keeps about a Member, as their export gives it to them. */
@@ -800,14 +945,16 @@ export type MemberExport = {
 	}[];
 	reshares: { postId: string; createdAt: string; undoneAt: string | null }[];
 	moderationDecisions: { postId: string; outcome: string; category: string | null; reason: string | null; model: string; createdAt: string }[];
+	/** The Member's own reports (of others' notes) and appeals (of their refused notes). */
+	reports: { postId: string; kind: NoteReportKind; reason: string | null; createdAt: string; resolvedAt: string | null }[];
 };
 
 const isoOrNull = (value: Date | string | null) => (value === null ? null : iso(value));
 
-/** The Member's row, notes (every state, torn up included), reshares (undone included) and every moderation decision on their notes. */
+/** The Member's row, notes (every state, torn up included), reshares (undone included), every moderation decision on their notes, and their reports and appeals. */
 export async function exportMemberData(memberId: string): Promise<MemberExport> {
 	const db = getDb();
-	const [member, notes, entries, decisions] = await Promise.all([
+	const [member, notes, entries, decisions, reports] = await Promise.all([
 		db
 			.select({ id: members.id, displayName: members.displayName, username: members.username, avatarUrl: members.avatarUrl, createdAt: members.createdAt })
 			.from(members)
@@ -844,6 +991,11 @@ export async function exportMemberData(memberId: string): Promise<MemberExport> 
 			.innerJoin(posts, eq(posts.id, moderationDecisions.postId))
 			.where(eq(posts.memberId, memberId))
 			.orderBy(moderationDecisions.createdAt, moderationDecisions.id),
+		db
+			.select({ postId: noteReports.postId, kind: noteReports.kind, reason: noteReports.reason, createdAt: noteReports.createdAt, resolvedAt: noteReports.resolvedAt })
+			.from(noteReports)
+			.where(eq(noteReports.memberId, memberId))
+			.orderBy(noteReports.createdAt, noteReports.id),
 	]);
 	const row = member[0];
 
@@ -862,6 +1014,7 @@ export async function exportMemberData(memberId: string): Promise<MemberExport> 
 		})),
 		reshares: entries.map((entry) => ({ postId: entry.postId, createdAt: iso(entry.createdAt), undoneAt: isoOrNull(entry.deletedAt) })),
 		moderationDecisions: decisions.map((decision) => ({ ...decision, createdAt: iso(decision.createdAt) })),
+		reports: reports.map((report) => ({ ...report, createdAt: iso(report.createdAt), resolvedAt: isoOrNull(report.resolvedAt) })),
 	};
 }
 
@@ -869,7 +1022,8 @@ export async function exportMemberData(memberId: string): Promise<MemberExport> 
  * Deletes a Member's account, in one transaction, under their write lock:
  * - every note of theirs is torn up (text and moderation reasons erased), so
  *   the threads others replied in still read, with no name on them (NO_AUTHOR);
- * - their reshares are deleted;
+ * - their reshares are deleted, and their reports and appeals (their own
+ *   words); reports of their notes are settled, the notes being gone;
  * - their Member row keeps only its id (other rows refer to it), no name or
  *   picture;
  * - their Neon Auth account goes, with its sessions and credentials (on
@@ -891,6 +1045,11 @@ export async function deleteMemberAccount(memberId: string): Promise<void> {
 			.set({ reason: null })
 			.where(inArray(moderationDecisions.postId, tx.select({ id: posts.id }).from(posts).where(eq(posts.memberId, memberId))));
 		await tx.delete(reshares).where(eq(reshares.memberId, memberId));
+		await tx.delete(noteReports).where(eq(noteReports.memberId, memberId));
+		await tx
+			.update(noteReports)
+			.set({ resolvedAt: sql`now()` })
+			.where(and(isNull(noteReports.resolvedAt), inArray(noteReports.postId, tx.select({ id: posts.id }).from(posts).where(eq(posts.memberId, memberId)))));
 		await tx.update(members).set({ displayName: "", username: null, avatarUrl: null }).where(eq(members.id, memberId));
 		await tx.execute(sql`delete from neon_auth."user" where id::text = ${memberId}`);
 	});
@@ -915,7 +1074,9 @@ const MAX_TOMBSTONE_DEPTH = 50;
  * - refused notes, and notes given up on, after RETENTION_DAYS (their author
  *   is told so in their margin), with their moderation history;
  * - the model's reasons on approved notes' decisions after RETENTION_DAYS
- *   (the outcome, category and model stay, for the audit).
+ *   (the outcome, category and model stay, for the audit);
+ * - reports and appeals the owner resolved (or whose note was torn up),
+ *   RETENTION_DAYS after; the rest go with their note (on delete cascade).
  * Returns how many rows each step removed or cleared.
  */
 export async function purgeExpired(db: Executor = getDb()) {
@@ -944,6 +1105,14 @@ export async function purgeExpired(db: Executor = getDb()) {
 		update ${moderationDecisions} set ${bare(moderationDecisions.reason)} = null
 		where ${moderationDecisions.outcome} = 'approved' and ${moderationDecisions.reason} is not null
 			and ${moderationDecisions.createdAt} < now() - make_interval(days => ${RETENTION_DAYS})`);
+	const reports = await db.execute(sql`
+		delete from ${noteReports} where ${noteReports.resolvedAt} < now() - make_interval(days => ${RETENTION_DAYS})`);
 
-	return { undoneReshares: undoneReshares.rowCount ?? 0, tombstones, heldNotes: held.rowCount ?? 0, reasons: reasons.rowCount ?? 0 };
+	return {
+		undoneReshares: undoneReshares.rowCount ?? 0,
+		tombstones,
+		heldNotes: held.rowCount ?? 0,
+		reasons: reasons.rowCount ?? 0,
+		reports: reports.rowCount ?? 0,
+	};
 }

@@ -16,6 +16,7 @@ import { HeldNotes } from "./held-notes";
 import { Composer, ComposerPlaceholder } from "./lazy-composer";
 import { NoteActions } from "./note-actions";
 import { paperFor, PostNote } from "./post-note";
+import { ReportNote } from "./report-note";
 import { TornUpNote } from "./torn-up-note";
 import { useMemberSession } from "./use-member-session";
 import { applyWriteResult, heldElementId, noteElementId, tearUpNote, useFocusAfterRender, useMine, useReshare } from "./use-swiftter";
@@ -241,13 +242,18 @@ export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
                     key={item.key}
                     banner={item.kind === "reshare" ? <ReshareBanner name={item.resharedBy.displayName} /> : undefined}
                     footer={
-                      <NoteActions
-                        authorName={post.author.displayName}
-                        postId={post.id}
-                        replyCount={post.replyCount}
-                        reshare={user && !own ? { reshared: mine.reshared.has(post.id), busy: reshare.busy === post.id, onToggle: () => reshare.toggle(post) } : undefined}
-                        reshareCount={post.reshareCount}
-                      />
+                      <>
+                        <NoteActions
+                          authorName={post.author.displayName}
+                          postId={post.id}
+                          replyCount={post.replyCount}
+                          reshare={user && !own ? { reshared: mine.reshared.has(post.id), busy: reshare.busy === post.id, onToggle: () => reshare.toggle(post) } : undefined}
+                          reshareCount={post.reshareCount}
+                        />
+                        {!session.pending && !own && (
+                          <ReportNote authorName={post.author.displayName} content={post.content} postId={post.id} signInHref={SIGN_IN_URL} signedIn={!!user} />
+                        )}
+                      </>
                     }
                     id={noteElementId(item.key)}
                     paper={paper}
