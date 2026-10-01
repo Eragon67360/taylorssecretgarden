@@ -61,6 +61,10 @@ export default function TermsPage() {
           </li>
           <li>One account per person, in a name that is not someone else&apos;s: no pretending to be Taylor, another fan or anybody real.</li>
           <li>Keep your password to yourself. What is written from your account is written by you.</li>
+          <li>
+            Use an email address that is yours: the site may ask you to confirm it with a code it emails you before you write on Swiftter. It only ever emails
+            you about your account (that code, or a link to choose a new password when you ask for one), never news or advertising.
+          </li>
         </ul>
       </Section>
 
