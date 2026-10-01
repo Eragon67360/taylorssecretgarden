@@ -244,6 +244,10 @@ test("a Google sign-in coming back is completed by the page's one session reques
 			body: JSON.stringify({ session: { id: "s" }, user: { id: "u", name: "Google Swiftie", email: "google@example.com" } }),
 		}),
 	);
+	// The member menu's new-replies badge asks too; with no real session behind the stub, it is answered here.
+	await page.route("**/api/swiftter/me/replies*", (route) =>
+		route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ count: 0, at: new Date().toISOString() }) }),
+	);
 	await page.goto("/music?neon_auth_session_verifier=the-verifier");
 
 	await expect(page.getByRole("banner").getByRole("button", { name: "Sign out" })).toBeVisible();

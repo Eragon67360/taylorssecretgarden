@@ -20,15 +20,36 @@ async function failure(response: Response, fallback: string): Promise<Failure> {
   return { ok: false, message: data.message ?? data.error ?? fallback, status: response.status };
 }
 
-/** One page of the feed (`cursor` from the previous page's `nextCursor`), or null if it could not be read. */
-export async function fetchFeed(cursor?: string | null): Promise<FeedPage | null> {
+/** One page of notes from `url` (`cursor` from the previous page's `nextCursor`), or null if it could not be read. */
+async function fetchPage(url: string, cursor?: string | null): Promise<FeedPage | null> {
   try {
-    const response = await fetch(cursor ? `${FEED_URL}?cursor=${encodeURIComponent(cursor)}` : FEED_URL, { cache: "no-store" });
+    const response = await fetch(cursor ? `${url}?cursor=${encodeURIComponent(cursor)}` : url, { cache: "no-store" });
 
     if (!response.ok) return null;
     const page = (await response.json()) as Partial<FeedPage>;
 
     return Array.isArray(page.items) ? { items: page.items, nextCursor: page.nextCursor ?? null } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** One page of the feed, or null if it could not be read. */
+export const fetchFeed = (cursor?: string | null) => fetchPage(FEED_URL, cursor);
+
+/** One page of a Member's Posts, for their page, or null if it could not be read. */
+export const fetchMemberPosts = (memberId: string, cursor: string) => fetchPage(`/api/swiftter/members/${encodeURIComponent(memberId)}/posts`, cursor);
+
+/**
+ * How many replies others wrote to the signed-in Member's notes since `since`
+ * (an earlier answer's `at`; none starts counting now), and the `at` to send
+ * next; null if it could not be read.
+ */
+export async function fetchNewReplies(since: string | null): Promise<{ count: number; at: string } | null> {
+  try {
+    const response = await fetch(since ? `/api/swiftter/me/replies?since=${encodeURIComponent(since)}` : "/api/swiftter/me/replies", { cache: "no-store" });
+
+    return response.ok ? ((await response.json()) as { count: number; at: string }) : null;
   } catch {
     return null;
   }

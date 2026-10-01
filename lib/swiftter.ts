@@ -14,6 +14,9 @@ export type Author = { id: string; displayName: string; username: string | null;
  */
 export const NO_AUTHOR: Author = { id: "", displayName: "", username: null, avatarUrl: null };
 
+/** A Member's page (app/swiftter/m/[id]), where their name on a note leads. */
+export const memberPath = (id: string) => `/swiftter/m/${encodeURIComponent(id)}`;
+
 /** A public Post, as the feed and a thread show it. */
 export type FeedPost = {
 	id: string;
