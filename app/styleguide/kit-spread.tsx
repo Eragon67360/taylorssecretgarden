@@ -5,6 +5,8 @@ import Image from "next/image";
 import {
   Arrow,
   Bracelet,
+  Button,
+  ButtonLink,
   Highlight,
   Paper,
   Pin,
@@ -113,6 +115,27 @@ export function KitSpread({ era }: { era?: EraSlug }) {
           <StickyNote lift attach="tape" className="w-[170px]" tilt={3} tone="era">
             {look?.note ?? "a lot going on at the moment"}
           </StickyNote>
+        </div>
+      </Specimen>
+
+      <Specimen className="sm:col-span-2" name="Buttons">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button>Try again</Button>
+            <Button aria-disabled arrow>
+              Pass it on
+            </Button>
+            <Button variant="danger">Tear it up</Button>
+            <Button variant="text">Keep it</Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <ButtonLink arrow intent href="/music" shape="tag">
+              Open the music journal
+            </ButtonLink>
+            <ButtonLink intent href="/swiftter">
+              A link, as a button
+            </ButtonLink>
+          </div>
         </div>
       </Specimen>
 
