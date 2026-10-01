@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useRef, useState } from "react";
 
 import { DEFAULT_REDIRECT, GOOGLE_ERROR } from "@/components/guestbook/guestbook";
+import { Button } from "@/components/scrapbook";
+import { trackEvent } from "@/lib/analytics";
 import { type AuthFailure, signInEmail, signInSocial, signUpEmail } from "@/lib/auth/client";
 import { BOT_REFUSAL } from "@/lib/botid-routes";
-import { cn } from "@/lib/utils";
+import { MINIMUM_AGE } from "@/lib/swiftter";
 
 type Mode = "sign-in" | "sign-up";
 
@@ -92,6 +94,8 @@ function describeError({ code = "", message = "", status }: AuthFailure): string
   return "The guestbook couldn't be signed just now. Try again in a moment.";
 }
 
+const inlineLinkClass = "text-accent hover:text-ink focus-ring rounded-sm font-bold underline underline-offset-[3px]";
+
 const inputClass =
   "text-ink placeholder:text-soft/70 focus-visible:outline-ink w-full rounded-none border-0 bg-[color-mix(in_srgb,var(--paper)_35%,var(--card))] px-2 py-2.5 text-[1rem] shadow-[inset_0_-2px_0_var(--soft)] transition-shadow outline-offset-[3px] hover:shadow-[inset_0_-2px_0_var(--ink)] focus:shadow-[inset_0_-2px_0_var(--ink)] focus-visible:outline-[2.5px] focus-visible:outline-solid aria-[invalid=true]:shadow-[inset_0_-2px_0_var(--pen)]";
 
@@ -136,6 +140,7 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
 
       return;
     }
+    trackEvent(mode === "sign-up" ? { name: "Sign up" } : { name: "Sign in" });
     router.push(redirectTo);
     router.refresh();
   };
@@ -145,6 +150,8 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
     setError(null);
     setFieldsInvalid(false);
     const here = window.location.origin;
+
+    trackEvent({ name: "Google sign-in started" });
     // On success the browser leaves for Google, and Neon Auth brings it back to callbackURL.
     const { error: failure } = await signInSocial({
       provider: "google",
@@ -170,6 +177,21 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
         <h2 className="font-hand text-ink text-[2rem] leading-[1.05] font-bold">{copy.title}</h2>
         <p className="text-soft text-[0.95rem]">{copy.subtitle}</p>
       </header>
+
+      {/* Above both ways in: "Continue with Google" signs a new visitor up too. */}
+      {mode === "sign-up" && (
+        <p className="text-soft text-[0.95rem]">
+          You must be {MINIMUM_AGE} or older to become a Member. Signing the guestbook means you accept the{" "}
+          <Link className={inlineLinkClass} href="/terms">
+            terms and community rules
+          </Link>
+          ; the{" "}
+          <Link className={inlineLinkClass} href="/privacy">
+            privacy policy
+          </Link>{" "}
+          says what is kept about you.
+        </p>
+      )}
 
       <button
         className="focus-ring text-ink bg-paper flex min-h-11 w-full items-center justify-center gap-3 rounded-[0.25rem] px-4 font-semibold shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--soft)_55%,var(--line)),0_2px_0_var(--line)] transition-colors hover:bg-[color-mix(in_srgb,var(--line)_45%,var(--paper))] disabled:opacity-60"
@@ -244,24 +266,21 @@ export function GuestbookForm({ mode, redirectTo, initialError = null }: Guestbo
           />
         </Field>
 
-        <button
+        {/* Inked like a stamp, as wide as the fields. */}
+        <Button
           aria-busy={pending === "email"}
-          className={cn(
-            "bg-accent text-on-accent focus-ring mt-1 min-h-11 w-full rounded-[0.25rem] px-5 font-bold tracking-[0.02em]",
-            "shadow-[2px_3px_0_color-mix(in_srgb,var(--ink)_30%,transparent)] transition-[background-color,translate] duration-200",
-            "hover:bg-[color-mix(in_srgb,var(--accent)_88%,black)] disabled:opacity-70 motion-safe:active:translate-y-px",
-          )}
+          className="mt-1 w-full text-[16px] shadow-[2px_3px_0_color-mix(in_srgb,var(--ink)_30%,transparent)]"
           disabled={pending !== null}
           type="submit"
         >
           {pending === "email" ? copy.pending : copy.submit}
-        </button>
+        </Button>
       </form>
 
       <p className="border-line text-soft border-t border-dashed pt-4 text-[0.95rem]">
         {copy.switchText}{" "}
         <Link
-          className="text-accent hover:text-ink focus-ring rounded-sm font-bold underline underline-offset-[3px]"
+          className={inlineLinkClass}
           href={withRedirect(copy.switchLink.href, redirectTo)}
         >
           {copy.switchLink.label}

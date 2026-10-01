@@ -2,6 +2,8 @@
 
 import { type AudioHTMLAttributes, type RefObject, useCallback, useRef, useState } from "react";
 
+import { trackEvent } from "@/lib/analytics";
+
 /** Deezer previews are 30 seconds long; the real length replaces this once known. */
 const PREVIEW_SECONDS = 30;
 
@@ -96,6 +98,7 @@ export function usePreviewPlayer(): PreviewPlayer {
       }
       // Show the track as playing right away; the audio events correct it.
       setPlaying(true);
+      trackEvent({ name: "Preview played" });
       audio.play().catch((error: unknown) => {
         // Replaced by another track before it started: not a failure.
         if (error instanceof DOMException && error.name === "AbortError") return;

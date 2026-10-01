@@ -1,9 +1,9 @@
 "use client";
 
-import type { Author } from "@/lib/swiftter";
-
+import Link from "next/link";
 import { type ReactNode, useId, useSyncExternalStore } from "react";
 
+import { type Author, memberPath } from "@/lib/swiftter";
 import { cn } from "@/lib/utils";
 
 import { DeletePost } from "./delete-post";
@@ -54,6 +54,8 @@ type PostNoteProps = {
   id?: string;
   /** In the feed: its place (from 1) and how many there are (-1 while more pages remain). */
   position?: FeedPosition;
+  /** The name links to the Member's page (app/swiftter/m/[id]); not on that page itself. */
+  authorLink?: boolean;
 };
 
 export type FeedPosition = { at: number; of: number };
@@ -63,7 +65,7 @@ export type FeedPosition = { at: number; of: number };
  * corner, their name in handwriting, when it was published, then the text on
  * the lines, and what can be done with it underneath.
  */
-export function PostNote({ post, paper, onDelete, footer, banner, id, position }: PostNoteProps) {
+export function PostNote({ post, paper, onDelete, footer, banner, id, position, authorLink = true }: PostNoteProps) {
   const { author } = post;
   const nameId = useId();
   const timeId = useId();
@@ -90,7 +92,14 @@ export function PostNote({ post, paper, onDelete, footer, banner, id, position }
       <header className={cn("relative min-h-[76px] pt-4 pr-4 sm:pr-6", TEXT_INSET)}>
         <div className="flex items-center gap-3">
           <p className="font-hand min-w-0 truncate text-[26px] leading-[1.05] font-bold" id={nameId}>
-            {author.displayName}
+            {/* A torn-up note has no author (NO_AUTHOR): nothing to link to. */}
+            {authorLink && author.id ? (
+              <Link className="focus-ring rounded-sm decoration-[1.5px] underline-offset-[5px] hover:underline" href={memberPath(author.id)}>
+                {author.displayName}
+              </Link>
+            ) : (
+              author.displayName
+            )}
           </p>
           {post.isDemo && (
             <span className="border-pen text-pen ml-auto shrink-0 -rotate-6 rounded-[3px] border-2 px-1.5 text-[11px] leading-[16px] font-extrabold tracking-[.14em] uppercase">

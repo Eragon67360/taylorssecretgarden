@@ -144,7 +144,7 @@ export default async function TourPage({ params }: TourPageProps) {
           </section>
 
           <div className="flex flex-col items-center gap-12 lg:col-span-5 lg:pt-16">
-            {tour.videoUrl && <TourVideo caption="on repeat" className="w-full max-w-[440px]" src={tour.videoUrl} tilt={-2} tour={tour.tour} />}
+            {tour.videoUrl && <TourVideo caption="on repeat" className="w-full max-w-[440px]" credit={tour.videoCredit} src={tour.videoUrl} tilt={-2} tour={tour.tour} />}
             {era ? (
               <StickyNote attach="tape" className="w-[260px]" tilt={3} tone="era">
                 {era.note}

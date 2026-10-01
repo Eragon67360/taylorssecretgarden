@@ -7,6 +7,8 @@ import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
 import { type FormEvent, type ReactNode, useId, useState } from "react";
 
+import { Button } from "@/components/scrapbook";
+import { trackEvent } from "@/lib/analytics";
 import { characterCount, MAX_NOTE_CHARACTERS } from "@/lib/swiftter";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +30,8 @@ type ComposerProps = {
   placeholder?: string;
   /** The submit button's label. */
   submitLabel?: string;
+  /** Whether this composer answers a note (counted apart in Analytics). */
+  reply?: boolean;
 };
 
 /** From how many characters the counter shows, before the limit. */
@@ -45,6 +49,7 @@ export default function Composer({
   title = "Pass a note",
   placeholder = "ok but did you hear the bridge on track 5??",
   submitLabel = "Pass note",
+  reply = false,
 }: ComposerProps) {
   const headingId = useId();
   const [publishing, setPublishing] = useState(false);
@@ -98,7 +103,10 @@ export default function Composer({
     try {
       const result = await onPublish(withoutTrailingBlankLines(editor.getHTML()));
 
-      if (result.published) editor.commands.clearContent(true);
+      if (result.published) {
+        editor.commands.clearContent(true);
+        trackEvent({ name: "Note passed", reply });
+      }
       else setRefusal(result.message);
     } finally {
       setPublishing(false);
@@ -166,17 +174,18 @@ export default function Composer({
             </>
           )}
         </p>
-        <button
+        <Button
+          arrow
           aria-describedby={characters >= COUNT_FROM ? counterId : undefined}
           // aria-disabled, not disabled: it stays focusable while the note is sent and once
           // the page is cleared, where `disabled` would drop the keyboard to the top of the page.
           aria-disabled={!editor || isEmpty || publishing || tooLong}
-          className="bg-accent text-on-accent focus-ring inline-flex min-h-11 items-center gap-2 rounded-[4px] px-5 text-[15px] font-bold tracking-wide shadow-[0_2px_0_rgba(0,0,0,.15),0_8px_18px_-8px_rgba(60,20,20,.5)] transition-transform duration-200 aria-disabled:opacity-60 motion-safe:active:scale-[.97] motion-safe:hover:not-aria-disabled:-translate-y-0.5"
+          // Lifted off the note a little further than a button on the page.
+          className="shadow-[0_2px_0_rgba(0,0,0,.15),0_8px_18px_-8px_rgba(60,20,20,.5)]"
           type="submit"
         >
           {submitLabel}
-          <span aria-hidden="true">→</span>
-        </button>
+        </Button>
       </footer>
     </form>
   );

@@ -59,8 +59,10 @@ function TrackLine({ track, player }: { track: Track; player: PreviewPlayer }) {
           aria-label={`${playing ? "Pause" : "Play"} preview of ${track.name}`}
           className={cn(
             "focus-ring grid size-8 shrink-0 place-items-center rounded-full border-[1.5px] disabled:opacity-40",
-            "motion-safe:transition-[scale,background-color] motion-safe:duration-150 motion-safe:hover:scale-110 motion-safe:active:scale-90",
-            playing ? "border-accent bg-accent text-on-accent" : "border-soft text-soft",
+            "motion-safe:transition-[scale,background-color,box-shadow] motion-safe:duration-150 motion-safe:hover:scale-110 motion-safe:active:scale-90",
+            // Hovered, a halo in the accent (and ink, when idle) as well as the swell: feedback that doesn't move.
+            "enabled:hover:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_30%,transparent)]",
+            playing ? "border-accent bg-accent text-on-accent" : "border-soft text-soft enabled:hover:border-ink enabled:hover:text-ink",
           )}
           disabled={!canPlay}
           type="button"

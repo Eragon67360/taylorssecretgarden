@@ -7,9 +7,11 @@ import {
 	AlreadyResharedError,
 	InvalidCursorError,
 	InvalidPostError,
+	InvalidReasonError,
 	NoMoreChecksError,
 	PostingLimitError,
 	PostNotFoundError,
+	SelfReportError,
 	SelfReshareError,
 	type WriteOutcome,
 } from "@/service/swiftter";
@@ -32,7 +34,7 @@ export const REFUSALS: Record<RefusalCategory, string> = {
 export const HELD =
 	"Your note is saved, but it couldn't be checked just now, so only you can see it. It will be checked again shortly, or you can press “check again”.";
 
-const WHAT: Record<LimitedWrite, string> = { post: "notes", reply: "replies", reshare: "reshares" };
+const WHAT: Record<LimitedWrite, string> = { post: "notes", reply: "replies", reshare: "reshares", report: "reports" };
 
 /** 201 approved (public), 422 refused (kept, author only), 202 no verdict (kept, pending). */
 export function outcomeResponse(outcome: WriteOutcome) {
@@ -61,11 +63,11 @@ export function limitReached({ kind, retryAfter }: PostingLimitError) {
  * their status, anything else logged (never with the note's content) and 500.
  */
 export function errorResponse(error: unknown, action: string) {
-	if (error instanceof InvalidPostError) return NextResponse.json({ error: error.message }, { status: 400 });
+	if (error instanceof InvalidPostError || error instanceof InvalidReasonError) return NextResponse.json({ error: error.message }, { status: 400 });
 	if (error instanceof InvalidCursorError) return NextResponse.json({ error: "That page of the feed doesn't exist." }, { status: 400 });
 	if (error instanceof PostingLimitError) return limitReached(error);
 	if (error instanceof PostNotFoundError) return NextResponse.json({ error: "There is no such note." }, { status: 404 });
-	if (error instanceof SelfReshareError) return NextResponse.json({ error: error.message }, { status: 422 });
+	if (error instanceof SelfReshareError || error instanceof SelfReportError) return NextResponse.json({ error: error.message }, { status: 422 });
 	if (error instanceof AlreadyResharedError) return NextResponse.json({ error: error.message }, { status: 409 });
 	if (error instanceof NoMoreChecksError) {
 		return NextResponse.json({ error: "This note has been checked as many times as it can be. Tear it up and write it again later." }, { status: 409 });

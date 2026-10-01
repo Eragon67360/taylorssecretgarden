@@ -34,7 +34,19 @@ test.describe("footer", () => {
 		await page.goto("/");
 		const footer = page.getByRole("contentinfo");
 
-		await expect(footer.getByRole("link", { name: "Deezer" })).toHaveAttribute("href", /^https:\/\/www\.deezer\.com/);
+		const deezer = footer.getByRole("link", { name: "Deezer" });
+
+		await expect(deezer).toHaveAttribute("href", /^https:\/\/www\.deezer\.com/);
+		// Deezer's API guidelines: its logo, clearly visible; its terms: previews for private listening.
+		await expect(deezer.locator("svg")).toBeVisible();
+		await expect(footer).toContainText(/for private listening only/i);
 		await expect(footer).toContainText(/unofficial fan site/i);
+	});
+
+	test("links the Credits page", async ({ page }) => {
+		await page.goto("/");
+		await page.getByRole("contentinfo").getByRole("link", { name: "Credits", exact: true }).click();
+		await expect(page).toHaveURL(/\/credits$/);
+		await expect(page.getByRole("heading", { name: "Credits", level: 1 })).toBeVisible();
 	});
 });

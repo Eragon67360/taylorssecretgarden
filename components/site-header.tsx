@@ -63,7 +63,9 @@ export function SiteHeader() {
       <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-end justify-between gap-x-6 gap-y-2 px-4 pt-4 sm:px-8 md:pt-7">
         <IntentLink className="group focus-ring text-ink flex min-h-11 items-center gap-2 rounded-md pb-2" href="/">
           <GardenMark className="size-9 transition-transform duration-500 motion-safe:group-hover:rotate-[30deg]" />
-          <span className="font-hand text-[26px] leading-none font-bold md:text-[28px]">Taylor&apos;s Secret Garden</span>
+          <span className="font-hand text-[26px] leading-none font-bold decoration-[1.5px] underline-offset-[5px] group-hover:underline md:text-[28px]">
+            Taylor&apos;s Secret Garden
+          </span>
         </IntentLink>
 
         {/* Beside the name on a phone (the tabs take the next row), before the tabs on wider screens. */}
@@ -81,7 +83,7 @@ export function SiteHeader() {
                   <IntentLink
                     aria-current={current ? "page" : undefined}
                     className={cn(
-                      "focus-ring text-ink relative -mb-px flex min-h-11 items-center justify-center rounded-t-[10px] border border-b-0 px-3 sm:px-4",
+                      "group focus-ring text-ink relative -mb-px flex min-h-11 items-center justify-center rounded-t-[10px] border border-b-0 px-3 sm:px-4",
                       "transition-[translate,padding] duration-200 ease-out",
                       current
                         ? "border-line z-10 pt-1 pb-2.5"
@@ -90,10 +92,10 @@ export function SiteHeader() {
                     href={section.path}
                     style={{ rotate: `${index % 2 ? 0.8 : -0.8}deg` }}
                   >
-                    {/* The tab itself: the section's pastel, or the card colour when it is the page you are on. */}
+                    {/* The tab itself: the section's pastel, or the card colour when it is the page you are on. Hovered, its colour deepens as well as the lift. */}
                     <span
                       aria-hidden="true"
-                      className="absolute inset-0 rounded-t-[9px] opacity-80"
+                      className="absolute inset-0 rounded-t-[9px] opacity-80 transition-opacity duration-200 group-hover:opacity-100"
                       style={{ background: section.tab }}
                     />
                     {current && (

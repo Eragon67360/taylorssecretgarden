@@ -15,6 +15,7 @@ import { Composer } from "./lazy-composer";
 import { NoteActions } from "./note-actions";
 import { type NotePaper } from "./note-paper";
 import { PostNote } from "./post-note";
+import { ReportNote } from "./report-note";
 import { TornUpNote } from "./torn-up-note";
 import { useMemberSession } from "./use-member-session";
 import { applyWriteResult, heldElementId, noteElementId, tearUpNote, useFocusAfterRender, useMine, useReshare } from "./use-swiftter";
@@ -151,6 +152,12 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
 
   const signInHref = `/sign-in?redirect_url=${encodeURIComponent(`/swiftter/p/${thread.root.id}`)}`;
 
+  /** "Report", under a public note that is not the Member's (visitors are asked to sign in), once the session is known. */
+  const reportControl = (note: ThreadNote) =>
+    !session.pending && !note.tornUp && note.author.id !== user?.id ? (
+      <ReportNote authorName={note.author.displayName} content={note.content} postId={note.id} signInHref={signInHref} signedIn={!!user} />
+    ) : null;
+
   /** A note's reply control and composer, for Members; nothing for visitors (one sign-in link serves the page). */
   const replyControls = (note: ThreadNote) =>
     user && !note.tornUp ? (
@@ -168,6 +175,7 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
     user && replyingTo === note.id ? (
       <div className="mt-6 max-w-[560px]">
         <Composer
+          reply
           member={{ name: displayNameOf(user), avatarUrl: user.image || null }}
           placeholder="say it kindly (and about Taylor)"
           submitLabel="Reply"
@@ -208,7 +216,12 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
               ) : (
                 <PostNote
                   banner={answering ? <p className="font-hand relative pt-3 pl-[78px] text-[18px] leading-none font-bold opacity-80">↳ replying to {answering}</p> : undefined}
-                  footer={replyControls(note)}
+                  footer={
+                    <>
+                      {replyControls(note)}
+                      {reportControl(note)}
+                    </>
+                  }
                   id={noteElementId(note.id)}
                   paper={paper}
                   post={note}
@@ -251,6 +264,7 @@ export function ThreadView({ thread, focusId }: { thread: Thread; focusId: strin
                 reshareCount={reshareCount}
               />
               {replyControls(root)}
+              {reportControl(root)}
             </Fragment>
           }
           id={noteElementId(root.id)}

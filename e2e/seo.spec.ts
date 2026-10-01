@@ -16,7 +16,7 @@ const SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9";
 
 const TOUR_PAGES = tours.map(({ slug }) => `/tours/${slug}`);
 /** Every page that may be indexed in production. */
-const INDEXABLE = ["/", "/music", "/tours", ...TOUR_PAGES, "/swiftter"];
+const INDEXABLE = ["/", "/music", "/tours", ...TOUR_PAGES, "/swiftter", "/terms", "/privacy", "/legal"];
 /** A seeded Swiftter thread (scripts/seed-data.ts): a page of its own, not indexed (seed content). */
 const SEEDED_THREAD = "/swiftter/p/5eed0000-0000-4000-8000-000000000001";
 /** Pages kept out of search results everywhere. */

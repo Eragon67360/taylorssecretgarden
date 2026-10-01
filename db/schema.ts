@@ -134,3 +134,44 @@ export const moderationDecisions = pgTable(
 		check("moderation_decisions_outcome_check", sql`${table.outcome} in ('approved', 'blocked', 'unavailable')`),
 	],
 );
+
+/** What a Member asks a human for: to look at someone else's public note, or to look again at their own refused one. */
+export const NOTE_REPORT_KINDS = ["report", "appeal"] as const;
+
+/**
+ * A Member asking a human to look at a note: a `report` of someone else's
+ * public note, or an `appeal` of their own refused one ("ask a human to look
+ * again"). One of each kind per Member and note. The hourly cron sums up the
+ * ones not yet sent to the owner (`notified_at`) in one owner alert per run;
+ * the owner sets `resolved_at` once handled, and the daily purge removes
+ * resolved ones after 30 days. They go with their note (on delete cascade).
+ */
+export const noteReports = pgTable(
+	"note_reports",
+	{
+		id: uuid("id").primaryKey().defaultRandom(),
+		postId: uuid("post_id")
+			.notNull()
+			.references(() => posts.id, { onDelete: "cascade" }),
+		memberId: text("member_id")
+			.notNull()
+			.references(() => members.id, { onDelete: "cascade" }),
+		kind: text("kind", { enum: NOTE_REPORT_KINDS }).notNull(),
+		/** The Member's own words, plain text (lib/swiftter.ts MAX_REPORT_REASON_CHARACTERS); never put in the public owner alert. */
+		reason: text("reason"),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		/** When the owner alert summing it up went out. */
+		notifiedAt: timestamp("notified_at", { withTimezone: true }),
+		/** When the owner handled it. */
+		resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+	},
+	(table) => [
+		unique("note_reports_post_member_kind_key").on(table.postId, table.memberId, table.kind),
+		index("note_reports_member_idx").on(table.memberId, table.createdAt.desc()),
+		// The cron's question: what has not been sent to the owner yet.
+		index("note_reports_unnotified_idx").on(table.createdAt).where(sql`${table.notifiedAt} is null and ${table.resolvedAt} is null`),
+		check("note_reports_kind_check", sql`${table.kind} in ('report', 'appeal')`),
+		// The app counts graphemes (500); this ceiling only stops a reason written some other way from growing without bound.
+		check("note_reports_reason_check", sql`${table.reason} is null or char_length(${table.reason}) <= 2000`),
+	],
+);

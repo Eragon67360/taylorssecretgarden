@@ -17,7 +17,7 @@ export function TourGallery({ photos }: { photos: GalleryPhoto[] }) {
       <ul className="mt-12 grid grid-cols-1 items-start gap-x-8 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
         {photos.map((photo, index) => (
           <li key={photo.src} className="mx-auto w-[86%] sm:w-full">
-            <Polaroid caption={photo.caption} taped={index % 2 === 0} tilt={TILTS[index % TILTS.length]}>
+            <Polaroid caption={photo.caption} credit={photo.credit} taped={index % 2 === 0} tilt={TILTS[index % TILTS.length]}>
               <Image
                 alt={photo.alt}
                 className="h-auto w-full"

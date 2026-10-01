@@ -46,6 +46,17 @@ _Avoid_: Retweet, repost, share
 A Post or reply that is not public: waiting for a moderation check (pending), or refused (blocked). Only its author sees it.
 _Avoid_: Draft, hidden post
 
+**Report**:
+A Member asking a human to look at someone else's public note ("Report" in the interface), with a reason if they like. One per Member and note; the owner hears of it in the hourly owner alert.
+_Avoid_: Flag, complaint
+
+**Appeal**:
+A Member asking a human to look again at their own refused note ("Ask a human to look again" in the interface). One per note.
+_Avoid_: Dispute, review request
+
+**Owner alert**:
+What the site sends its owner when something needs a human: notes given up on, and new Reports and Appeals. A GitHub issue on the (public) repository when a token is set, so it names notes by id only; otherwise a log line.
+
 **Member**:
 A signed-in person who can publish Posts on Swiftter.
 _Avoid_: User, account, profile

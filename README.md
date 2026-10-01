@@ -105,12 +105,12 @@ Why these two, and how they behave off Vercel: [ADR-0005](docs/adr/0005-botid-an
 
 - **Vercel BotID** ([`botid`](https://vercel.com/docs/botid), invisible, no puzzle) guards signing up, signing in (email and Google) and publishing a Post. The routes are listed once in [`lib/botid-routes.ts`](lib/botid-routes.ts): `instrumentation-client.ts` attaches BotID's token to those requests (its challenge script loads only when one is made), and the publish route and `app/api/auth/[...path]` (in front of Neon Auth's proxy) refuse a bot with 403 ([`lib/bot-protection.ts`](lib/bot-protection.ts)). `withBotId` in `next.config.ts` proxies BotID through this origin. It runs in Basic mode (free); Deep Analysis is a Firewall setting in the Vercel dashboard. Off Vercel (`next dev`, `next start`, CI) BotID has no OIDC token to verify with, so a stand-in treats a request carrying a token (`x-is-human`) as human and one without as a bot: the browser still fetches a real token, and the Playwright suite sends `BOTID_HUMAN` ([`e2e/member.ts`](e2e/member.ts)) with the requests it makes itself.
 - **Write limits:** per Member, 5 Posts, 10 replies and 10 reshares per 10 minutes (`LIMITS` in [`lib/swiftter.ts`](lib/swiftter.ts)), counted in Postgres and checked again under a per-Member lock when the note is inserted. The next one gets 429 with `Retry-After` and a message saying when it is allowed; the composer shows it on the note and keeps the text. Torn-up notes, refused notes and undone reshares still count, so neither deleting nor refused attempts are a way round the limit (or round moderation's cost); "check again" is offered for a note's first 4 attempts (the hourly re-check carries on for a week).
-- **Stored decisions, fail-closed** ([ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md)): a note is stored pending, then judged; approved notes become public, refused ones stay visible to their author only (with the reason), and a note with no verdict stays pending (author only, "check again", and the 15-minute cron) instead of being lost. Every attempt is appended to `moderation_decisions`. Before the model sees a note, its text is normalised (Unicode compatibility forms folded, invisible characters removed); look-alike letters from other scripts, leetspeak and spacing are left to the model, a known limit.
+- **Stored decisions, fail-closed** ([ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md)): a note is stored pending, then judged; approved notes become public, refused ones stay visible to their author only (with the reason), and a note with no verdict stays pending (author only, "check again", and the hourly cron) instead of being lost. Every attempt is appended to `moderation_decisions`. Before the model sees a note, its text is normalised (Unicode compatibility forms folded, invisible characters removed); look-alike letters from other scripts, leetspeak and spacing are left to the model, a known limit.
 - **AI moderation** ([`service/moderation.ts`](service/moderation.ts), [ADR-0006](docs/adr/0006-ai-moderation-before-publishing.md)): every new Post's plain text is judged by `anthropic/claude-haiku-4.5` through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) (AI SDK 7, structured output, temperature 0, 8 s timeout) against `MODERATION_POLICY`, written in plain language in that file: no insults, harassment or hate, and on topic (Taylor, her music, Eras, tours, the fandom), judged leniently. The Post is passed as delimited, untrusted data. A refused Post is stored for its author only (see "Stored decisions" above): 422 `{ category: "insult" | "off_topic", message }`, which the composer writes on the note. No verdict in time (Gateway down, timeout) keeps the note pending: 202, checked again later. On Vercel the Gateway authenticates with the deployment's OIDC token; the Vercel team (Le Bon Tempérament) needs paid AI Gateway credits, since the free tier refuses this model. The Playwright suite and CI set `SWIFTTER_MODERATION=fake` (never honoured on a Vercel deployment): Posts containing `fake-insult`, `fake-off-topic` or `fake-moderation-down` are refused or fail, the rest are allowed. To check the policy against the real model, `npm run moderation:check` (opt-in, not in CI) moderates a handful of sample Posts and prints the verdicts; it needs `AI_GATEWAY_API_KEY`, or a `VERCEL_OIDC_TOKEN` from `npx vercel env pull --scope le-bon-temperament`, in `.env.local`.
 
 ## Database
 
-Swiftter's schema lives in [`db/schema.ts`](db/schema.ts): `members` (keyed by Neon Auth user id), `posts` (Posts and their replies, sanitised HTML, with a moderation `status` and `published_at`), `reshares` and `moderation_decisions` (every moderation attempt, appended). Why this shape: [ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md). All Swiftter data access goes through [`service/swiftter.ts`](service/swiftter.ts). The API:
+Swiftter's schema lives in [`db/schema.ts`](db/schema.ts): `members` (keyed by Neon Auth user id), `posts` (Posts and their replies, sanitised HTML, with a moderation `status` and `published_at`), `reshares`, `moderation_decisions` (every moderation attempt, appended) and `note_reports` (Members asking a human to look: a report, or an appeal). Why this shape: [ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md). All Swiftter data access goes through [`service/swiftter.ts`](service/swiftter.ts). The API:
 
 | Route | What |
 | --- | --- |
@@ -119,10 +119,14 @@ Swiftter's schema lives in [`db/schema.ts`](db/schema.ts): `members` (keyed by N
 | `DELETE /api/swiftter/posts/[id]` | Tear up one of your notes: 204; 404 for anyone else's. |
 | `POST`/`DELETE /api/swiftter/posts/[id]/reshare` | Reshare someone else's public Post, or undo it: 201/204; 422 your own, 409 already, 404 not public. |
 | `POST /api/swiftter/posts/[id]/check` | "Check again" on your pending note (at most 4 moderation attempts in all). |
+| `POST /api/swiftter/posts/[id]/report` | "Report" someone else's public note (Post or reply) `{ reason? }` (plain text, 500 characters at most): 201, 200 if you already had; 422 your own, 404 not public, 429 past 10 reports in 10 minutes. |
+| `POST /api/swiftter/posts/[id]/appeal` | "Ask a human to look again" at your refused note: 201, 200 if you already had; 404 when it is not your refused note. |
 | `GET /api/swiftter/me` | Your held notes (pending or refused, with reasons) and what you reshare: session only, `no-store`. |
 | `DELETE /api/swiftter/me` | Delete your account: your notes torn up, your reshares and your Neon Auth account deleted, signed out; 204. From `/guestbook`. |
-| `GET /api/swiftter/me/export` | Your data as a JSON download (account, notes in every state, reshares, moderation decisions): session only, `no-store`. |
-| `GET /api/cron/moderation` | Vercel Cron (hourly, `vercel.json`): re-checks pending notes (every run for a day, then daily, given up after a week), and once a day purges what is past retention (30 days); needs `Authorization: Bearer $CRON_SECRET`. |
+| `GET /api/swiftter/me/export` | Your data as a JSON download (account, notes in every state, reshares, moderation decisions, your reports and appeals): session only, `no-store`. |
+| `GET /api/cron/moderation` | Vercel Cron (hourly, `vercel.json`): re-checks pending notes (every run for a day, then daily, given up after a week), sends the owner alerts (below), and once a day purges what is past retention (30 days); needs `Authorization: Bearer $CRON_SECRET`. |
+
+**Owner alerts** ([`service/owner-alerts.ts`](service/owner-alerts.ts)). The hourly cron tells the owner when notes are given up on (moderation gave no verdict for a week) and, in one alert per run, about the reports and appeals sent since the last one. With `OWNER_ALERTS_GITHUB_TOKEN` set (a fine-grained token limited to this repository, Issues: read and write; Production only, Sensitive) each alert opens an issue labelled `owner-alert`, or comments on the open issue with the same title, so the same alert is never opened twice; without it, or when GitHub fails, the alert is only logged (and reports stay unsent, for the next run). The repository is public, so an alert names notes by id and links only to public threads: never a Member, an email, a reason someone wrote or a held note's text. Those are in `note_reports` and `posts`; once a report is handled, set its `resolved_at` (resolved ones are purged after 30 days, and every report goes with its note). To publish a refused note after an appeal, set it approved with `published_at`, as ADR-0007 describes.
 
 Every write goes through [`lib/member-write.ts`](lib/member-write.ts): same-origin only (403), JSON only (415), signed in (401, or 503 when Neon Auth fails), BotID (403); then ownership and visibility in SQL (404). Threads have their own page, `/swiftter/p/[id]` (server-rendered, with `DiscussionForumPosting` structured data; demo, seed and torn-up notes, and threads below the indexing bar, are `noindex`).
 
@@ -130,13 +134,47 @@ Every database command uses `DATABASE_URL` (read from `.env.local` when it is no
 
 **Production's credentials are on no laptop.** Its `DATABASE_URL` is a Sensitive variable in Vercel (write-only: builds and functions get it, nobody can read it back) and otherwise lives only in Neon. Production migrations run in the **Migrate production** workflow ([`.github/workflows/migrate-production.yml`](.github/workflows/migrate-production.yml)): Actions → Migrate production → Run workflow, pick the branch whose migrations to apply (usually `dev`, before merging a release) and type `production`. It fetches the connection string from Neon's API for the run, masked in the log. Apply a migration to `dev` first (`npm run db:migrate` locally); its reverse lives in `drizzle/down/`.
 
-Neon Auth keeps the Members' accounts (users, sessions) in the `neon_auth` schema of the same database. It belongs to Neon: `drizzle.config.ts` limits drizzle-kit to `public`, and nothing in the app writes to `neon_auth` except through `/api/auth`, with one exception: a Member deleting their account deletes their own `neon_auth."user"` row (Neon Auth's hosted `delete-user` is disabled; [ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md)).
+Neon Auth keeps the Members' accounts (users, sessions) in the `neon_auth` schema of the same database. It belongs to Neon: `drizzle.config.ts` limits drizzle-kit to `public`, and nothing in the app writes to `neon_auth` except through `/api/auth`, with one exception: a Member deleting their account deletes their own `neon_auth."user"` row, through the `public.delete_auth_user` function (Neon Auth's hosted `delete-user` is disabled; [ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md), [ADR-0008](docs/adr/0008-least-privilege-database-role.md)). The development scripts (`npm run seed`, `npm run unseed`) read and write `neon_auth` directly, so they need the owner's connection string.
 
 ```bash
 npm run db:migrate   # apply the SQL migrations in drizzle/
 npm run db:seed      # insert the demo Members and Posts (safe to re-run)
 npm run db:unseed    # show the demo rows; add `-- --yes` to delete them
 npm run db:generate  # after editing db/schema.ts: write a new migration to drizzle/, then commit it
+```
+
+### Database roles
+
+The deployed app connects as **`swiftter_app`**, not as the owner (`neondb_owner`): it can read and write the rows of Swiftter's tables in `public`, and delete one Neon Auth account by id through `public.delete_auth_user` (migration 0005), and nothing else. It cannot read `neon_auth` (emails, password hashes, sessions) or `drizzle`, create or alter tables, or truncate them. Why: [ADR-0008](docs/adr/0008-least-privilege-database-role.md). Migrations, the backup, the seed scripts and CI keep the owner: Migrate production and Backup production ask Neon's API for `neondb_owner`'s connection string, as before.
+
+The role is not a migration (roles belong to a branch, and its password must never be committed): [`db/roles/swiftter_app.sql`](db/roles/swiftter_app.sql) creates it and grants exactly that, each line explained. Later migrations need no grant for a new table (the script sets `neondb_owner`'s default privileges); a new function the app calls does (`GRANT EXECUTE … TO swiftter_app` in its migration, as 0005 does).
+
+**Production**, once, by the owner, after the release with migration 0005 is migrated (the script grants its function):
+
+1. Make a password on your own machine: `openssl rand -hex 24` (hex: nothing to escape in a URL; Neon wants at least 60 bits of entropy, this is 192).
+2. Neon console → the project → **SQL Editor**, branch **production**, database `neondb`, role `neondb_owner`. Paste `db/roles/swiftter_app.sql`, replace `:'password'` in `CREATE ROLE` with the password in single quotes, and run it. Create the role this way, not under Roles & Databases: roles made there are members of `neon_superuser`. Then remove the query from the editor's history, so the password is kept nowhere but in step 4.
+3. Build its **pooled** connection string: the owner's pooled string from **Connect** (host ending in `-pooler`) with the user and password replaced, `postgresql://swiftter_app:<password>@ep-…-pooler.<region>.aws.neon.tech/neondb?sslmode=require&channel_binding=require`.
+4. Vercel → `taylorssecretgarden` (team Le Bon Tempérament) → Settings → Environment Variables: set **Production** `DATABASE_URL` to it, **Sensitive**. Then redeploy production (Deployments → the current production deployment → Redeploy): functions read the variable when deployed.
+5. Check: the Swiftter feed loads, a test account can publish, and deleting it from `/guestbook` works. In the SQL editor (as `neondb_owner`), `select usename, count(*) from pg_stat_activity group by 1` shows `swiftter_app`'s connections.
+
+To go back, set Production `DATABASE_URL` to the owner's pooled string again (from Connect) and redeploy; the role can stay.
+
+**dev (Preview)**: the same on the `dev` branch, with a password of its own: `npm run db:migrate` first (from `.env.local`), then steps 1–3 on branch `dev`, then Vercel's **Preview** `DATABASE_URL` (Sensitive), and redeploy a preview. Keep **Development** (`.env.local`, what `npx vercel env pull` gives) on the owner: local work runs migrations, the seed scripts and the integration tests' Neon Auth fixtures, which need it. To run the app locally as the role, set `DATABASE_URL` for that command only.
+
+Branches made from production after step 2 (CI's, a reset `dev`) inherit the role **with production's password**: after resetting `dev` from production, give it its own (`ALTER ROLE swiftter_app PASSWORD '…';` on `dev`) and update Preview's `DATABASE_URL`. CI connects as the owner and does not depend on the role.
+
+To remove the role from a branch (as `neondb_owner`, which Neon does not allow `DROP OWNED`), close its connections first, or the pooler keeps sessions of a role that no longer exists (`invalid role OID` once it is created again):
+
+```sql
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE usename = 'swiftter_app';
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM swiftter_app;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM swiftter_app;
+REVOKE ALL ON SCHEMA public FROM swiftter_app;
+REVOKE ALL ON FUNCTION public.delete_auth_user(text) FROM swiftter_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE neondb_owner IN SCHEMA public REVOKE ALL ON TABLES FROM swiftter_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE neondb_owner IN SCHEMA public REVOKE ALL ON SEQUENCES FROM swiftter_app;
+REVOKE ALL ON DATABASE neondb FROM swiftter_app;
+DROP ROLE swiftter_app;
 ```
 
 ### Backups

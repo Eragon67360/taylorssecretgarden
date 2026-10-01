@@ -20,15 +20,36 @@ async function failure(response: Response, fallback: string): Promise<Failure> {
   return { ok: false, message: data.message ?? data.error ?? fallback, status: response.status };
 }
 
-/** One page of the feed (`cursor` from the previous page's `nextCursor`), or null if it could not be read. */
-export async function fetchFeed(cursor?: string | null): Promise<FeedPage | null> {
+/** One page of notes from `url` (`cursor` from the previous page's `nextCursor`), or null if it could not be read. */
+async function fetchPage(url: string, cursor?: string | null): Promise<FeedPage | null> {
   try {
-    const response = await fetch(cursor ? `${FEED_URL}?cursor=${encodeURIComponent(cursor)}` : FEED_URL, { cache: "no-store" });
+    const response = await fetch(cursor ? `${url}?cursor=${encodeURIComponent(cursor)}` : url, { cache: "no-store" });
 
     if (!response.ok) return null;
     const page = (await response.json()) as Partial<FeedPage>;
 
     return Array.isArray(page.items) ? { items: page.items, nextCursor: page.nextCursor ?? null } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** One page of the feed, or null if it could not be read. */
+export const fetchFeed = (cursor?: string | null) => fetchPage(FEED_URL, cursor);
+
+/** One page of a Member's Posts, for their page, or null if it could not be read. */
+export const fetchMemberPosts = (memberId: string, cursor: string) => fetchPage(`/api/swiftter/members/${encodeURIComponent(memberId)}/posts`, cursor);
+
+/**
+ * How many replies others wrote to the signed-in Member's notes since `since`
+ * (an earlier answer's `at`; none starts counting now), and the `at` to send
+ * next; null if it could not be read.
+ */
+export async function fetchNewReplies(since: string | null): Promise<{ count: number; at: string } | null> {
+  try {
+    const response = await fetch(since ? `/api/swiftter/me/replies?since=${encodeURIComponent(since)}` : "/api/swiftter/me/replies", { cache: "no-store" });
+
+    return response.ok ? ((await response.json()) as { count: number; at: string }) : null;
   } catch {
     return null;
   }
@@ -96,6 +117,28 @@ export async function tearUp(id: string): Promise<{ ok: true } | Failure> {
     const response = await fetch(`${FEED_URL}/${id}`, { method: "DELETE" });
 
     return response.ok || response.status === 404 ? { ok: true } : failure(response, "That note couldn't be torn up just now. Try again in a moment.");
+  } catch {
+    return { ok: false, message: CONNECTION, status: 0 };
+  }
+}
+
+/** Reports someone else's public note for a human to look at, with an optional reason. `already`: you had reported it before. */
+export async function reportNote(id: string, reason: string): Promise<{ ok: true; already: boolean } | Failure> {
+  try {
+    const response = await fetch(`${FEED_URL}/${id}/report`, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(reason.trim() ? { reason } : {}) });
+
+    return response.ok ? { ok: true, already: response.status === 200 } : failure(response, "That note couldn't be reported just now. Try again in a moment.");
+  } catch {
+    return { ok: false, message: CONNECTION, status: 0 };
+  }
+}
+
+/** "Ask a human to look again" at one of your refused notes. `already`: you had asked before. */
+export async function appealNote(id: string): Promise<{ ok: true; already: boolean } | Failure> {
+  try {
+    const response = await fetch(`${FEED_URL}/${id}/appeal`, { method: "POST" });
+
+    return response.ok ? { ok: true, already: response.status === 200 } : failure(response, "That couldn't be sent just now. Try again in a moment.");
   } catch {
     return { ok: false, message: CONNECTION, status: 0 };
   }

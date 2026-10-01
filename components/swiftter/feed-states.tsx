@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { PressedFlower, WashiTape } from "@/components/scrapbook";
+import { Button, PressedFlower, WashiTape } from "@/components/scrapbook";
 import { cn } from "@/lib/utils";
 
 import { LINE, NoteSheet, type NotePaper, PAPERS, ruling, TEXT_INSET } from "./note-paper";
@@ -67,13 +67,9 @@ export function FeedError({ onRetry }: { onRetry: () => void }) {
         <p className="font-hand text-[30px] font-bold">Hm, the note got lost on its way.</p>
         <p className="mt-7 text-[16.5px]">Swiftter can&apos;t reach its notes right now.</p>
       </div>
-      <button
-        className="bg-accent text-on-accent focus-ring mt-7 inline-flex min-h-11 items-center rounded-[4px] px-5 text-[15px] font-bold tracking-wide shadow-[0_2px_0_rgba(0,0,0,.15)]"
-        type="button"
-        onClick={onRetry}
-      >
+      <Button className="mt-7" onClick={onRetry}>
         Try again
-      </button>
+      </Button>
     </DrawnState>
   );
 }

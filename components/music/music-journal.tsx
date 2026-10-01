@@ -10,6 +10,7 @@ import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import { useEffect, useOptimistic, useTransition } from "react";
 
+import { DeezerLogo } from "@/components/deezer-logo";
 import { EraScope } from "@/components/era-scope";
 import { Bracelet, Highlight, Polaroid, PressedFlower, StickyNote } from "@/components/scrapbook";
 import { ERA_LOOKS, ERA_SLUGS } from "@/lib/eras";
@@ -217,6 +218,14 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details, lin
 
           <div className="mt-10">
             <Tracklist player={player} tracks={tracks} />
+            {/* Where the previews play, Deezer's logo and their terms (components/deezer-logo.tsx). */}
+            <p className="text-soft mt-4 text-[13px]">
+              Covers and 30-second previews from{" "}
+              <a className="text-ink focus-ring rounded-sm font-semibold underline underline-offset-2" href="https://www.deezer.com/">
+                <DeezerLogo />
+              </a>
+              , for private listening only.
+            </p>
           </div>
           {/* The page's one player: one preview at a time. */}
           {/* eslint-disable-next-line jsx-a11y/media-has-caption -- 30-second music previews have no captions */}

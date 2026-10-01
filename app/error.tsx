@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { Button } from "@/components/scrapbook";
 import { TornPage, WayOut } from "@/components/torn-page";
 
 /**
@@ -20,13 +21,7 @@ export default function Error({ error, retry }: { error: Error & { digest?: stri
   return (
     <TornPage aside="the tape gave way. it happens to the best scrapbooks." kicker="Error · page came loose" title="Something went wrong on this page.">
       <div className="flex flex-wrap items-center gap-x-8 gap-y-5">
-        <button
-          className="bg-accent text-on-accent focus-ring inline-flex min-h-11 items-center rounded-[4px] px-5 text-[15px] font-bold tracking-wide shadow-[0_2px_0_rgba(0,0,0,.15)]"
-          type="button"
-          onClick={() => retry()}
-        >
-          Try again
-        </button>
+        <Button onClick={() => retry()}>Try again</Button>
         <WayOut label="Back to the journal" links={[{ href: "/", name: "Home" }]} />
       </div>
       {error.digest && (
