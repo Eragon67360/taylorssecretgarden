@@ -20,11 +20,13 @@ import {
   TicketStub,
   WashiTape,
 } from "@/components/scrapbook";
+import { HOME_PHOTO } from "@/lib/credits";
 import { ERA_LOOKS, type EraSlug, FLOWERS, paperTexture } from "@/lib/eras";
 import { cn } from "@/lib/utils";
 
-const PHOTO = "/img/eras.jpg";
-const PHOTO_ALT = "Taylor Swift on the Eras Tour stage";
+// The home page's photo, a free-licensed one (lib/credits.ts).
+const PHOTO = HOME_PHOTO.src;
+const PHOTO_ALT = HOME_PHOTO.alt;
 
 /** Every kit component, in whatever Era surrounds it. */
 export function KitSpread({ era }: { era?: EraSlug }) {
@@ -64,9 +66,9 @@ export function KitSpread({ era }: { era?: EraSlug }) {
       </Specimen>
 
       <Specimen className="lg:row-span-2" name="Polaroid">
-        <Polaroid lift taped caption="the orange one. I screamed." className="mx-auto w-[82%]" tilt={2.5}>
+        <Polaroid lift taped caption="the folklore dress. I sobbed." className="mx-auto w-[82%]" credit={HOME_PHOTO.credit} tilt={2.5}>
           <div className="relative aspect-[4/5]">
-            <Image fill alt={PHOTO_ALT} className="object-cover object-[50%_35%]" sizes="(min-width: 1024px) 300px, 80vw" src={PHOTO} />
+            <Image fill alt={PHOTO_ALT} className="object-cover object-[50%_40%]" sizes="(min-width: 1024px) 300px, 80vw" src={PHOTO} />
           </div>
         </Polaroid>
       </Specimen>

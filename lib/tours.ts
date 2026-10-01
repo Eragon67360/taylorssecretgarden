@@ -26,17 +26,31 @@ export type Tour = {
   facts: string[];
   /** Handwritten fan note. */
   note: string;
-  /** Poster (Cloudinary) and its intrinsic size. */
+  /** Poster: a photo of the Tour (public/img/tours), a 2:3 print, and its intrinsic size. */
   imageUrl: string;
   posterSize: [number, number];
-  /** The poster's source, when it is known (lib/credits.ts). */
-  imageCredit?: Credit;
-  /** Footage of this Tour or its Era, when there is some (never another Tour's). */
-  videoUrl?: string;
-  /** The footage's source, when it is known. */
-  videoCredit?: Credit;
-  /** Photos from the Tour (Cloudinary). */
+  /** What the poster's photo shows. */
+  imageAlt: string;
+  /** The poster's source (lib/credits.ts). */
+  imageCredit: Credit;
+  /** The Tour's official trailer, embedded from YouTube on a click (components/tours/tour-trailer.tsx). */
+  trailer?: Trailer;
+  /** A photo from the Tour's stage beside the facts, for a Tour without a trailer. */
+  stage?: GalleryPhoto;
+  /** Photos from the Tour (public/img/tours). */
   gallery?: GalleryPhoto[];
+};
+
+/** An official trailer on YouTube, and the photo that stands in for it until the visitor plays it. */
+export type Trailer = {
+  youtubeId: string;
+  /** What the play button calls it ("the Eras Tour film trailer"). */
+  name: string;
+  /** The video's title, for the embed's frame. */
+  title: string;
+  credit: Credit;
+  /** Shown, with a play button, before anything loads from YouTube; never YouTube's own thumbnail. */
+  still: GalleryPhoto;
 };
 
 export const TOURS: Tour[] = data.map((tour) => {

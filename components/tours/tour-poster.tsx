@@ -4,7 +4,7 @@ import { Polaroid } from "@/components/scrapbook";
 import { type Tour } from "@/lib/tours";
 
 type TourPosterProps = {
-  tour: Pick<Tour, "tour" | "imageUrl" | "posterSize" | "imageCredit">;
+  tour: Pick<Tour, "imageUrl" | "posterSize" | "imageAlt" | "imageCredit">;
   caption?: string;
   tilt?: number;
   /** Rendered width on a wide screen, for the image's `sizes`. */
@@ -14,14 +14,14 @@ type TourPosterProps = {
   className?: string;
 };
 
-/** A Tour's poster in a taped polaroid. */
+/** A Tour's poster, a photo from its stage, in a taped polaroid. */
 export function TourPoster({ tour, caption, tilt = -3, width, priority = false, className }: TourPosterProps) {
   const [w, h] = tour.posterSize;
 
   return (
     <Polaroid taped caption={caption} className={className} credit={tour.imageCredit} tilt={tilt}>
       <Image
-        alt={`${tour.tour} poster`}
+        alt={tour.imageAlt}
         className="h-auto w-full"
         height={h}
         priority={priority}

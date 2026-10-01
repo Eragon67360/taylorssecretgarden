@@ -15,7 +15,7 @@ The domain vocabulary (Era, Album, Tour, Swiftter, Post, Member) is defined in [
 - [Tailwind CSS 4](https://tailwindcss.com/) (CSS-first config in `styles/globals.css`); [shadcn/ui](https://ui.shadcn.com/) is configured (`components.json`, [ADR-0002](docs/adr/0002-shadcn-replaces-nextui.md)) for primitives copied into `components/ui/` when a page needs one (none does yet: the scrapbook kit covers them)
 - [Neon Auth](https://neon.com/docs/auth/overview) (managed Better Auth, `@neondatabase/auth`, beta SDK pinned exactly) for sign-in, with our own guestbook forms ([ADR-0004](docs/adr/0004-neon-auth-replaces-clerk.md))
 - [Neon Postgres](https://neon.com/) (via the Vercel Marketplace) with [Drizzle ORM](https://orm.drizzle.team/) for Swiftter's Members and Posts ([ADR-0003](docs/adr/0003-neon-drizzle-for-swiftter.md))
-- [Cloudinary](https://cloudinary.com/) for Tour images, videos and the home photo (URL helpers in `lib/cloudinary.ts`). Pictures go through next/image and are served from the site's own origin; the videos stream from Cloudinary
+- Free-licensed concert photos from [Wikimedia Commons](https://commons.wikimedia.org/) for the home photo and the Tours, cropped into `public/img` and served through next/image; each is credited with its licence (`public/json/tours.json`, `lib/credits.ts`, `/credits`). The Eras Tour trailer is a click-to-load YouTube embed
 - [Deezer API](https://developers.deezer.com/api) for the Album catalogue (no credentials needed)
 - [Motion](https://motion.dev/) (`motion/react`) for the scrapbook's hover lifts and tab transitions
 - [Playwright](https://playwright.dev/) with [axe](https://github.com/dequelabs/axe-core-npm/tree/develop/packages/playwright) for the smoke tests

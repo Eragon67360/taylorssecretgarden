@@ -1,9 +1,12 @@
 /*
   Helpers for the images drawn with next/og (app/opengraph-image.tsx), which
-  are rendered once, at build time. Both fetch over the network; a failure
-  degrades the image (next/og's default face, no photo) instead of failing
-  the build.
+  are rendered once, at build time. The faces come over the network, the
+  photo from public/; a failure degrades the image (next/og's default face,
+  no photo) instead of failing the build.
 */
+
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 type OgFont = { name: string; data: ArrayBuffer; weight: 400 | 500 | 600 | 700; style: "normal" | "italic" };
 
@@ -26,15 +29,12 @@ export async function googleFont(font: Omit<OgFont, "data">, family: string, axe
   }
 }
 
-/** An image as a data URL for next/og, or null if it cannot be fetched. */
-export async function imageDataUrl(url: string): Promise<string | null> {
+/** A JPEG from public/ (its path from the site's root, "/img/home.jpg") as a data URL for next/og, or null if it cannot be read. */
+export async function publicJpegDataUrl(path: string): Promise<string | null> {
   try {
-    const response = await fetch(url);
+    const data = await readFile(join(process.cwd(), "public", path));
 
-    if (!response.ok) return null;
-    const type = response.headers.get("content-type") ?? "image/jpeg";
-
-    return `data:${type};base64,${Buffer.from(await response.arrayBuffer()).toString("base64")}`;
+    return `data:image/jpeg;base64,${data.toString("base64")}`;
   } catch {
     return null;
   }

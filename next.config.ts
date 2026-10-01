@@ -11,11 +11,12 @@ import { NOINDEX_HEADER, isIndexable } from "./lib/indexing";
 /**
  * Sent with every response, in every environment. The Content-Security-Policy
  * holds only directives that cannot break a script or a media source (no
- * script-src, style-src or media-src: BotID, Deezer previews and Cloudinary
- * video load as before): no framing of the site (clickjacking), no <base> or
- * plugin injection, and forms submit to this origin only. BotID's own path
- * keeps the `frame-ancestors 'self'` its wrapper adds after these (the last
- * header set for a path wins).
+ * script-src, style-src, media-src or frame-src: BotID, Deezer previews and
+ * the Eras Tour trailer's YouTube embed load as before; frame-ancestors only
+ * stops other sites framing this one): no framing of the site
+ * (clickjacking), no <base> or plugin injection, and forms submit to this
+ * origin only. BotID's own path keeps the `frame-ancestors 'self'` its
+ * wrapper adds after these (the last header set for a path wins).
  */
 const SECURITY_HEADERS = [
   { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
@@ -67,13 +68,6 @@ const nextConfig: NextConfig = {
         hostname: "cdn-images.dzcdn.net",
         port: "",
         pathname: "/images/**",
-      },
-      // The home photo and the Tour posters and photos, resized and served from this origin.
-      {
-        protocol: "https",
-        hostname: "res.cloudinary.com",
-        port: "",
-        pathname: "/dluezegi8/**",
       },
       // Member avatars: Google account photos only (lib/avatar.ts). Clerk's
       // avatars (before ADR-0004) are gone: Members still holding one show
