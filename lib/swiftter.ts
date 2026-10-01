@@ -19,18 +19,18 @@ export const memberPath = (id: string) => `/swiftter/m/${encodeURIComponent(id)}
 
 /** A public Post, as the feed and a thread show it. */
 export type FeedPost = {
-	id: string;
-	/** Sanitised HTML. */
-	content: string;
-	isDemo: boolean;
-	createdAt: string;
-	/** When moderation approved it: the feed's order. */
-	publishedAt: string;
-	author: Author;
-	/** Public replies in its thread. */
-	replyCount: number;
-	/** Members resharing it now. */
-	reshareCount: number;
+  id: string;
+  /** Sanitised HTML. */
+  content: string;
+  isDemo: boolean;
+  createdAt: string;
+  /** When moderation approved it: the feed's order. */
+  publishedAt: string;
+  author: Author;
+  /** Public replies in its thread. */
+  replyCount: number;
+  /** Members resharing it now. */
+  reshareCount: number;
 };
 
 /** A Post its Member tore up, still referred to by a reshare or a reply. */
@@ -38,8 +38,7 @@ export type TornUpPost = { id: string; tornUp: true };
 
 /** One entry of the feed: a Post, or a Member resharing one (which may since have been torn up). */
 export type FeedItem =
-	| { kind: "post"; key: string; post: FeedPost }
-	| { kind: "reshare"; key: string; resharedAt: string; resharedBy: Author; post: FeedPost | TornUpPost };
+  { kind: "post"; key: string; post: FeedPost } | { kind: "reshare"; key: string; resharedAt: string; resharedBy: Author; post: FeedPost | TornUpPost };
 
 /** A page of the feed, and the cursor for the next one (null at the end). */
 export type FeedPage = { items: FeedItem[]; nextCursor: string | null };
@@ -52,51 +51,51 @@ export type RefusalCategory = "insult" | "restricted" | "off_topic";
 
 /** One of the signed-in Member's own notes that is not public: waiting for a check, or refused. */
 export type HeldNote = {
-	id: string;
-	content: string;
-	status: "pending" | "blocked";
-	category: RefusalCategory | null;
-	/** The model's reason for a refusal. */
-	reason: string | null;
-	/** Moderation attempts so far. */
-	attempts: number;
-	/** Whether "check again" is still allowed. */
-	canCheckAgain: boolean;
-	/** For a refused note: its author already asked a human to look again (an appeal). */
-	appealed: boolean;
-	/**
-	 * Moderation could not be reached for a whole week (MODERATION_RETRY), so
-	 * the scheduled re-check gave up on it: it will never be published as it is.
-	 */
-	givenUp: boolean;
-	createdAt: string;
-	/** For a reply: its thread's first Post. */
-	rootId: string | null;
-	/** For a reply: the note it answers, where its thread shows it. */
-	parentId: string | null;
+  id: string;
+  content: string;
+  status: "pending" | "blocked";
+  category: RefusalCategory | null;
+  /** The model's reason for a refusal. */
+  reason: string | null;
+  /** Moderation attempts so far. */
+  attempts: number;
+  /** Whether "check again" is still allowed. */
+  canCheckAgain: boolean;
+  /** For a refused note: its author already asked a human to look again (an appeal). */
+  appealed: boolean;
+  /**
+   * Moderation could not be reached for a whole week (MODERATION_RETRY), so
+   * the scheduled re-check gave up on it: it will never be published as it is.
+   */
+  givenUp: boolean;
+  createdAt: string;
+  /** For a reply: its thread's first Post. */
+  rootId: string | null;
+  /** For a reply: the note it answers, where its thread shows it. */
+  parentId: string | null;
 };
 
 /** A note in a thread: public, or torn up (text gone) but kept so the replies under it still read. */
 export type ThreadNote = {
-	id: string;
-	parentId: string | null;
-	/** NO_AUTHOR once torn up. */
-	author: Author;
-	/** Sanitised HTML; empty when torn up. */
-	content: string;
-	tornUp: boolean;
-	isDemo: boolean;
-	createdAt: string;
-	publishedAt: string;
+  id: string;
+  parentId: string | null;
+  /** NO_AUTHOR once torn up. */
+  author: Author;
+  /** Sanitised HTML; empty when torn up. */
+  content: string;
+  tornUp: boolean;
+  isDemo: boolean;
+  createdAt: string;
+  publishedAt: string;
 };
 
 /** A thread: its first Post and every public (or torn-up) reply, oldest first. */
 export type Thread = {
-	root: ThreadNote;
-	replies: ThreadNote[];
-	reshareCount: number;
-	/** Whether search engines may index it: a real Member's Post, not demo or seed content, not torn up, meeting the indexing bar (service/swiftter.ts). */
-	indexable: boolean;
+  root: ThreadNote;
+  replies: ThreadNote[];
+  reshareCount: number;
+  /** Whether search engines may index it: a real Member's Post, not demo or seed content, not torn up, meeting the indexing bar (service/swiftter.ts). */
+  indexable: boolean;
 };
 
 /** The most visible characters a note may have (graphemes: an emoji counts as one). */
@@ -111,10 +110,10 @@ export const MINIMUM_AGE = 15;
 
 /** How many of each write a Member may make in a window of time. */
 export const LIMITS = {
-	post: { count: 5, minutes: 10 },
-	reply: { count: 10, minutes: 10 },
-	reshare: { count: 10, minutes: 10 },
-	report: { count: 10, minutes: 10 },
+  post: { count: 5, minutes: 10 },
+  reply: { count: 10, minutes: 10 },
+  reshare: { count: 10, minutes: 10 },
+  report: { count: 10, minutes: 10 },
 } as const;
 
 export type LimitedWrite = keyof typeof LIMITS;
@@ -142,5 +141,5 @@ export const MAX_REPORT_REASON_CHARACTERS = 500;
 
 /** Visible characters in a string, as a reader counts them. */
 export function characterCount(text: string): number {
-	return Array.from(new Intl.Segmenter("en", { granularity: "grapheme" }).segment(text)).length;
+  return Array.from(new Intl.Segmenter("en", { granularity: "grapheme" }).segment(text)).length;
 }

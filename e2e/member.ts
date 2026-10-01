@@ -18,18 +18,18 @@ export type TestMember = { name: string; email: string; password: string };
 
 /** A fresh test Member for this run: unique email, random password. */
 export function newTestMember(): TestMember {
-	const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-	return {
-		name: "Swiftter Tester",
-		email: `swiftter-e2e-${id}@example.com`,
-		password: `Eras-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`,
-	};
+  return {
+    name: "Swiftter Tester",
+    email: `swiftter-e2e-${id}@example.com`,
+    password: `Eras-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`,
+  };
 }
 
 /** The test Member the setup project signed up, if it ran. */
 export function readTestMember(): TestMember | null {
-	return existsSync(MEMBER_FILE) ? (JSON.parse(readFileSync(MEMBER_FILE, "utf8")) as TestMember) : null;
+  return existsSync(MEMBER_FILE) ? (JSON.parse(readFileSync(MEMBER_FILE, "utf8")) as TestMember) : null;
 }
 
 /**

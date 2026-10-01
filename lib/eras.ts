@@ -289,10 +289,7 @@ export const ERA_LOOKS: Record<EraSlug, EraLook> = {
 };
 
 /** The colours and display face of a look: what `eraVariables` applies (an Era's, or a Tour's own). */
-export type EraPalette = Pick<
-  EraLook,
-  "paper" | "card" | "ink" | "soft" | "accent" | "onAccent" | "line" | "tape" | "font" | "fontWeight" | "fontItalic"
->;
+export type EraPalette = Pick<EraLook, "paper" | "card" | "ink" | "soft" | "accent" | "onAccent" | "line" | "tape" | "font" | "fontWeight" | "fontItalic">;
 
 /** Every Era's look, in release order. */
 export const ERAS: EraLook[] = ERA_SLUGS.map((slug) => ERA_LOOKS[slug]);

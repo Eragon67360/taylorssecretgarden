@@ -81,7 +81,8 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details, lin
 
   const title = album?.title ?? look.name;
   // "(Taylor's Version), Deluxe Edition": what the h2 adds to the title, unseen.
-  const fullNameSuffix = album && `${album.taylorsVersion ? " (Taylor's Version)" : ""}${version || album.edition ? `, ${version?.name ?? album.edition}` : ""}`;
+  const fullNameSuffix =
+    album && `${album.taylorsVersion ? " (Taylor's Version)" : ""}${version || album.edition ? `, ${version?.name ?? album.edition}` : ""}`;
   const eraNumber = String(ERA_SLUGS.indexOf(era) + 1).padStart(2, "0");
   const braceletWord = look.short === "rep" ? look.name : look.short;
 
@@ -95,9 +96,7 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details, lin
               pick an Era. the page changes outfits.
             </h1>
           </div>
-          <p className="font-hand text-soft -rotate-[1.5deg] text-[21px] font-bold">
-            {shelf.length} Albums, in Era order (we&apos;re not animals)
-          </p>
+          <p className="font-hand text-soft -rotate-[1.5deg] text-[21px] font-bold">{shelf.length} Albums, in Era order (we&apos;re not animals)</p>
         </div>
 
         <AlbumShelf albums={shelf} selectedId={selectedId} onSelect={select} />
@@ -161,7 +160,13 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details, lin
           <p className="text-soft text-[11px] font-bold tracking-[.26em] uppercase">
             Era No. {eraNumber} · {look.year}
           </p>
-          <h2 className={title.length > 18 ? "font-display mt-2 text-[clamp(2rem,4.6vw,3.6rem)] leading-[1.05] break-words" : "font-display mt-2 text-[clamp(2.5rem,6.5vw,5.2rem)] leading-[1.02] break-words"}>
+          <h2
+            className={
+              title.length > 18
+                ? "font-display mt-2 text-[clamp(2rem,4.6vw,3.6rem)] leading-[1.05] break-words"
+                : "font-display mt-2 text-[clamp(2.5rem,6.5vw,5.2rem)] leading-[1.02] break-words"
+            }
+          >
             {title}
             {/* The release's full name, for search results and screen readers; the handwritten line below shows it. */}
             {album && fullNameSuffix && <span className="sr-only">{fullNameSuffix}</span>}
@@ -200,7 +205,10 @@ export function MusicJournal({ shelf, albumId, versionId, versions, details, lin
           </dl>
 
           {album && (links[album.catalogueId]?.length ?? 0) > 0 && (
-            <ul aria-label={`More about ${album.name}`} className="font-hand mt-4 flex max-w-[640px] flex-wrap gap-x-6 gap-y-1 text-[21px] leading-tight font-bold">
+            <ul
+              aria-label={`More about ${album.name}`}
+              className="font-hand mt-4 flex max-w-[640px] flex-wrap gap-x-6 gap-y-1 text-[21px] leading-tight font-bold"
+            >
               {links[album.catalogueId].map(({ lead, href, text }) => (
                 <li key={href}>
                   <span className="text-soft">{lead}</span>{" "}

@@ -47,12 +47,19 @@ npm run dev                  # http://localhost:3000
 ## Checks
 
 ```bash
-npm run lint              # ESLint 9, flat config (eslint.config.mjs)
+npm run lint              # ESLint 9, flat config (eslint.config.mjs); fails on any warning
+npm run format            # Prettier rewrites every file (npm run format:check only reports)
 npm run typecheck         # tsc --noEmit
 npm test                  # unit tests (Vitest), hermetic
 npm run test:integration  # integration tests, against a disposable Neon branch only
 npm run test:e2e          # Playwright smoke suite
 npm run lighthouse        # Lighthouse CI on a production build (run `npm run build` first)
+```
+
+[Prettier](https://prettier.io/) formats the code, styles, JSON, YAML and Markdown ([`.prettierrc.json`](.prettierrc.json): its defaults, 160 columns; [`.prettierignore`](.prettierignore)), with 2-space indentation, and [`.editorconfig`](.editorconfig) gives editors the same settings. The reformat that introduced it is listed in [`.git-blame-ignore-revs`](.git-blame-ignore-revs); to have `git blame` skip it locally, run once:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
 
 `npm test` runs the unit tests (Vitest, `tests/unit/`): hermetic, no network or database. AI moderation runs against the AI SDK's mock model (`MockLanguageModelV4`): allowed, both refusals, timeout, Gateway error and malformed answers, prompt injection and unicode. The sanitiser and the database guards are covered too. `npm run test:integration` runs `tests/integration/` against a disposable Neon branch only (the same guard as below), and `npm run test:coverage` reports coverage.
@@ -65,7 +72,7 @@ The tests read `.env.local` like the app does. Everything that writes (signing u
 
 [GitHub Actions](.github/workflows/ci.yml) runs two jobs on every pull request, each on a production build under `next start`:
 
-- **smoke**: lint, typecheck, unit and integration tests, build and the Playwright suite. A failed test gets one retry; the run summary counts passed, flaky (passed only on the retry), failed and skipped tests, and each flaky test is a warning on the pull request. On failure the Playwright report and traces are uploaded as an artifact.
+- **smoke**: lint (`npm run lint` and `npm run format:check`), typecheck, unit and integration tests, build and the Playwright suite. A failed test gets one retry; the run summary counts passed, flaky (passed only on the retry), failed and skipped tests, and each flaky test is a warning on the pull request. On failure the Playwright report and traces are uploaded as an artifact.
 - **lighthouse**: [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci) ([`lighthouserc.js`](lighthouserc.js)) audits Home, Music, Tours, the Eras Tour page, Swiftter, the sign-in page and a seeded eight-reply thread with Lighthouse's mobile emulation, three runs each: the median run must score at least 0.9 for Accessibility (an error) and should for Performance (a warning, since shared runners swing it by up to 0.3 between runs; check it on the Vercel preview). The scores table lands in the run summary and the full reports are uploaded as an artifact.
 
 A first job, **changes**, compares the pull request with its base (a push to `dev` with `main`): when only documentation changed (Markdown, `docs/`, `LICENSE`, `.vscode/`, `dependabot.yml`), both jobs are skipped, which still counts as passing for the required checks. One run at a time per branch: a push to `dev` and the open release pull request share one, the newer cancelling the older.
@@ -112,19 +119,19 @@ Why these two, and how they behave off Vercel: [ADR-0005](docs/adr/0005-botid-an
 
 Swiftter's schema lives in [`db/schema.ts`](db/schema.ts): `members` (keyed by Neon Auth user id), `posts` (Posts and their replies, sanitised HTML, with a moderation `status` and `published_at`), `reshares`, `moderation_decisions` (every moderation attempt, appended) and `note_reports` (Members asking a human to look: a report, or an appeal). Why this shape: [ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md). All Swiftter data access goes through [`service/swiftter.ts`](service/swiftter.ts). The API:
 
-| Route | What |
-| --- | --- |
-| `GET /api/swiftter/posts?cursor=` | The public feed, the same for everyone: Posts and reshares, newest published first, 20 per page, `{ items, nextCursor }`. |
-| `POST /api/swiftter/posts` | Write a note `{ content, parentId? }` (a reply with `parentId`): 201 approved (public), 422 refused (kept, author only, with the reason), 202 no verdict (kept pending, checked again later); 400 invalid, 404 replying to a note that is not public, 429 limit. |
-| `DELETE /api/swiftter/posts/[id]` | Tear up one of your notes: 204; 404 for anyone else's. |
-| `POST`/`DELETE /api/swiftter/posts/[id]/reshare` | Reshare someone else's public Post, or undo it: 201/204; 422 your own, 409 already, 404 not public. |
-| `POST /api/swiftter/posts/[id]/check` | "Check again" on your pending note (at most 4 moderation attempts in all). |
-| `POST /api/swiftter/posts/[id]/report` | "Report" someone else's public note (Post or reply) `{ reason? }` (plain text, 500 characters at most): 201, 200 if you already had; 422 your own, 404 not public, 429 past 10 reports in 10 minutes. |
-| `POST /api/swiftter/posts/[id]/appeal` | "Ask a human to look again" at your refused note: 201, 200 if you already had; 404 when it is not your refused note. |
-| `GET /api/swiftter/me` | Your held notes (pending or refused, with reasons) and what you reshare: session only, `no-store`. |
-| `DELETE /api/swiftter/me` | Delete your account: your notes torn up, your reshares and your Neon Auth account deleted, signed out; 204. From `/guestbook`. |
-| `GET /api/swiftter/me/export` | Your data as a JSON download (account, notes in every state, reshares, moderation decisions, your reports and appeals): session only, `no-store`. |
-| `GET /api/cron/moderation` | Vercel Cron (hourly, `vercel.json`): re-checks pending notes (every run for a day, then daily, given up after a week), sends the owner alerts (below), and once a day purges what is past retention (30 days); needs `Authorization: Bearer $CRON_SECRET`. |
+| Route                                            | What                                                                                                                                                                                                                                                             |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/swiftter/posts?cursor=`                | The public feed, the same for everyone: Posts and reshares, newest published first, 20 per page, `{ items, nextCursor }`.                                                                                                                                        |
+| `POST /api/swiftter/posts`                       | Write a note `{ content, parentId? }` (a reply with `parentId`): 201 approved (public), 422 refused (kept, author only, with the reason), 202 no verdict (kept pending, checked again later); 400 invalid, 404 replying to a note that is not public, 429 limit. |
+| `DELETE /api/swiftter/posts/[id]`                | Tear up one of your notes: 204; 404 for anyone else's.                                                                                                                                                                                                           |
+| `POST`/`DELETE /api/swiftter/posts/[id]/reshare` | Reshare someone else's public Post, or undo it: 201/204; 422 your own, 409 already, 404 not public.                                                                                                                                                              |
+| `POST /api/swiftter/posts/[id]/check`            | "Check again" on your pending note (at most 4 moderation attempts in all).                                                                                                                                                                                       |
+| `POST /api/swiftter/posts/[id]/report`           | "Report" someone else's public note (Post or reply) `{ reason? }` (plain text, 500 characters at most): 201, 200 if you already had; 422 your own, 404 not public, 429 past 10 reports in 10 minutes.                                                            |
+| `POST /api/swiftter/posts/[id]/appeal`           | "Ask a human to look again" at your refused note: 201, 200 if you already had; 404 when it is not your refused note.                                                                                                                                             |
+| `GET /api/swiftter/me`                           | Your held notes (pending or refused, with reasons) and what you reshare: session only, `no-store`.                                                                                                                                                               |
+| `DELETE /api/swiftter/me`                        | Delete your account: your notes torn up, your reshares and your Neon Auth account deleted, signed out; 204. From `/guestbook`.                                                                                                                                   |
+| `GET /api/swiftter/me/export`                    | Your data as a JSON download (account, notes in every state, reshares, moderation decisions, your reports and appeals): session only, `no-store`.                                                                                                                |
+| `GET /api/cron/moderation`                       | Vercel Cron (hourly, `vercel.json`): re-checks pending notes (every run for a day, then daily, given up after a week), sends the owner alerts (below), and once a day purges what is past retention (30 days); needs `Authorization: Bearer $CRON_SECRET`.       |
 
 **Owner alerts** ([`service/owner-alerts.ts`](service/owner-alerts.ts)). The hourly cron tells the owner when notes are given up on (moderation gave no verdict for a week) and, in one alert per run, about the reports and appeals sent since the last one. With `OWNER_ALERTS_GITHUB_TOKEN` set (a fine-grained token limited to this repository, Issues: read and write; Production only, Sensitive) each alert opens an issue labelled `owner-alert`, or comments on the open issue with the same title, so the same alert is never opened twice; without it, or when GitHub fails, the alert is only logged (and reports stay unsent, for the next run). The repository is public, so an alert names notes by id and links only to public threads: never a Member, an email, a reason someone wrote or a held note's text. Those are in `note_reports` and `posts`; once a report is handled, set its `resolved_at` (resolved ones are purged after 30 days, and every report goes with its note). To publish a refused note after an appeal, set it approved with `published_at`, as ADR-0007 describes.
 

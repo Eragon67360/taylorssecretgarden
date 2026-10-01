@@ -12,17 +12,17 @@ type Context = { params: Promise<{ id: string }> };
  * hears of it at the next hourly run (app/api/cron/moderation).
  */
 export function POST(request: Request, { params }: Context) {
-	return memberWrite(
-		request,
-		async (writer) => {
-			try {
-				const { created } = await appealNote(writer.id, (await params).id);
+  return memberWrite(
+    request,
+    async (writer) => {
+      try {
+        const { created } = await appealNote(writer.id, (await params).id);
 
-				return NextResponse.json({ appealed: true, alreadyAppealed: !created }, { status: created ? 201 : 200 });
-			} catch (error) {
-				return errorResponse(error, "Asking for a human to look again");
-			}
-		},
-		{ body: false },
-	);
+        return NextResponse.json({ appealed: true, alreadyAppealed: !created }, { status: created ? 201 : 200 });
+      } catch (error) {
+        return errorResponse(error, "Asking for a human to look again");
+      }
+    },
+    { body: false },
+  );
 }

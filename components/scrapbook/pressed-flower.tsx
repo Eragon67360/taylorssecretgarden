@@ -7,7 +7,6 @@ import type { Flower } from "@/lib/eras";
 
 import { cn } from "@/lib/utils";
 
-
 type PressedFlowerProps = {
   kind: Flower;
   /** Petal (or frond) colour; defaults to the Era's accent. */
@@ -111,22 +110,8 @@ function Fern({ color }: { color: string }) {
 
         return (
           <g key={index} opacity=".9">
-            <ellipse
-              cx={60 - 13 * scale}
-              cy={y}
-              fill={color}
-              rx={15 * scale}
-              ry={4.5 * scale}
-              transform={`rotate(-28 ${60 - 13 * scale} ${y})`}
-            />
-            <ellipse
-              cx={62 + 13 * scale}
-              cy={y - 5}
-              fill={color}
-              rx={15 * scale}
-              ry={4.5 * scale}
-              transform={`rotate(28 ${62 + 13 * scale} ${y - 5})`}
-            />
+            <ellipse cx={60 - 13 * scale} cy={y} fill={color} rx={15 * scale} ry={4.5 * scale} transform={`rotate(-28 ${60 - 13 * scale} ${y})`} />
+            <ellipse cx={62 + 13 * scale} cy={y - 5} fill={color} rx={15 * scale} ry={4.5 * scale} transform={`rotate(28 ${62 + 13 * scale} ${y - 5})`} />
           </g>
         );
       })}
@@ -156,12 +141,7 @@ function Rose({ color }: { color: string }) {
       <path d="M60 140 C40 130 32 136 24 124 C40 116 52 124 60 134Z" fill={STEM} opacity=".85" />
       <path d="M61 116 C80 106 90 112 98 100 C84 94 70 100 61 110Z" fill={STEM} opacity=".8" />
       <circle cx="60" cy="60" fill={color} opacity=".82" r="28" />
-      <path
-        d="M60 60 m-18 0 a18 18 0 1 0 36 0 a14 14 0 1 0 -28 2 a9 9 0 1 0 18 -2 a5 5 0 1 0 -10 1"
-        fill="none"
-        stroke="rgba(0,0,0,.25)"
-        strokeWidth="1.6"
-      />
+      <path d="M60 60 m-18 0 a18 18 0 1 0 36 0 a14 14 0 1 0 -28 2 a9 9 0 1 0 18 -2 a5 5 0 1 0 -10 1" fill="none" stroke="rgba(0,0,0,.25)" strokeWidth="1.6" />
       <path d="M34 50 C40 34 52 30 60 32 C70 30 82 36 86 50" fill="none" stroke="rgba(255,255,255,.35)" strokeWidth="2" />
     </g>
   );
@@ -181,13 +161,7 @@ function Leaves({ color }: { color: string }) {
     <g>
       <path d="M40 198 C50 150 70 90 84 20" fill="none" stroke={STEM} strokeLinecap="round" strokeWidth="2" />
       {LEAVES.map(([x, y, rotate], index) => (
-        <path
-          key={index}
-          d={`M${x} ${y} c-18 -6 -26 -20 -24 -34 c14 4 24 16 24 34z`}
-          fill={color}
-          opacity=".85"
-          transform={`rotate(${rotate} ${x} ${y})`}
-        />
+        <path key={index} d={`M${x} ${y} c-18 -6 -26 -20 -24 -34 c14 4 24 16 24 34z`} fill={color} opacity=".85" transform={`rotate(${rotate} ${x} ${y})`} />
       ))}
     </g>
   );

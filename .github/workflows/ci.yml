@@ -3,8 +3,8 @@ name: CI
 # Two jobs on every pull request, each on its own
 # production build under `next start`, unless only documentation changed
 # (see the `changes` job):
-#   smoke       lint, typecheck, unit and integration tests, build, then the
-#               Playwright smoke suite
+#   smoke       lint and formatting, typecheck, unit and integration tests,
+#               build, then the Playwright smoke suite
 #   lighthouse  build, then Lighthouse CI (lighthouserc.js): mobile, median of
 #               3 runs; Accessibility under 0.9 fails, Performance under 0.9 warns
 #
@@ -109,7 +109,9 @@ jobs:
           cookie_secret: ${{ secrets.NEON_AUTH_COOKIE_SECRET }}
 
       - name: Lint
-        run: npm run lint
+        run: |
+          npm run lint
+          npm run format:check
 
       - name: Typecheck
         run: npm run typecheck

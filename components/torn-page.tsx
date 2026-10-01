@@ -31,11 +31,7 @@ export function TornPage({ kicker, title, aside, children }: TornPageProps) {
         </span>
         <WashiTape className="top-1 left-8" rotate={-6} width={92} />
         <WashiTape className="top-2 right-10" rotate={5} width={76} />
-        <PressedFlower
-          className="absolute -right-3 -bottom-10 h-44 w-24 rotate-[20deg] opacity-90 sm:-right-10 sm:h-56 sm:w-32"
-          color="#8a8f6a"
-          kind="leaf"
-        />
+        <PressedFlower className="absolute -right-3 -bottom-10 h-44 w-24 rotate-[20deg] opacity-90 sm:-right-10 sm:h-56 sm:w-32" color="#8a8f6a" kind="leaf" />
 
         <div className="relative px-6 pt-12 pb-10 sm:px-12 sm:pt-14">
           <p className="text-soft text-[11px] font-bold tracking-[.26em] uppercase">{kicker}</p>

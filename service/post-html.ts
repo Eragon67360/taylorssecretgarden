@@ -16,21 +16,23 @@ import sanitizeHtml from "sanitize-html";
  * gzipped, too much to ship to the browser.
  */
 const POLICY: sanitizeHtml.IOptions = {
-	allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "s", "a", "ol", "ul", "li", "h1", "h2", "h3", "blockquote", "code", "pre"],
-	allowedAttributes: { a: ["href", "target", "rel"], li: ["data-list"] },
-	allowedSchemes: ["http", "https", "mailto"],
-	allowProtocolRelative: false,
-	// `ugc`: links Members wrote, which the site vouches for no more than `nofollow` says.
-	transformTags: { a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer nofollow ugc" }) },
+  allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "s", "a", "ol", "ul", "li", "h1", "h2", "h3", "blockquote", "code", "pre"],
+  allowedAttributes: { a: ["href", "target", "rel"], li: ["data-list"] },
+  allowedSchemes: ["http", "https", "mailto"],
+  allowProtocolRelative: false,
+  // `ugc`: links Members wrote, which the site vouches for no more than `nofollow` says.
+  transformTags: { a: sanitizeHtml.simpleTransform("a", { target: "_blank", rel: "noopener noreferrer nofollow ugc" }) },
 };
 
 export function sanitisePostHtml(html: string): string {
-	return sanitizeHtml(html, POLICY);
+  return sanitizeHtml(html, POLICY);
 }
 
 /** The visible text of some Post HTML, trimmed. */
 export function postText(html: string): string {
-	return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} }).replace(/&nbsp;| /g, " ").trim();
+  return sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} })
+    .replace(/&nbsp;| /g, " ")
+    .trim();
 }
 
 const ENTITIES: Record<string, string> = { "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&amp;": "&" };
@@ -43,9 +45,9 @@ const decodeEntities = (text: string) => text.replace(/&(lt|gt|quot|#39|amp);/g,
  * own, and characters as typed rather than HTML entities.
  */
 export function postPlainText(html: string): string {
-	const text = postText(html.replace(/<br\s*\/?>|<\/(p|li|h[1-6]|blockquote|pre)>/gi, "$&\n"));
+  const text = postText(html.replace(/<br\s*\/?>|<\/(p|li|h[1-6]|blockquote|pre)>/gi, "$&\n"));
 
-	return decodeEntities(text).replace(/\n{3,}/g, "\n\n");
+  return decodeEntities(text).replace(/\n{3,}/g, "\n\n");
 }
 
 /** An opening or closing link tag in sanitised HTML (sanitize-html writes attributes double-quoted). */
@@ -60,29 +62,29 @@ const HREF = /\bhref="([^"]*)"/i;
  * only: the stored and displayed HTML is unchanged.
  */
 export function postModerationText(html: string): string {
-	const clean = sanitisePostHtml(html);
-	// Open links, innermost last, each with where its text starts; a stack, in case links arrive nested.
-	// Hrefs stay entity-encoded while they sit in the HTML: postPlainText decodes everything at the end.
-	const open: { href: string; start: number }[] = [];
-	let out = "";
-	let last = 0;
+  const clean = sanitisePostHtml(html);
+  // Open links, innermost last, each with where its text starts; a stack, in case links arrive nested.
+  // Hrefs stay entity-encoded while they sit in the HTML: postPlainText decodes everything at the end.
+  const open: { href: string; start: number }[] = [];
+  let out = "";
+  let last = 0;
 
-	for (const match of clean.matchAll(LINK_TAG)) {
-		out += clean.slice(last, match.index);
-		last = match.index + match[0].length;
+  for (const match of clean.matchAll(LINK_TAG)) {
+    out += clean.slice(last, match.index);
+    last = match.index + match[0].length;
 
-		if (!match[0].startsWith("</")) {
-			open.push({ href: match[0].match(HREF)?.[1] ?? "", start: out.length });
-			continue;
-		}
+    if (!match[0].startsWith("</")) {
+      open.push({ href: match[0].match(HREF)?.[1] ?? "", start: out.length });
+      continue;
+    }
 
-		const link = open.pop();
+    const link = open.pop();
 
-		if (link?.href && postPlainText(out.slice(link.start)).trim() !== decodeEntities(link.href)) out += ` (link: ${link.href})`;
-	}
-	out += clean.slice(last);
-	// Links left open at the end (sanitize-html closes them, but a stray one would lose its destination).
-	for (const link of open.reverse()) if (link.href) out += ` (link: ${link.href})`;
+    if (link?.href && postPlainText(out.slice(link.start)).trim() !== decodeEntities(link.href)) out += ` (link: ${link.href})`;
+  }
+  out += clean.slice(last);
+  // Links left open at the end (sanitize-html closes them, but a stray one would lose its destination).
+  for (const link of open.reverse()) if (link.href) out += ` (link: ${link.href})`;
 
-	return postPlainText(out);
+  return postPlainText(out);
 }

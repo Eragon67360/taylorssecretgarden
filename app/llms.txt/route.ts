@@ -35,8 +35,7 @@ function albumLine(album: CatalogueAlbum, tracklist: AlbumFacts | undefined): st
     tracklist && tracklistFacts(tracklist),
     original && `Taylor Swift's re-recording of ${albumName(original)} (${albumYear(original)})`,
     album.edition && `edition shown: ${album.edition}`,
-    album.versions?.length &&
-      `other Versions: ${album.versions.map((version) => `${version.name} (${formatReleaseDate(version.released)})`).join("; ")}`,
+    album.versions?.length && `other Versions: ${album.versions.map((version) => `${version.name} (${formatReleaseDate(version.released)})`).join("; ")}`,
   ].filter(Boolean);
 
   return `- [${albumName(album)}](${absoluteUrl(albumPath(album))}): ${facts.join("; ")}.`;

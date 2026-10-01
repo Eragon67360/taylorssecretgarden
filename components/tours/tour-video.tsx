@@ -94,12 +94,7 @@ export function TourVideo({ tour, src, caption, credit, tilt = 3, className }: T
   }, [shouldPlay]);
 
   return (
-    <div
-      ref={frameRef}
-      className={cn("relative", className)}
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
-    >
+    <div ref={frameRef} className={cn("relative", className)} onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
       <Polaroid
         taped
         caption={

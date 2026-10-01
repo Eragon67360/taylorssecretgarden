@@ -23,17 +23,18 @@ Scope: Swiftter as a real social feed, and the visibility foundations (SEO, GEO,
 
 **On `main`: nothing** (`main` = `3cfcfe6`, unchanged). **On `dev`** (squash-merged, each with CI green):
 
-| PR | What | Commit on `dev` |
-| --- | --- | --- |
-| [#63](https://github.com/Eragon67360/taylorssecretgarden/pull/63) | ROADMAP.md and SESSION-LOG.md, committed before any feature code | `1a5fa08` |
-| [#64](https://github.com/Eragon67360/taylorssecretgarden/pull/64) | Vitest unit tests; moderation tested against a mocked Gateway; the shared write/seed guard | `5b1772b` |
-| [#66](https://github.com/Eragon67360/taylorssecretgarden/pull/66) | The social feed: replies, reshares, pagination, stored fail-closed moderation, seed/unseed, write-route protections, integration and e2e tests, ADR-0007 | `b28b401` |
-| [#67](https://github.com/Eragon67360/taylorssecretgarden/pull/67) | Live moderation check with fan-discourse and evasion samples; larger tear-up target | `f3c0861` |
-| [#65](https://github.com/Eragon67360/taylorssecretgarden/pull/65) | Visibility foundations (canonical, robots, sitemap incl. threads, noindex, metadata, JSON-LD, llms.txt, WCAG 2.2 gate, SEO-STRATEGY.md) | `6f6b3cc` |
+| PR                                                                | What                                                                                                                                                     | Commit on `dev` |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| [#63](https://github.com/Eragon67360/taylorssecretgarden/pull/63) | ROADMAP.md and SESSION-LOG.md, committed before any feature code                                                                                         | `1a5fa08`       |
+| [#64](https://github.com/Eragon67360/taylorssecretgarden/pull/64) | Vitest unit tests; moderation tested against a mocked Gateway; the shared write/seed guard                                                               | `5b1772b`       |
+| [#66](https://github.com/Eragon67360/taylorssecretgarden/pull/66) | The social feed: replies, reshares, pagination, stored fail-closed moderation, seed/unseed, write-route protections, integration and e2e tests, ADR-0007 | `b28b401`       |
+| [#67](https://github.com/Eragon67360/taylorssecretgarden/pull/67) | Live moderation check with fan-discourse and evasion samples; larger tear-up target                                                                      | `f3c0861`       |
+| [#65](https://github.com/Eragon67360/taylorssecretgarden/pull/65) | Visibility foundations (canonical, robots, sitemap incl. threads, noindex, metadata, JSON-LD, llms.txt, WCAG 2.2 gate, SEO-STRATEGY.md)                  | `6f6b3cc`       |
 
 These also ride along to `main`, from before tonight: #56–#62 (BotID and posting limit, AI moderation, tear-up, album versions, CI fixes).
 
 What a person can now do on the `dev` preview (https://taylorssecretgarden-git-dev-le-bon-temperament.vercel.app, behind Vercel login):
+
 - read threads at `/swiftter/p/<id>`;
 - reply under any note;
 - reshare and undo;
@@ -43,14 +44,14 @@ What a person can now do on the `dev` preview (https://taylorssecretgarden-git-d
 
 ## 3. CI STATUS
 
-| Pipeline | State | Link |
-| --- | --- | --- |
-| CI (`ci.yml`) on `dev` @ `6f6b3cc`: **smoke** (lint, typecheck, unit, integration, build, Playwright) | ✅ success | [run 36656254605](https://github.com/Eragon67360/taylorssecretgarden/actions/runs/36656254605) |
-| CI on `dev` @ `6f6b3cc`: **lighthouse** | ✅ success | same run |
-| CI on release PR #59 (`dev` → `main`) | runs on each `dev` push; the latest `dev` commit carries this report | [#59 checks](https://github.com/Eragon67360/taylorssecretgarden/pull/59/checks) |
-| Release check (`releases.yml`, weekly) | never run: scheduled workflows only run from `main` | — |
-| Vercel preview of `dev` | ✅ READY at `b28b401`, and rebuilt on each `dev` push | https://taylorssecretgarden-git-dev-le-bon-temperament.vercel.app |
-| Vercel production | unchanged (`main`) | https://www.taylorssecretgarden.com |
+| Pipeline                                                                                              | State                                                                | Link                                                                                           |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| CI (`ci.yml`) on `dev` @ `6f6b3cc`: **smoke** (lint, typecheck, unit, integration, build, Playwright) | ✅ success                                                           | [run 36656254605](https://github.com/Eragon67360/taylorssecretgarden/actions/runs/36656254605) |
+| CI on `dev` @ `6f6b3cc`: **lighthouse**                                                               | ✅ success                                                           | same run                                                                                       |
+| CI on release PR #59 (`dev` → `main`)                                                                 | runs on each `dev` push; the latest `dev` commit carries this report | [#59 checks](https://github.com/Eragon67360/taylorssecretgarden/pull/59/checks)                |
+| Release check (`releases.yml`, weekly)                                                                | never run: scheduled workflows only run from `main`                  | —                                                                                              |
+| Vercel preview of `dev`                                                                               | ✅ READY at `b28b401`, and rebuilt on each `dev` push                | https://taylorssecretgarden-git-dev-le-bon-temperament.vercel.app                              |
+| Vercel production                                                                                     | unchanged (`main`)                                                   | https://www.taylorssecretgarden.com                                                            |
 
 One CI job failed once tonight at "Create a Neon branch" with a 422 from Neon. Overlapping runs exceeded the free plan's branch limit (each run uses 2 branches; `main`, `dev` and an older `a40-dev-neon-auth` hold 3 more). A re-run passed. See section 9.
 
@@ -60,23 +61,25 @@ Only numbers produced by a tool tonight.
 
 **Lighthouse** (Lighthouse CI in the `lighthouse` CI job, `npm run lighthouse` = `lhci autorun`, mobile emulation, median of 3 runs; downloaded from the job's `lighthouse-reports` artifact):
 
-| Page | Before (`dev` 65056da, run 36644950703) perf / a11y | After (`dev` 6f6b3cc, run 36656254605) perf / a11y |
-| --- | --- | --- |
-| `/` | 0.89 / 1 | 0.89 / 1 |
-| `/music` | 0.87 / 1 | 0.87 / 1 |
-| `/tours` | 0.89 / 1 | 0.88 / 1 |
-| `/tours/the-eras-tour` | 0.91 / 1 | 0.92 / 1 |
-| `/swiftter` | 0.93 / 1 | 0.93 / 1 |
-| `/sign-in` | not audited | 0.90 / 1 |
-| `/swiftter/p/<seeded thread>` (8 replies deep) | did not exist | 0.92 / 1 |
+| Page                                           | Before (`dev` 65056da, run 36644950703) perf / a11y | After (`dev` 6f6b3cc, run 36656254605) perf / a11y |
+| ---------------------------------------------- | --------------------------------------------------- | -------------------------------------------------- |
+| `/`                                            | 0.89 / 1                                            | 0.89 / 1                                           |
+| `/music`                                       | 0.87 / 1                                            | 0.87 / 1                                           |
+| `/tours`                                       | 0.89 / 1                                            | 0.88 / 1                                           |
+| `/tours/the-eras-tour`                         | 0.91 / 1                                            | 0.92 / 1                                           |
+| `/swiftter`                                    | 0.93 / 1                                            | 0.93 / 1                                           |
+| `/sign-in`                                     | not audited                                         | 0.90 / 1                                           |
+| `/swiftter/p/<seeded thread>` (8 replies deep) | did not exist                                       | 0.92 / 1                                           |
 
 Both runs audited a seeded database (CI loads the demo content and, since tonight, the fixtures). Performance below 0.9 is a warning in this config, not a failure.
 
 **axe:** 17 `expectNoAxeViolations` call sites in the Playwright suite, several in loops (every Era palette on Music, every Tour page). They run with WCAG 2.2 AA tags (`wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa`). All pass in CI run 36656254605: 0 violations. Tonight's checks found and fixed two real contrast/target problems:
+
 - sonner's "rich" success toast failed contrast;
 - the tear-up button was below 24 px.
 
 **Tests** (CI run 36656254605, `dev` 6f6b3cc):
+
 - `npm test`: 53 passed (5 files).
 - `npm run test:integration`: 17 passed.
 - `npm run test:e2e`: 275 passed.
@@ -88,6 +91,7 @@ Both runs audited a seeded database (CI loads the demo content and, since tonigh
 **Live moderation** (`npm run moderation:check`, real AI Gateway, `anthropic/claude-haiku-4.5`, Development OIDC token): **25/25 as expected.** Baseline 11/11, fan discourse 9/9, evasion 5/5. Latency median 1318 ms, max 2342 ms. The first call in the end-to-end run below took 4014 ms (cold).
 
 **End-to-end with the real Gateway:** the production build, run locally on the `dev` database with no fake moderation (Playwright script):
+
 - sign-in 200;
 - a normal note 201 approved (4014 ms);
 - an off-topic note 422 refused (2838 ms), shown in the author's held notes;
@@ -144,12 +148,12 @@ Both runs audited a seeded database (CI loads the demo content and, since tonigh
 
 ## 7. BLOCKERS
 
-| # | Blocked | Why | The one action from you |
-| --- | --- | --- | --- |
-| B2 | Nothing is blocked, but this is urgent: security | Loading an env file through the shell echoed the database URL. The `neondb_owner` password (the same on production and `dev`) appeared in this session's local tool output. It isn't in any commit, file or remote log. | Reset the `neondb_owner` password in the Neon console (project `small-truth-26004702`) on **both** branches, `production` and `dev` (the branch copied the role with the same password). Then update the Vercel variables: Production `DATABASE_URL` (plus `DATABASE_URL_UNPOOLED` / `PG*` / `POSTGRES_*`) and the Preview + Development `DATABASE_URL`. |
-| B3 | The release to `main` (PR #59) | Checklist line 11 isn't met on a Vercel deployment: Vercel BotID refuses the automated browser's sign-in (403), and there's no supported BotID bypass for automation. The same flow passed locally with the real Gateway (section 4). The merge debate (section 8) also agreed not to merge. | In order: (1) B2; (2) `npm run db:migrate` with production's `.env.local`, which applies 0002 (additive; production must have it before the new code); (3) sign in on the `dev` preview in your own browser and publish one normal and one off-topic note; (4) if both behave, merge #59. To roll back later, run `drizzle/down/0002_swiftter_social.down.sql` **before** a Vercel Instant Rollback. |
-| B1 | Sign-in on www.taylorssecretgarden.com, and the vercel.app → .com redirect | The .com isn't in Neon Auth's trusted domains, so sign-in there already fails (`INVALID_CALLBACKURL`). Adding it is a write outside this repo, GitHub and Vercel, which was refused tonight. | Neon console → production branch → Auth → Domains: add `https://www.taylorssecretgarden.com` and `https://taylorssecretgarden.com`. Then ask for the redirect (SEO-STRATEGY.md, pre-launch checklist). |
-| B4 | Reliable CI under parallel runs | Neon's free plan caps branches. CI takes 2 per run on top of `main`, `dev` and `a40-dev-neon-auth` (expires 2026-10-04). | Pick one: let `a40-dev-neon-auth` expire and accept occasional re-runs, or move this Neon project to a plan with more branches (a cost, so your call). |
+| #   | Blocked                                                                    | Why                                                                                                                                                                                                                                                                                          | The one action from you                                                                                                                                                                                                                                                                                                                                                                              |
+| --- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B2  | Nothing is blocked, but this is urgent: security                           | Loading an env file through the shell echoed the database URL. The `neondb_owner` password (the same on production and `dev`) appeared in this session's local tool output. It isn't in any commit, file or remote log.                                                                      | Reset the `neondb_owner` password in the Neon console (project `small-truth-26004702`) on **both** branches, `production` and `dev` (the branch copied the role with the same password). Then update the Vercel variables: Production `DATABASE_URL` (plus `DATABASE_URL_UNPOOLED` / `PG*` / `POSTGRES_*`) and the Preview + Development `DATABASE_URL`.                                             |
+| B3  | The release to `main` (PR #59)                                             | Checklist line 11 isn't met on a Vercel deployment: Vercel BotID refuses the automated browser's sign-in (403), and there's no supported BotID bypass for automation. The same flow passed locally with the real Gateway (section 4). The merge debate (section 8) also agreed not to merge. | In order: (1) B2; (2) `npm run db:migrate` with production's `.env.local`, which applies 0002 (additive; production must have it before the new code); (3) sign in on the `dev` preview in your own browser and publish one normal and one off-topic note; (4) if both behave, merge #59. To roll back later, run `drizzle/down/0002_swiftter_social.down.sql` **before** a Vercel Instant Rollback. |
+| B1  | Sign-in on www.taylorssecretgarden.com, and the vercel.app → .com redirect | The .com isn't in Neon Auth's trusted domains, so sign-in there already fails (`INVALID_CALLBACKURL`). Adding it is a write outside this repo, GitHub and Vercel, which was refused tonight.                                                                                                 | Neon console → production branch → Auth → Domains: add `https://www.taylorssecretgarden.com` and `https://taylorssecretgarden.com`. Then ask for the redirect (SEO-STRATEGY.md, pre-launch checklist).                                                                                                                                                                                               |
+| B4  | Reliable CI under parallel runs                                            | Neon's free plan caps branches. CI takes 2 per run on top of `main`, `dev` and `a40-dev-neon-auth` (expires 2026-10-04).                                                                                                                                                                     | Pick one: let `a40-dev-neon-auth` expire and accept occasional re-runs, or move this Neon project to a plan with more branches (a cost, so your call).                                                                                                                                                                                                                                               |
 
 ## 8. DECISIONS & DEBATES
 

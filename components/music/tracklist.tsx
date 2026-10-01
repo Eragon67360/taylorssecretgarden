@@ -75,8 +75,7 @@ function TrackLine({ track, player }: { track: Track; player: PreviewPlayer }) {
             <span
               className="min-w-0 truncate rounded-[2px] px-1 py-0.5 [background-position:0_70%] bg-no-repeat motion-safe:transition-[background-size] motion-safe:duration-500"
               style={{
-                backgroundImage:
-                  "linear-gradient(100deg, transparent 0 1%, color-mix(in srgb, var(--accent) 34%, transparent) 3% 96%, transparent 99%)",
+                backgroundImage: "linear-gradient(100deg, transparent 0 1%, color-mix(in srgb, var(--accent) 34%, transparent) 3% 96%, transparent 99%)",
                 backgroundSize: loaded ? "100% 70%" : "0% 70%",
               }}
             >

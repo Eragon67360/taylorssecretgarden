@@ -14,11 +14,7 @@ export const metadata: Metadata = {
  */
 export default function NotFound() {
   return (
-    <TornPage
-      aside="someone tore it out. we suspect whoever still has the scarf."
-      kicker="404 · page not found"
-      title="This page was torn out of the journal."
-    >
+    <TornPage aside="someone tore it out. we suspect whoever still has the scarf." kicker="404 · page not found" title="This page was torn out of the journal.">
       <p className="text-soft max-w-[34rem] text-[17px] leading-relaxed">
         The address may have a typo, or the page was never kept. Everything else is still where we left it:
       </p>

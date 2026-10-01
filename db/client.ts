@@ -15,18 +15,18 @@ export type Database = NodePgDatabase<typeof schema>;
  * no `sslmode` (the plain Postgres in CI) are left alone.
  */
 export function connectionString(): string {
-	const url = process.env.DATABASE_URL;
+  const url = process.env.DATABASE_URL;
 
-	if (!url) throw new Error("DATABASE_URL is not set: Swiftter needs a Postgres database.");
+  if (!url) throw new Error("DATABASE_URL is not set: Swiftter needs a Postgres database.");
 
-	const parsed = new URL(url);
-	const sslmode = parsed.searchParams.get("sslmode");
+  const parsed = new URL(url);
+  const sslmode = parsed.searchParams.get("sslmode");
 
-	if (sslmode === "prefer" || sslmode === "require" || sslmode === "verify-ca") {
-		parsed.searchParams.set("sslmode", "verify-full");
-	}
+  if (sslmode === "prefer" || sslmode === "require" || sslmode === "verify-ca") {
+    parsed.searchParams.set("sslmode", "verify-full");
+  }
 
-	return parsed.toString();
+  return parsed.toString();
 }
 
 /*
@@ -48,7 +48,7 @@ export function connectionString(): string {
   timeout also lets a script's process exit if one ever forgets.
 */
 export function createPool() {
-	return new Pool({ connectionString: connectionString(), max: 5, idleTimeoutMillis: 5_000, connectionTimeoutMillis: 10_000 });
+  return new Pool({ connectionString: connectionString(), max: 5, idleTimeoutMillis: 5_000, connectionTimeoutMillis: 10_000 });
 }
 
 // Created on first use, not at import, so `next build` needs no database. Kept
@@ -56,16 +56,16 @@ export function createPool() {
 const globalForDb = globalThis as typeof globalThis & { swiftterDb?: Database };
 
 export function getDb(): Database {
-	if (!globalForDb.swiftterDb) {
-		const pool = createPool();
+  if (!globalForDb.swiftterDb) {
+    const pool = createPool();
 
-		// On Vercel, after each query, keeps the instance alive (waitUntil) for
-		// the idle timeout, so idle connections are closed rather than frozen
-		// open while it is suspended. Outside Vercel (VERCEL_URL and
-		// VERCEL_REGION unset: next start, tests) it does nothing.
-		attachDatabasePool(pool);
-		globalForDb.swiftterDb = drizzle(pool, { schema });
-	}
+    // On Vercel, after each query, keeps the instance alive (waitUntil) for
+    // the idle timeout, so idle connections are closed rather than frozen
+    // open while it is suspended. Outside Vercel (VERCEL_URL and
+    // VERCEL_REGION unset: next start, tests) it does nothing.
+    attachDatabasePool(pool);
+    globalForDb.swiftterDb = drizzle(pool, { schema });
+  }
 
-	return globalForDb.swiftterDb;
+  return globalForDb.swiftterDb;
 }

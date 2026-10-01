@@ -37,9 +37,7 @@ export function TicketStub({ kicker, title, titleAs: Title = "p", meta, picture,
   return (
     <m.div className={cn("drop-shadow-[0_10px_12px_rgba(0,0,0,.22)]", className)} {...motionProps}>
       <div className="bg-card text-ink flex min-h-[150px] overflow-hidden" style={{ mask: NOTCHES, WebkitMask: NOTCHES }}>
-        {picture && (
-          <div className="relative w-[34%] shrink-0 overflow-hidden [&>img]:h-full [&>img]:w-full [&>img]:object-cover">{picture}</div>
-        )}
+        {picture && <div className="relative w-[34%] shrink-0 overflow-hidden [&>img]:h-full [&>img]:w-full [&>img]:object-cover">{picture}</div>}
         <div className={cn("flex min-w-0 flex-1 flex-col justify-between gap-2 p-4 pl-5", picture && "border-l-2 border-dashed border-line")}>
           <p className="text-soft text-[11px] font-bold tracking-[.26em] uppercase">{kicker}</p>
           <Title className="font-serif-italic text-[26px] leading-none font-semibold">{title}</Title>

@@ -22,12 +22,7 @@ export function Scribble({ color = "var(--accent)", className }: PenMarkProps) {
 /** A hand-drawn curved arrow, pointing right (or left when flipped). Decorative. */
 export function Arrow({ color = "var(--pen)", className, flip = false }: PenMarkProps & { flip?: boolean }) {
   return (
-    <svg
-      aria-hidden="true"
-      className={cn("pointer-events-none", flip && "-scale-x-100", className)}
-      focusable="false"
-      viewBox="0 0 120 80"
-    >
+    <svg aria-hidden="true" className={cn("pointer-events-none", flip && "-scale-x-100", className)} focusable="false" viewBox="0 0 120 80">
       <path d="M6 10 C30 60 70 70 108 56" fill="none" stroke={color} strokeLinecap="round" strokeWidth="2.6" />
       <path d="M94 46 L110 56 L96 68" fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.6" />
     </svg>

@@ -47,7 +47,9 @@ export function pageMetadata({ title, description, path, noindex, article }: Pag
     ...(title && { title }),
     ...(description && { description }),
     alternates: { canonical: path },
-    openGraph: article ? { ...OPEN_GRAPH, type: "article", publishedTime: article.publishedTime, url: path, images: [CARD] } : { ...OPEN_GRAPH, url: path, images: [CARD] },
+    openGraph: article
+      ? { ...OPEN_GRAPH, type: "article", publishedTime: article.publishedTime, url: path, images: [CARD] }
+      : { ...OPEN_GRAPH, url: path, images: [CARD] },
     ...(noindex && { robots: { index: false, follow: false } }),
   };
 }

@@ -18,52 +18,52 @@ type Release = { id: number; title: string; release_date: string; record_type: s
 type Page = { data: Release[]; next?: string; error?: { message: string } };
 
 async function allReleases(): Promise<Release[]> {
-	const releases: Release[] = [];
-	let url: string | undefined = `https://api.deezer.com/artist/${ARTIST_ID}/albums?limit=100`;
+  const releases: Release[] = [];
+  let url: string | undefined = `https://api.deezer.com/artist/${ARTIST_ID}/albums?limit=100`;
 
-	while (url) {
-		const page = (await (await fetch(url)).json()) as Page;
+  while (url) {
+    const page = (await (await fetch(url)).json()) as Page;
 
-		if (page.error) throw new Error(`Deezer: ${page.error.message}`);
-		releases.push(...page.data);
-		url = page.next;
-	}
+    if (page.error) throw new Error(`Deezer: ${page.error.message}`);
+    releases.push(...page.data);
+    url = page.next;
+  }
 
-	return releases;
+  return releases;
 }
 
 async function main() {
-	const reportIndex = process.argv.indexOf("--report");
-	const reportFile = reportIndex > 0 ? process.argv[reportIndex + 1] : undefined;
-	const known = new Set([...CATALOGUE.flatMap(albumIds), ...IGNORED_RELEASES.map(({ id }) => id)]);
-	const releases = await allReleases();
-	const unknown = releases
-		.filter(({ record_type, id }) => record_type !== "single" && !known.has(String(id)))
-		.toSorted((a, b) => a.release_date.localeCompare(b.release_date));
+  const reportIndex = process.argv.indexOf("--report");
+  const reportFile = reportIndex > 0 ? process.argv[reportIndex + 1] : undefined;
+  const known = new Set([...CATALOGUE.flatMap(albumIds), ...IGNORED_RELEASES.map(({ id }) => id)]);
+  const releases = await allReleases();
+  const unknown = releases
+    .filter(({ record_type, id }) => record_type !== "single" && !known.has(String(id)))
+    .toSorted((a, b) => a.release_date.localeCompare(b.release_date));
 
-	console.log(`${releases.length} releases on Deezer, ${unknown.length} not in the catalogue.`);
-	if (!unknown.length) return;
+  console.log(`${releases.length} releases on Deezer, ${unknown.length} not in the catalogue.`);
+  if (!unknown.length) return;
 
-	const lines = unknown.map(({ id, title, release_date, record_type, link }) => `- [${title}](${link}) (${record_type}, ${release_date}, Deezer ID \`${id}\`)`);
+  const lines = unknown.map(({ id, title, release_date, record_type, link }) => `- [${title}](${link}) (${record_type}, ${release_date}, Deezer ID \`${id}\`)`);
 
-	console.log(lines.join("\n"));
-	if (reportFile) {
-		writeFileSync(
-			reportFile,
-			[
-				"Deezer lists releases by Taylor Swift that the catalogue (`lib/catalogue.ts`) does not know:",
-				"",
-				...lines,
-				"",
-				"For each one, either add it to the catalogue (a new Album, with its Era in `lib/eras.ts`, or a new version of an Album in its `versions`), or add it to `IGNORED_RELEASES` with the reason it is left out (karaoke, a playlist, one song's remixes…).",
-				"",
-				"_Opened by the weekly [release check](../blob/dev/scripts/check-releases.ts); it updates this issue while it is open._",
-			].join("\n"),
-		);
-	}
+  console.log(lines.join("\n"));
+  if (reportFile) {
+    writeFileSync(
+      reportFile,
+      [
+        "Deezer lists releases by Taylor Swift that the catalogue (`lib/catalogue.ts`) does not know:",
+        "",
+        ...lines,
+        "",
+        "For each one, either add it to the catalogue (a new Album, with its Era in `lib/eras.ts`, or a new version of an Album in its `versions`), or add it to `IGNORED_RELEASES` with the reason it is left out (karaoke, a playlist, one song's remixes…).",
+        "",
+        "_Opened by the weekly [release check](../blob/dev/scripts/check-releases.ts); it updates this issue while it is open._",
+      ].join("\n"),
+    );
+  }
 }
 
 main().catch((error: unknown) => {
-	console.error(error);
-	process.exit(1);
+  console.error(error);
+  process.exit(1);
 });

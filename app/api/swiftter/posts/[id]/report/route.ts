@@ -14,15 +14,15 @@ type Context = { params: Promise<{ id: string }> };
  * owner hears of it at the next hourly run (app/api/cron/moderation).
  */
 export function POST(request: Request, { params }: Context) {
-	return memberWrite(request, async (writer, body) => {
-		try {
-			// A Member who never wrote has no Member row yet: the report needs one.
-			await ensureMember(memberFromAuthUser(writer));
-			const { created } = await reportNote(writer.id, (await params).id, body.reason);
+  return memberWrite(request, async (writer, body) => {
+    try {
+      // A Member who never wrote has no Member row yet: the report needs one.
+      await ensureMember(memberFromAuthUser(writer));
+      const { created } = await reportNote(writer.id, (await params).id, body.reason);
 
-			return NextResponse.json({ reported: true, alreadyReported: !created }, { status: created ? 201 : 200 });
-		} catch (error) {
-			return errorResponse(error, "Reporting the note");
-		}
-	});
+      return NextResponse.json({ reported: true, alreadyReported: !created }, { status: created ? 201 : 200 });
+    } catch (error) {
+      return errorResponse(error, "Reporting the note");
+    }
+  });
 }

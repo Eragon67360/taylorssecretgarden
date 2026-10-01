@@ -9,23 +9,23 @@ import { allowedAvatarUrl } from "@/lib/avatar";
 import { displayNameOf } from "@/lib/display-name";
 import { members, moderationDecisions, noteReports, posts, reshares } from "@/db/schema";
 import {
-	type Author,
-	characterCount,
-	type FeedItem,
-	type FeedPage,
-	type FeedPost,
-	type HeldNote,
-	LIMITS,
-	type LimitedWrite,
-	MAX_MODERATION_ATTEMPTS,
-	MAX_NOTE_CHARACTERS,
-	MAX_REPORT_REASON_CHARACTERS,
-	MODERATION_RETRY,
-	NO_AUTHOR,
-	type NoteReportKind,
-	type RefusalCategory,
-	type Thread,
-	type ThreadNote,
+  type Author,
+  characterCount,
+  type FeedItem,
+  type FeedPage,
+  type FeedPost,
+  type HeldNote,
+  LIMITS,
+  type LimitedWrite,
+  MAX_MODERATION_ATTEMPTS,
+  MAX_NOTE_CHARACTERS,
+  MAX_REPORT_REASON_CHARACTERS,
+  MODERATION_RETRY,
+  NO_AUTHOR,
+  type NoteReportKind,
+  type RefusalCategory,
+  type Thread,
+  type ThreadNote,
 } from "@/lib/swiftter";
 import { moderatePost, moderationModelName, type ModerationResult } from "@/service/moderation";
 import { postModerationText, postPlainText, postText, sanitisePostHtml } from "@/service/post-html";
@@ -44,10 +44,10 @@ export type { FeedItem, FeedPage, FeedPost } from "@/lib/swiftter";
 
 /** What Swiftter keeps about a Member, copied from their Neon Auth user. */
 export type MemberDetails = {
-	id: string;
-	displayName: string;
-	username: string | null;
-	avatarUrl: string | null;
+  id: string;
+  displayName: string;
+  username: string | null;
+  avatarUrl: string | null;
 };
 
 /** Content that cannot be published: empty once sanitised, or too long. */
@@ -55,9 +55,9 @@ export class InvalidPostError extends Error {}
 
 /** No such public note (or no such note of yours): the same answer either way, so nothing leaks. */
 export class PostNotFoundError extends Error {
-	constructor() {
-		super("Post not found");
-	}
+  constructor() {
+    super("Post not found");
+  }
 }
 
 /** A Member tried to reshare their own Post. */
@@ -80,13 +80,13 @@ export class InvalidCursorError extends Error {}
 
 /** The Member reached a write limit (LIMITS). */
 export class PostingLimitError extends Error {
-	constructor(
-		readonly kind: LimitedWrite,
-		/** Seconds until the next write of this kind is allowed (at least 1). */
-		readonly retryAfter: number,
-	) {
-		super("Posting limit reached");
-	}
+  constructor(
+    readonly kind: LimitedWrite,
+    /** Seconds until the next write of this kind is allowed (at least 1). */
+    readonly retryAfter: number,
+  ) {
+    super("Posting limit reached");
+  }
 }
 
 /** The limit on Posts, as the posting-limit messages quote it. */
@@ -118,9 +118,9 @@ const c = alias(posts, "c");
 
 /** A timestamp from a raw query (node-postgres through Drizzle answers text: `2026-09-30 02:13:28.123456+00`) as ISO 8601. */
 export function iso(value: Date | string): string {
-	if (value instanceof Date) return value.toISOString();
+  if (value instanceof Date) return value.toISOString();
 
-	return new Date(value.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00")).toISOString();
+  return new Date(value.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00")).toISOString();
 }
 
 // ---------------------------------------------------------------------------
@@ -128,12 +128,9 @@ export function iso(value: Date | string): string {
 
 /** Creates the Member, or refreshes their name and avatar if they changed since. */
 export async function ensureMember(member: MemberDetails): Promise<void> {
-	const { displayName, username, avatarUrl } = member;
+  const { displayName, username, avatarUrl } = member;
 
-	await getDb()
-		.insert(members)
-		.values(member)
-		.onConflictDoUpdate({ target: members.id, set: { displayName, username, avatarUrl } });
+  await getDb().insert(members).values(member).onConflictDoUpdate({ target: members.id, set: { displayName, username, avatarUrl } });
 }
 
 /** The person signed in, as Neon Auth describes them (lib/auth/server.ts). */
@@ -146,12 +143,12 @@ export type AuthUser = { id: string; name?: string | null; email: string; image?
  * kept only when next/image may load it (lib/avatar.ts).
  */
 export function memberFromAuthUser(user: AuthUser): MemberDetails {
-	return {
-		id: user.id,
-		displayName: displayNameOf(user),
-		username: null,
-		avatarUrl: allowedAvatarUrl(user.image),
-	};
+  return {
+    id: user.id,
+    displayName: displayNameOf(user),
+    username: null,
+    avatarUrl: allowedAvatarUrl(user.image),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -162,20 +159,20 @@ export function memberFromAuthUser(user: AuthUser): MemberDetails {
  * InvalidPostError if it is too long or has no text left.
  */
 export function preparePost(html: string): string {
-	// Checked on the raw HTML, before any parsing.
-	if (html.length > MAX_HTML_LENGTH) throw new InvalidPostError("This note is too long.");
+  // Checked on the raw HTML, before any parsing.
+  if (html.length > MAX_HTML_LENGTH) throw new InvalidPostError("This note is too long.");
 
-	const content = sanitisePostHtml(html);
+  const content = sanitisePostHtml(html);
 
-	if (!postText(content)) throw new InvalidPostError("A note needs some text.");
+  if (!postText(content)) throw new InvalidPostError("A note needs some text.");
 
-	const characters = characterCount(postPlainText(content).replace(/\n/g, ""));
+  const characters = characterCount(postPlainText(content).replace(/\n/g, ""));
 
-	if (characters > MAX_NOTE_CHARACTERS) {
-		throw new InvalidPostError(`This note is ${characters} characters long; ${MAX_NOTE_CHARACTERS} is the most a note can hold.`);
-	}
+  if (characters > MAX_NOTE_CHARACTERS) {
+    throw new InvalidPostError(`This note is ${characters} characters long; ${MAX_NOTE_CHARACTERS} is the most a note can hold.`);
+  }
 
-	return content;
+  return content;
 }
 
 // ---------------------------------------------------------------------------
@@ -183,18 +180,18 @@ export function preparePost(html: string): string {
 
 // Each write the limit counts, as `made_at`.
 const LIMIT_COUNTS: Record<LimitedWrite, (memberId: string, minutes: number) => ReturnType<typeof sql>> = {
-	post: (memberId, minutes) => sql`
+  post: (memberId, minutes) => sql`
 		select ${posts.createdAt} as made_at from ${posts}
 		where ${posts.memberId} = ${memberId} and ${posts.parentId} is null and ${posts.createdAt} > now() - make_interval(mins => ${minutes})`,
-	reply: (memberId, minutes) => sql`
+  reply: (memberId, minutes) => sql`
 		select ${posts.createdAt} as made_at from ${posts}
 		where ${posts.memberId} = ${memberId} and ${posts.parentId} is not null and ${posts.createdAt} > now() - make_interval(mins => ${minutes})`,
-	// Undone reshares still count: undo and redo cannot dodge the limit.
-	reshare: (memberId, minutes) => sql`
+  // Undone reshares still count: undo and redo cannot dodge the limit.
+  reshare: (memberId, minutes) => sql`
 		select ${reshares.createdAt} as made_at from ${reshares}
 		where ${reshares.memberId} = ${memberId} and ${reshares.createdAt} > now() - make_interval(mins => ${minutes})`,
-	// Appeals are not counted: one per refused note of the Member's own, which the Post and reply limits already bound.
-	report: (memberId, minutes) => sql`
+  // Appeals are not counted: one per refused note of the Member's own, which the Post and reply limits already bound.
+  report: (memberId, minutes) => sql`
 		select ${noteReports.createdAt} as made_at from ${noteReports}
 		where ${noteReports.memberId} = ${memberId} and ${noteReports.kind} = 'report' and ${noteReports.createdAt} > now() - make_interval(mins => ${minutes})`,
 };
@@ -206,24 +203,24 @@ const LIMIT_COUNTS: Record<LimitedWrite, (memberId: string, minutes: number) => 
  * Torn-up notes still count.
  */
 export async function limitWait(memberId: string, kind: LimitedWrite, db: Executor = getDb()): Promise<number | null> {
-	const { count, minutes } = LIMITS[kind];
-	const { rows } = await db.execute<{ count: number; wait: number | null }>(sql`
+  const { count, minutes } = LIMITS[kind];
+  const { rows } = await db.execute<{ count: number; wait: number | null }>(sql`
 		select count(*)::int as count,
 			ceil(extract(epoch from min(made_at) + make_interval(mins => ${minutes}) - now()))::int as wait
 		from (${LIMIT_COUNTS[kind](memberId, minutes)} order by made_at desc limit ${count}) as recent
 	`);
-	const [{ count: made, wait }] = rows;
+  const [{ count: made, wait }] = rows;
 
-	return made < count ? null : Math.max(1, wait ?? 1);
+  return made < count ? null : Math.max(1, wait ?? 1);
 }
 
 /** Holds the Member's write lock until the transaction ends: their writes happen one at a time. */
 const lockMember = (db: Executor, memberId: string) => db.execute(sql`select pg_advisory_xact_lock(hashtext('swiftter-post:' || ${memberId}))`);
 
 async function checkLimit(db: Executor, memberId: string, kind: LimitedWrite) {
-	const wait = await limitWait(memberId, kind, db);
+  const wait = await limitWait(memberId, kind, db);
 
-	if (wait !== null) throw new PostingLimitError(kind, wait);
+  if (wait !== null) throw new PostingLimitError(kind, wait);
 }
 
 // ---------------------------------------------------------------------------
@@ -231,9 +228,7 @@ async function checkLimit(db: Executor, memberId: string, kind: LimitedWrite) {
 
 /** What happened to a note just written or checked again. */
 export type WriteOutcome =
-	| { status: "approved"; note: FeedPost }
-	| { status: "blocked"; note: HeldNote; category: RefusalCategory }
-	| { status: "pending"; note: HeldNote };
+  { status: "approved"; note: FeedPost } | { status: "blocked"; note: HeldNote; category: RefusalCategory } | { status: "pending"; note: HeldNote };
 
 /** The moderation step, replaceable in tests. */
 export type Moderate = (text: string) => Promise<ModerationResult>;
@@ -249,31 +244,31 @@ const parent = alias(posts, "parent");
  * note to check again, never a lost one.
  */
 export async function writeNote(memberId: string, html: string, parentId?: string | null, moderate: Moderate = moderatePost): Promise<WriteOutcome> {
-	const content = preparePost(html);
+  const content = preparePost(html);
 
-	if (parentId != null && !isUuid(parentId)) throw new PostNotFoundError();
+  if (parentId != null && !isUuid(parentId)) throw new PostNotFoundError();
 
-	const id = await getDb().transaction(async (tx) => {
-		await lockMember(tx, memberId);
-		await checkLimit(tx, memberId, parentId ? "reply" : "post");
+  const id = await getDb().transaction(async (tx) => {
+    await lockMember(tx, memberId);
+    await checkLimit(tx, memberId, parentId ? "reply" : "post");
 
-		const rows = parentId
-			? (
-					await tx.execute<RowOf<typeof posts, "id">>(sql`
+    const rows = parentId
+      ? (
+          await tx.execute<RowOf<typeof posts, "id">>(sql`
 						insert into ${posts} (${bare(posts.memberId)}, ${bare(posts.content)}, ${bare(posts.parentId)}, ${bare(posts.rootId)})
 						select ${memberId}, ${content}, ${parent.id}, ${parent.threadId}
 						from ${posts} ${parent}
 						where ${parent.id} = ${parentId} and ${parent.publishedAt} is not null and ${parent.deletedAt} is null
 						returning ${posts.id}`)
-				).rows
-			: await tx.insert(posts).values({ memberId, content }).returning({ id: posts.id });
+        ).rows
+      : await tx.insert(posts).values({ memberId, content }).returning({ id: posts.id });
 
-		if (!rows[0]) throw new PostNotFoundError();
+    if (!rows[0]) throw new PostNotFoundError();
 
-		return rows[0].id;
-	});
+    return rows[0].id;
+  });
 
-	return judge(id, content, moderate);
+  return judge(id, content, moderate);
 }
 
 /**
@@ -282,60 +277,60 @@ export async function writeNote(memberId: string, html: string, parentId?: strin
  * bring back a note its Member deleted.
  */
 async function judge(id: string, content: string, moderate: Moderate): Promise<WriteOutcome> {
-	const started = Date.now();
-	let result: ModerationResult | null = null;
+  const started = Date.now();
+  let result: ModerationResult | null = null;
 
-	try {
-		// The text with every link's destination spelled out, so a masked link is judged by where it leads.
-		result = await moderate(postModerationText(content));
-	} catch (error) {
-		// Any failure means no verdict: the note stays pending, nothing is lost.
-		// eslint-disable-next-line no-console
-		console.error("Moderation gave no verdict", error instanceof Error ? error.message : error);
-	}
+  try {
+    // The text with every link's destination spelled out, so a masked link is judged by where it leads.
+    result = await moderate(postModerationText(content));
+  } catch (error) {
+    // Any failure means no verdict: the note stays pending, nothing is lost.
+    // eslint-disable-next-line no-console
+    console.error("Moderation gave no verdict", error instanceof Error ? error.message : error);
+  }
 
-	const durationMs = Date.now() - started;
-	const model = moderationModelName();
+  const durationMs = Date.now() - started;
+  const model = moderationModelName();
 
-	await getDb().transaction(async (tx) => {
-		if (!result) {
-			await tx.insert(moderationDecisions).values({ postId: id, outcome: "unavailable", model, durationMs });
+  await getDb().transaction(async (tx) => {
+    if (!result) {
+      await tx.insert(moderationDecisions).values({ postId: id, outcome: "unavailable", model, durationMs });
 
-			return;
-		}
+      return;
+    }
 
-		const approved = result.verdict === "allowed";
-		const rows = await tx
-			.update(posts)
-			.set({ status: approved ? "approved" : "blocked", publishedAt: approved ? sql`now()` : null })
-			.where(and(eq(posts.id, id), eq(posts.status, "pending"), isNull(posts.deletedAt)))
-			.returning({ id: posts.id });
+    const approved = result.verdict === "allowed";
+    const rows = await tx
+      .update(posts)
+      .set({ status: approved ? "approved" : "blocked", publishedAt: approved ? sql`now()` : null })
+      .where(and(eq(posts.id, id), eq(posts.status, "pending"), isNull(posts.deletedAt)))
+      .returning({ id: posts.id });
 
-		// Torn up (or already judged) meanwhile: the verdict is kept as history only.
-		await tx.insert(moderationDecisions).values({
-			postId: id,
-			outcome: approved ? "approved" : "blocked",
-			category: result.verdict === "rejected" ? result.category : null,
-			reason: rows[0] ? result.reason : null,
-			model,
-			durationMs,
-		});
-	});
+    // Torn up (or already judged) meanwhile: the verdict is kept as history only.
+    await tx.insert(moderationDecisions).values({
+      postId: id,
+      outcome: approved ? "approved" : "blocked",
+      category: result.verdict === "rejected" ? result.category : null,
+      reason: rows[0] ? result.reason : null,
+      model,
+      durationMs,
+    });
+  });
 
-	return outcomeOf(id);
+  return outcomeOf(id);
 }
 
 /** The note's current state, as the Member who wrote it sees it. */
 async function outcomeOf(id: string): Promise<WriteOutcome> {
-	const [public_] = await selectPublicPosts(sql`${p.id} = ${id}`);
+  const [public_] = await selectPublicPosts(sql`${p.id} = ${id}`);
 
-	if (public_) return { status: "approved", note: public_ };
+  if (public_) return { status: "approved", note: public_ };
 
-	const [held] = await selectHeld(sql`${p.id} = ${id}`);
+  const [held] = await selectHeld(sql`${p.id} = ${id}`);
 
-	if (!held) throw new PostNotFoundError();
+  if (!held) throw new PostNotFoundError();
 
-	return held.status === "blocked" ? { status: "blocked", note: held, category: held.category ?? "insult" } : { status: "pending", note: held };
+  return held.status === "blocked" ? { status: "blocked", note: held, category: held.category ?? "insult" } : { status: "pending", note: held };
 }
 
 /**
@@ -344,16 +339,16 @@ async function outcomeOf(id: string): Promise<WriteOutcome> {
  * given up on.
  */
 export async function checkAgain(memberId: string, id: string, moderate: Moderate = moderatePost): Promise<WriteOutcome> {
-	if (!isUuid(id)) throw new PostNotFoundError();
+  if (!isUuid(id)) throw new PostNotFoundError();
 
-	const [held] = await selectHeld(sql`${p.id} = ${id} and ${p.memberId} = ${memberId}`);
+  const [held] = await selectHeld(sql`${p.id} = ${id} and ${p.memberId} = ${memberId}`);
 
-	if (!held || held.status !== "pending") throw new PostNotFoundError();
-	if (!held.canCheckAgain) throw new NoMoreChecksError();
+  if (!held || held.status !== "pending") throw new PostNotFoundError();
+  if (!held.canCheckAgain) throw new NoMoreChecksError();
 
-	const [{ content }] = await getDb().select({ content: posts.content }).from(posts).where(eq(posts.id, id));
+  const [{ content }] = await getDb().select({ content: posts.content }).from(posts).where(eq(posts.id, id));
 
-	return judge(id, content, moderate);
+  return judge(id, content, moderate);
 }
 
 /**
@@ -371,8 +366,7 @@ const dueForCheck = sql`(
 )`;
 
 /** A pending note `p` whose last check (`lastAt`) came after its week was up: given up on. */
-const givenUp = (lastAt = sql`d.last_at`) =>
-	sql`(${p.status} = 'pending' and ${lastAt} >= ${p.createdAt} + make_interval(days => ${MODERATION_RETRY.days}))`;
+const givenUp = (lastAt = sql`d.last_at`) => sql`(${p.status} = 'pending' and ${lastAt} >= ${p.createdAt} + make_interval(days => ${MODERATION_RETRY.days}))`;
 
 /** Consecutive notes left without a verdict after which a run stops: the Gateway is down, the rest keep their turn. */
 const STOP_AFTER_NO_VERDICTS = 3;
@@ -385,35 +379,40 @@ const STOP_AFTER_NO_VERDICTS = 3;
  * and the last check still had no verdict): each is reported once.
  */
 export async function recheckPending({ batch = 20, moderate = moderatePost, ids }: { batch?: number; moderate?: Moderate; ids?: string[] } = {}) {
-	const only = ids ? sql`and ${p.id} in (${sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `)})` : sql``;
-	const { rows } = await getDb().execute<RowOf<typeof posts, "id" | "content"> & { final: boolean }>(sql`
+  const only = ids
+    ? sql`and ${p.id} in (${sql.join(
+        ids.map((id) => sql`${id}::uuid`),
+        sql`, `,
+      )})`
+    : sql``;
+  const { rows } = await getDb().execute<RowOf<typeof posts, "id" | "content"> & { final: boolean }>(sql`
 		select ${p.id}, ${p.content}, ${p.createdAt} <= now() - make_interval(days => ${MODERATION_RETRY.days}) as final
 		from ${posts} ${p}
 		join lateral (select max(${moderationDecisions.createdAt}) as last_at from ${moderationDecisions} where ${moderationDecisions.postId} = ${p.id}) d on true
 		where ${p.status} = 'pending' and ${p.deletedAt} is null and ${dueForCheck} ${only}
 		order by d.last_at nulls first, ${p.createdAt}
 		limit ${batch}`);
-	const outcomes: WriteOutcome["status"][] = [];
-	const gaveUp: string[] = [];
-	let noVerdicts = 0;
+  const outcomes: WriteOutcome["status"][] = [];
+  const gaveUp: string[] = [];
+  let noVerdicts = 0;
 
-	for (const { id, content, final } of rows) {
-		const { status } = await judge(id, content, moderate);
+  for (const { id, content, final } of rows) {
+    const { status } = await judge(id, content, moderate);
 
-		outcomes.push(status);
-		if (status === "pending" && final) gaveUp.push(id);
-		noVerdicts = status === "pending" ? noVerdicts + 1 : 0;
-		if (noVerdicts >= STOP_AFTER_NO_VERDICTS) break;
-	}
+    outcomes.push(status);
+    if (status === "pending" && final) gaveUp.push(id);
+    noVerdicts = status === "pending" ? noVerdicts + 1 : 0;
+    if (noVerdicts >= STOP_AFTER_NO_VERDICTS) break;
+  }
 
-	return {
-		checked: outcomes.length,
-		approved: outcomes.filter((status) => status === "approved").length,
-		stillPending: outcomes.filter((status) => status === "pending").length,
-		gaveUp: gaveUp.length,
-		/** The notes given up on: held notes, so an owner alert may name them by id only. */
-		gaveUpIds: gaveUp,
-	};
+  return {
+    checked: outcomes.length,
+    approved: outcomes.filter((status) => status === "approved").length,
+    stillPending: outcomes.filter((status) => status === "pending").length,
+    gaveUp: gaveUp.length,
+    /** The notes given up on: held notes, so an owner alert may name them by id only. */
+    gaveUpIds: gaveUp,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -426,30 +425,30 @@ const s = alias(reshares, "s");
 type AuthorRow = { author_id: RawValue<typeof members.id> } & RowOf<typeof members, "displayName" | "username" | "avatarUrl">;
 
 type PostRow = RowOf<typeof posts, "id" | "content" | "isDemo" | "createdAt"> &
-	NotNull<RowOf<typeof posts, "publishedAt">> &
-	AuthorRow & { reply_count: number; reshare_count: number };
+  NotNull<RowOf<typeof posts, "publishedAt">> &
+  AuthorRow & { reply_count: number; reshare_count: number };
 
 // Rows stored before avatars were checked may hold a picture next/image
 // refuses (a Clerk avatar): those Members show their initials.
 const authorOf = (row: AuthorRow): Author => ({
-	id: row.author_id,
-	displayName: row.display_name,
-	username: row.username,
-	avatarUrl: allowedAvatarUrl(row.avatar_url),
+  id: row.author_id,
+  displayName: row.display_name,
+  username: row.username,
+  avatarUrl: allowedAvatarUrl(row.avatar_url),
 });
 
 // Every note leaves the server sanitised, including rows written some other
 // way than writeNote, so the browser renders its HTML as is (and never
 // downloads the sanitiser).
 const toFeedPost = (row: PostRow): FeedPost => ({
-	id: row.id,
-	content: sanitisePostHtml(row.content),
-	isDemo: row.is_demo,
-	createdAt: iso(row.created_at),
-	publishedAt: iso(row.published_at),
-	author: authorOf(row),
-	replyCount: row.reply_count,
-	reshareCount: row.reshare_count,
+  id: row.id,
+  content: sanitisePostHtml(row.content),
+  isDemo: row.is_demo,
+  createdAt: iso(row.created_at),
+  publishedAt: iso(row.published_at),
+  author: authorOf(row),
+  replyCount: row.reply_count,
+  reshareCount: row.reshare_count,
 });
 
 /** A public reply to `p`, as reply_count counts them (and listSitemapPosts checks for one). */
@@ -463,12 +462,12 @@ const postColumns = sql`
 
 /** Public Posts (not replies) matching a condition on `p`. */
 async function selectPublicPosts(where: ReturnType<typeof sql>): Promise<FeedPost[]> {
-	const { rows } = await getDb().execute<PostRow>(sql`
+  const { rows } = await getDb().execute<PostRow>(sql`
 		select ${postColumns}
 		from ${posts} ${p} join ${members} ${a} on ${a.id} = ${p.memberId}
 		where ${where} and ${p.publishedAt} is not null and ${p.deletedAt} is null`);
 
-	return rows.map(toFeedPost);
+  return rows.map(toFeedPost);
 }
 
 /** A timestamptz as Postgres prints it: `2026-09-30 02:13:28.123456+00`. */
@@ -477,14 +476,14 @@ const POSTGRES_TIMESTAMP = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d{1,6})?(
 const encodeCursor = (at: string, id: string) => Buffer.from(JSON.stringify([at, id])).toString("base64url");
 
 function decodeCursor(cursor: string): { at: string; id: string } {
-	try {
-		const [at, id] = JSON.parse(Buffer.from(cursor, "base64url").toString()) as unknown[];
+  try {
+    const [at, id] = JSON.parse(Buffer.from(cursor, "base64url").toString()) as unknown[];
 
-		if (typeof at === "string" && POSTGRES_TIMESTAMP.test(at) && isUuid(id)) return { at, id };
-	} catch {
-		// Falls through to the error below.
-	}
-	throw new InvalidCursorError("Invalid cursor");
+    if (typeof at === "string" && POSTGRES_TIMESTAMP.test(at) && isUuid(id)) return { at, id };
+  } catch {
+    // Falls through to the error below.
+  }
+  throw new InvalidCursorError("Invalid cursor");
 }
 
 /** A reshare in the feed. */
@@ -493,19 +492,19 @@ const r = alias(reshares, "r");
 const rm = alias(members, "rm");
 
 type FeedRow = PostRow &
-	RowOf<typeof posts, "deletedAt"> & {
-		kind: "post" | "reshare";
-		/** The Post's id, or the reshare's. */
-		item_id: RawValue<typeof posts.id> | RawValue<typeof reshares.id>;
-		/** The item's time as Postgres prints it (microseconds): the exact cursor. */
-		at_text: string;
-		at: NonNullable<RawValue<typeof posts.publishedAt>> | RawValue<typeof reshares.createdAt>;
-		// From the left join: null for a Post.
-		resharer_id: RawValue<typeof members.id> | null;
-		resharer_name: RawValue<typeof members.displayName> | null;
-		resharer_username: RawValue<typeof members.username>;
-		resharer_avatar: RawValue<typeof members.avatarUrl>;
-	};
+  RowOf<typeof posts, "deletedAt"> & {
+    kind: "post" | "reshare";
+    /** The Post's id, or the reshare's. */
+    item_id: RawValue<typeof posts.id> | RawValue<typeof reshares.id>;
+    /** The item's time as Postgres prints it (microseconds): the exact cursor. */
+    at_text: string;
+    at: NonNullable<RawValue<typeof posts.publishedAt>> | RawValue<typeof reshares.createdAt>;
+    // From the left join: null for a Post.
+    resharer_id: RawValue<typeof members.id> | null;
+    resharer_name: RawValue<typeof members.displayName> | null;
+    resharer_username: RawValue<typeof members.username>;
+    resharer_avatar: RawValue<typeof members.avatarUrl>;
+  };
 
 /**
  * One page of the feed: public Posts and reshares (a reshare of a Post since
@@ -515,12 +514,12 @@ type FeedRow = PostRow &
  * its size (counts are sub-selects, authors joins).
  */
 export async function listFeed(cursor?: string | null, pageSize = PAGE_SIZE, db: Executor = getDb()): Promise<FeedPage> {
-	const after = cursor ? decodeCursor(cursor) : null;
-	const before = (at: ReturnType<typeof sql>, id: ReturnType<typeof sql>) =>
-		after ? sql`and (${at}, ${id}) < (${after.at}::timestamptz, ${after.id}::uuid)` : sql``;
-	const take = pageSize + 1;
+  const after = cursor ? decodeCursor(cursor) : null;
+  const before = (at: ReturnType<typeof sql>, id: ReturnType<typeof sql>) =>
+    after ? sql`and (${at}, ${id}) < (${after.at}::timestamptz, ${after.id}::uuid)` : sql``;
+  const take = pageSize + 1;
 
-	const { rows } = await db.execute<FeedRow>(sql`
+  const { rows } = await db.execute<FeedRow>(sql`
 		with page as (
 			(select 'post'::text as kind, ${p.id} as item_id, ${p.publishedAt} as at, ${p.id} as post_id, null::text as resharer_id
 				from ${posts} ${p}
@@ -543,20 +542,20 @@ export async function listFeed(cursor?: string | null, pageSize = PAGE_SIZE, db:
 		order by page.at desc, page.item_id desc
 		limit ${take}`);
 
-	const items = rows.slice(0, pageSize).map((row): FeedItem => {
-		if (row.kind === "post") return { kind: "post", key: row.item_id, post: toFeedPost(row) };
+  const items = rows.slice(0, pageSize).map((row): FeedItem => {
+    if (row.kind === "post") return { kind: "post", key: row.item_id, post: toFeedPost(row) };
 
-		return {
-			kind: "reshare",
-			key: row.item_id,
-			resharedAt: iso(row.at),
-			resharedBy: authorOf({ author_id: row.resharer_id!, display_name: row.resharer_name!, username: row.resharer_username, avatar_url: row.resharer_avatar }),
-			post: row.deleted_at ? { id: row.id, tornUp: true } : toFeedPost(row),
-		};
-	});
-	const last = rows[pageSize - 1];
+    return {
+      kind: "reshare",
+      key: row.item_id,
+      resharedAt: iso(row.at),
+      resharedBy: authorOf({ author_id: row.resharer_id!, display_name: row.resharer_name!, username: row.resharer_username, avatar_url: row.resharer_avatar }),
+      post: row.deleted_at ? { id: row.id, tornUp: true } : toFeedPost(row),
+    };
+  });
+  const last = rows[pageSize - 1];
 
-	return { items, nextCursor: rows.length > pageSize && last ? encodeCursor(last.at_text, last.item_id) : null };
+  return { items, nextCursor: rows.length > pageSize && last ? encodeCursor(last.at_text, last.item_id) : null };
 }
 
 /** A thread's first Post needs this many visible characters to be indexed, unless someone replied. */
@@ -569,12 +568,12 @@ export const INDEXING_BAR_CHARACTERS = 140;
  * thread page's robots tag and its place in the sitemap.
  */
 export function meetsIndexingBar(rootHtml: string, publicReplies: number): boolean {
-	return publicReplies > 0 || characterCount(postPlainText(rootHtml).replace(/\s+/g, " ").trim()) >= INDEXING_BAR_CHARACTERS;
+  return publicReplies > 0 || characterCount(postPlainText(rootHtml).replace(/\s+/g, " ").trim()) >= INDEXING_BAR_CHARACTERS;
 }
 
 type ThreadRow = RowOf<typeof posts, "id" | "parentId" | "content" | "isDemo" | "isSeed" | "createdAt" | "deletedAt"> &
-	NotNull<RowOf<typeof posts, "publishedAt">> &
-	AuthorRow & { reshare_count: number };
+  NotNull<RowOf<typeof posts, "publishedAt">> &
+  AuthorRow & { reshare_count: number };
 
 /**
  * The thread a note belongs to: its first Post and every reply that is public
@@ -582,9 +581,9 @@ type ThreadRow = RowOf<typeof posts, "id" | "parentId" | "content" | "isDemo" | 
  * read), oldest first. Null when the note is not public (never was, or does not exist).
  */
 export async function getThread(id: string): Promise<Thread | null> {
-	if (!isUuid(id)) return null;
+  if (!isUuid(id)) return null;
 
-	const { rows } = await getDb().execute<ThreadRow>(sql`
+  const { rows } = await getDb().execute<ThreadRow>(sql`
 		select ${p.id}, ${p.parentId}, ${p.content}, ${p.isDemo}, ${p.isSeed}, ${p.createdAt}, ${p.publishedAt}, ${p.deletedAt},
 			${a.id} as author_id, ${a.displayName}, ${a.username}, ${a.avatarUrl},
 			(select count(*)::int from ${reshares} ${s} where ${s.postId} = ${p.id} and ${s.deletedAt} is null) as reshare_count
@@ -592,44 +591,45 @@ export async function getThread(id: string): Promise<Thread | null> {
 		where ${p.threadId} = (select ${posts.threadId} from ${posts} where ${posts.id} = ${id} and ${posts.publishedAt} is not null)
 			and ${p.publishedAt} is not null
 		order by ${p.createdAt}, ${p.id}`);
-	const notes = rows.map(
-		(row): ThreadNote & { reshareCount: number } => ({
-			id: row.id,
-			parentId: row.parent_id,
-			author: row.deleted_at ? NO_AUTHOR : authorOf(row),
-			content: row.deleted_at ? "" : sanitisePostHtml(row.content),
-			tornUp: !!row.deleted_at,
-			isDemo: row.is_demo,
-			createdAt: iso(row.created_at),
-			publishedAt: iso(row.published_at),
-			reshareCount: row.reshare_count,
-		}),
-	);
-	const rootIndex = notes.findIndex((note) => note.parentId === null);
+  const notes = rows.map((row): ThreadNote & { reshareCount: number } => ({
+    id: row.id,
+    parentId: row.parent_id,
+    author: row.deleted_at ? NO_AUTHOR : authorOf(row),
+    content: row.deleted_at ? "" : sanitisePostHtml(row.content),
+    tornUp: !!row.deleted_at,
+    isDemo: row.is_demo,
+    createdAt: iso(row.created_at),
+    publishedAt: iso(row.published_at),
+    reshareCount: row.reshare_count,
+  }));
+  const rootIndex = notes.findIndex((note) => note.parentId === null);
 
-	if (rootIndex < 0) return null;
+  if (rootIndex < 0) return null;
 
-	const { reshareCount, ...root } = notes[rootIndex];
+  const { reshareCount, ...root } = notes[rootIndex];
 
-	return {
-		root,
-		replies: notes.filter((note) => note.parentId !== null).map(({ reshareCount: _count, ...note }) => note),
-		reshareCount,
-		indexable:
-			!root.tornUp && !root.isDemo && !rows[rootIndex].is_seed && meetsIndexingBar(root.content, notes.filter((note) => note.parentId !== null && !note.tornUp).length),
-	};
+  return {
+    root,
+    replies: notes.filter((note) => note.parentId !== null).map(({ reshareCount: _count, ...note }) => note),
+    reshareCount,
+    indexable:
+      !root.tornUp &&
+      !root.isDemo &&
+      !rows[rootIndex].is_seed &&
+      meetsIndexingBar(root.content, notes.filter((note) => note.parentId !== null && !note.tornUp).length),
+  };
 }
 
 type HeldRow = RowOf<typeof posts, "id" | "content" | "rootId" | "parentId" | "createdAt"> &
-	Narrowed<RowOf<typeof posts, "status">, Exclude<RawValue<typeof posts.status>, "approved">> &
-	Narrowed<RowOf<typeof moderationDecisions, "category">, RefusalCategory | null> &
-	RowOf<typeof moderationDecisions, "reason"> & { attempts: number; given_up: boolean; appealed: boolean };
+  Narrowed<RowOf<typeof posts, "status">, Exclude<RawValue<typeof posts.status>, "approved">> &
+  Narrowed<RowOf<typeof moderationDecisions, "category">, RefusalCategory | null> &
+  RowOf<typeof moderationDecisions, "reason"> & { attempts: number; given_up: boolean; appealed: boolean };
 
 /** The last refusal of a held note. */
 const last = alias(moderationDecisions, "last");
 
 async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
-	const { rows } = await getDb().execute<HeldRow>(sql`
+  const { rows } = await getDb().execute<HeldRow>(sql`
 		select ${p.id}, ${p.content}, ${p.status}, ${p.rootId}, ${p.parentId}, ${p.createdAt}, d.attempts, coalesce(${givenUp()}, false) as given_up, ${last.category}, ${last.reason},
 			exists (select 1 from ${noteReports} where ${noteReports.postId} = ${p.id} and ${noteReports.kind} = 'appeal') as appealed
 		from ${posts} ${p}
@@ -643,20 +643,20 @@ async function selectHeld(where: ReturnType<typeof sql>): Promise<HeldNote[]> {
 		where ${where} and ${p.status} in ('pending', 'blocked') and ${p.deletedAt} is null
 		order by ${p.createdAt} desc`);
 
-	return rows.map((row) => ({
-		id: row.id,
-		content: sanitisePostHtml(row.content),
-		status: row.status,
-		category: row.status === "blocked" ? row.category : null,
-		reason: row.status === "blocked" ? row.reason : null,
-		attempts: row.attempts,
-		canCheckAgain: row.status === "pending" && !row.given_up && row.attempts < MAX_MODERATION_ATTEMPTS,
-		appealed: row.status === "blocked" && row.appealed,
-		givenUp: row.given_up,
-		createdAt: iso(row.created_at),
-		rootId: row.root_id,
-		parentId: row.parent_id,
-	}));
+  return rows.map((row) => ({
+    id: row.id,
+    content: sanitisePostHtml(row.content),
+    status: row.status,
+    category: row.status === "blocked" ? row.category : null,
+    reason: row.status === "blocked" ? row.reason : null,
+    attempts: row.attempts,
+    canCheckAgain: row.status === "pending" && !row.given_up && row.attempts < MAX_MODERATION_ATTEMPTS,
+    appealed: row.status === "blocked" && row.appealed,
+    givenUp: row.given_up,
+    createdAt: iso(row.created_at),
+    rootId: row.root_id,
+    parentId: row.parent_id,
+  }));
 }
 
 /** The Member's own notes that are not public: waiting for a check, or refused. */
@@ -664,14 +664,14 @@ export const listHeld = (memberId: string) => selectHeld(sql`${p.memberId} = ${m
 
 /** The Posts the Member reshares now (most recent 500). */
 export async function listOwnReshares(memberId: string): Promise<string[]> {
-	const rows = await getDb()
-		.select({ postId: reshares.postId })
-		.from(reshares)
-		.where(and(eq(reshares.memberId, memberId), isNull(reshares.deletedAt)))
-		.orderBy(desc(reshares.createdAt))
-		.limit(500);
+  const rows = await getDb()
+    .select({ postId: reshares.postId })
+    .from(reshares)
+    .where(and(eq(reshares.memberId, memberId), isNull(reshares.deletedAt)))
+    .orderBy(desc(reshares.createdAt))
+    .limit(500);
 
-	return rows.map((row) => row.postId);
+  return rows.map((row) => row.postId);
 }
 
 /**
@@ -679,9 +679,9 @@ export async function listOwnReshares(memberId: string): Promise<string[]> {
  * only threads that meet the indexing bar (meetsIndexingBar), like their pages.
  */
 export async function listSitemapPosts(limit = 5000): Promise<{ id: string; publishedAt: string }[]> {
-	// A note's stored HTML is never shorter than its visible text: the length
-	// check in SQL only skips notes that cannot meet the bar.
-	const { rows } = await getDb().execute<RowOf<typeof posts, "id" | "content"> & NotNull<RowOf<typeof posts, "publishedAt">> & { reply_count: number }>(sql`
+  // A note's stored HTML is never shorter than its visible text: the length
+  // check in SQL only skips notes that cannot meet the bar.
+  const { rows } = await getDb().execute<RowOf<typeof posts, "id" | "content"> & NotNull<RowOf<typeof posts, "publishedAt">> & { reply_count: number }>(sql`
 		select ${p.id}, ${p.publishedAt}, ${p.content},
 			(select count(*)::int from ${posts} ${c} where ${publicReplyOfP}) as reply_count
 		from ${posts} ${p}
@@ -690,9 +690,9 @@ export async function listSitemapPosts(limit = 5000): Promise<{ id: string; publ
 				or exists (select 1 from ${posts} ${c} where ${publicReplyOfP}))
 		order by ${p.publishedAt} desc limit ${limit}`);
 
-	return rows
-		.filter((row) => meetsIndexingBar(sanitisePostHtml(row.content), row.reply_count))
-		.map((row) => ({ id: row.id, publishedAt: iso(row.published_at) }));
+  return rows
+    .filter((row) => meetsIndexingBar(sanitisePostHtml(row.content), row.reply_count))
+    .map((row) => ({ id: row.id, publishedAt: iso(row.published_at) }));
 }
 
 // ---------------------------------------------------------------------------
@@ -704,45 +704,45 @@ export async function listSitemapPosts(limit = 5000): Promise<{ id: string; publ
  * SelfReshareError, AlreadyResharedError or PostingLimitError.
  */
 export async function reshare(memberId: string, postId: string): Promise<void> {
-	if (!isUuid(postId)) throw new PostNotFoundError();
+  if (!isUuid(postId)) throw new PostNotFoundError();
 
-	await getDb().transaction(async (tx) => {
-		await lockMember(tx, memberId);
+  await getDb().transaction(async (tx) => {
+    await lockMember(tx, memberId);
 
-		const targets = await tx
-			.select({ memberId: posts.memberId })
-			.from(posts)
-			.where(and(eq(posts.id, postId), isNull(posts.parentId), isNotNull(posts.publishedAt), isNull(posts.deletedAt)));
+    const targets = await tx
+      .select({ memberId: posts.memberId })
+      .from(posts)
+      .where(and(eq(posts.id, postId), isNull(posts.parentId), isNotNull(posts.publishedAt), isNull(posts.deletedAt)));
 
-		if (!targets[0]) throw new PostNotFoundError();
-		if (targets[0].memberId === memberId) throw new SelfReshareError("You can't reshare your own note.");
+    if (!targets[0]) throw new PostNotFoundError();
+    if (targets[0].memberId === memberId) throw new SelfReshareError("You can't reshare your own note.");
 
-		const theirs = and(eq(reshares.memberId, memberId), eq(reshares.postId, postId));
-		const existing = await tx.select({ deletedAt: reshares.deletedAt }).from(reshares).where(theirs);
+    const theirs = and(eq(reshares.memberId, memberId), eq(reshares.postId, postId));
+    const existing = await tx.select({ deletedAt: reshares.deletedAt }).from(reshares).where(theirs);
 
-		if (existing[0] && !existing[0].deletedAt) throw new AlreadyResharedError("You already reshare this note.");
-		if (existing[0]) {
-			await tx.update(reshares).set({ deletedAt: null }).where(theirs);
+    if (existing[0] && !existing[0].deletedAt) throw new AlreadyResharedError("You already reshare this note.");
+    if (existing[0]) {
+      await tx.update(reshares).set({ deletedAt: null }).where(theirs);
 
-			return;
-		}
+      return;
+    }
 
-		await checkLimit(tx, memberId, "reshare");
-		await tx.insert(reshares).values({ memberId, postId });
-	});
+    await checkLimit(tx, memberId, "reshare");
+    await tx.insert(reshares).values({ memberId, postId });
+  });
 }
 
 /** Undoes the Member's reshare of a Post. Throws PostNotFoundError when they do not reshare it. */
 export async function unreshare(memberId: string, postId: string): Promise<void> {
-	if (!isUuid(postId)) throw new PostNotFoundError();
+  if (!isUuid(postId)) throw new PostNotFoundError();
 
-	const rows = await getDb()
-		.update(reshares)
-		.set({ deletedAt: sql`now()` })
-		.where(and(eq(reshares.memberId, memberId), eq(reshares.postId, postId), isNull(reshares.deletedAt)))
-		.returning({ id: reshares.id });
+  const rows = await getDb()
+    .update(reshares)
+    .set({ deletedAt: sql`now()` })
+    .where(and(eq(reshares.memberId, memberId), eq(reshares.postId, postId), isNull(reshares.deletedAt)))
+    .returning({ id: reshares.id });
 
-	if (!rows[0]) throw new PostNotFoundError();
+  if (!rows[0]) throw new PostNotFoundError();
 }
 
 // ---------------------------------------------------------------------------
@@ -757,25 +757,25 @@ export async function unreshare(memberId: string, postId: string): Promise<void>
  * limits; the Member's tombstones past that are then removed.
  */
 export async function deletePost(memberId: string, postId: string): Promise<void> {
-	if (!isUuid(postId)) throw new PostNotFoundError();
+  if (!isUuid(postId)) throw new PostNotFoundError();
 
-	await getDb().transaction(async (tx) => {
-		const rows = await tx
-			.update(posts)
-			.set({ content: "", deletedAt: sql`now()` })
-			.where(and(eq(posts.id, postId), eq(posts.memberId, memberId), isNull(posts.deletedAt)))
-			.returning({ id: posts.id });
+  await getDb().transaction(async (tx) => {
+    const rows = await tx
+      .update(posts)
+      .set({ content: "", deletedAt: sql`now()` })
+      .where(and(eq(posts.id, postId), eq(posts.memberId, memberId), isNull(posts.deletedAt)))
+      .returning({ id: posts.id });
 
-		if (!rows[0]) throw new PostNotFoundError();
-		await tx.update(moderationDecisions).set({ reason: null }).where(eq(moderationDecisions.postId, postId));
-		// Nothing left for a human to look at: reports and appeals of it are settled (and purged in time).
-		await tx
-			.update(noteReports)
-			.set({ resolvedAt: sql`now()` })
-			.where(and(eq(noteReports.postId, postId), isNull(noteReports.resolvedAt)));
-	});
+    if (!rows[0]) throw new PostNotFoundError();
+    await tx.update(moderationDecisions).set({ reason: null }).where(eq(moderationDecisions.postId, postId));
+    // Nothing left for a human to look at: reports and appeals of it are settled (and purged in time).
+    await tx
+      .update(noteReports)
+      .set({ resolvedAt: sql`now()` })
+      .where(and(eq(noteReports.postId, postId), isNull(noteReports.resolvedAt)));
+  });
 
-	await purgeTombstones(memberId);
+  await purgeTombstones(memberId);
 }
 
 /** A note `p` that no reply answers and no reshare (even undone) points at: its row can go. */
@@ -787,18 +787,18 @@ const unreferenced = sql`not exists (select 1 from ${posts} ${c} where ${c.paren
  * makes Postgres refuse the delete (foreign key), and the row simply stays.
  */
 async function purgeTombstones(memberId: string) {
-	const window = Math.max(LIMITS.post.minutes, LIMITS.reply.minutes);
+  const window = Math.max(LIMITS.post.minutes, LIMITS.reply.minutes);
 
-	try {
-		await getDb().execute(sql`
+  try {
+    await getDb().execute(sql`
 			delete from ${posts} ${p}
 			where ${p.memberId} = ${memberId} and ${p.deletedAt} is not null
 				and ${p.createdAt} <= now() - make_interval(mins => ${window})
 				and ${unreferenced}`);
-	} catch (error) {
-		// eslint-disable-next-line no-console
-		console.warn("Tombstone purge skipped", error instanceof Error ? error.message : error);
-	}
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn("Tombstone purge skipped", error instanceof Error ? error.message : error);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -811,28 +811,28 @@ async function purgeTombstones(memberId: string) {
  * InvalidReasonError otherwise.
  */
 export function prepareReason(reason: unknown): string | null {
-	if (reason === undefined || reason === null) return null;
-	if (typeof reason !== "string") throw new InvalidReasonError("A reason is text.");
-	// Checked on the raw text, before any work on it.
-	if (reason.length > MAX_REPORT_REASON_CHARACTERS * 8) throw new InvalidReasonError("This reason is too long.");
+  if (reason === undefined || reason === null) return null;
+  if (typeof reason !== "string") throw new InvalidReasonError("A reason is text.");
+  // Checked on the raw text, before any work on it.
+  if (reason.length > MAX_REPORT_REASON_CHARACTERS * 8) throw new InvalidReasonError("This reason is too long.");
 
-	const text = reason
-		.normalize("NFC")
-		.replace(/\r\n?/g, "\n")
-		.replace(/\t/g, " ")
-		// Control characters, and the invisible ones that reorder or hide text.
-		.replace(/[\u0000-\u0009\u000B-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "")
-		.replace(/\n{3,}/g, "\n\n")
-		.trim();
+  const text = reason
+    .normalize("NFC")
+    .replace(/\r\n?/g, "\n")
+    .replace(/\t/g, " ")
+    // Control characters, and the invisible ones that reorder or hide text.
+    .replace(/[\u0000-\u0009\u000B-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
-	if (!text) return null;
-	const characters = characterCount(text.replace(/\n/g, ""));
+  if (!text) return null;
+  const characters = characterCount(text.replace(/\n/g, ""));
 
-	if (characters > MAX_REPORT_REASON_CHARACTERS) {
-		throw new InvalidReasonError(`This reason is ${characters} characters long; ${MAX_REPORT_REASON_CHARACTERS} is the most it can hold.`);
-	}
+  if (characters > MAX_REPORT_REASON_CHARACTERS) {
+    throw new InvalidReasonError(`This reason is ${characters} characters long; ${MAX_REPORT_REASON_CHARACTERS} is the most it can hold.`);
+  }
 
-	return text;
+  return text;
 }
 
 /**
@@ -842,32 +842,32 @@ export function prepareReason(reason: unknown): string | null {
  * PostNotFoundError, SelfReportError, InvalidReasonError or PostingLimitError.
  */
 export async function reportNote(memberId: string, postId: string, reason?: unknown): Promise<{ created: boolean }> {
-	if (!isUuid(postId)) throw new PostNotFoundError();
+  if (!isUuid(postId)) throw new PostNotFoundError();
 
-	const text = prepareReason(reason);
+  const text = prepareReason(reason);
 
-	return getDb().transaction(async (tx) => {
-		await lockMember(tx, memberId);
+  return getDb().transaction(async (tx) => {
+    await lockMember(tx, memberId);
 
-		const targets = await tx
-			.select({ memberId: posts.memberId })
-			.from(posts)
-			.where(and(eq(posts.id, postId), isNotNull(posts.publishedAt), isNull(posts.deletedAt)));
+    const targets = await tx
+      .select({ memberId: posts.memberId })
+      .from(posts)
+      .where(and(eq(posts.id, postId), isNotNull(posts.publishedAt), isNull(posts.deletedAt)));
 
-		if (!targets[0]) throw new PostNotFoundError();
-		if (targets[0].memberId === memberId) throw new SelfReportError("You can't report your own note.");
+    if (!targets[0]) throw new PostNotFoundError();
+    if (targets[0].memberId === memberId) throw new SelfReportError("You can't report your own note.");
 
-		const existing = await tx
-			.select({ id: noteReports.id })
-			.from(noteReports)
-			.where(and(eq(noteReports.postId, postId), eq(noteReports.memberId, memberId), eq(noteReports.kind, "report")));
+    const existing = await tx
+      .select({ id: noteReports.id })
+      .from(noteReports)
+      .where(and(eq(noteReports.postId, postId), eq(noteReports.memberId, memberId), eq(noteReports.kind, "report")));
 
-		if (existing[0]) return { created: false };
-		await checkLimit(tx, memberId, "report");
-		await tx.insert(noteReports).values({ postId, memberId, kind: "report", reason: text });
+    if (existing[0]) return { created: false };
+    await checkLimit(tx, memberId, "report");
+    await tx.insert(noteReports).values({ postId, memberId, kind: "report", reason: text });
 
-		return { created: true };
-	});
+    return { created: true };
+  });
 }
 
 /**
@@ -876,53 +876,53 @@ export async function reportNote(memberId: string, postId: string, reason?: unkn
  * PostNotFoundError when it is not their refused note.
  */
 export async function appealNote(memberId: string, postId: string): Promise<{ created: boolean }> {
-	if (!isUuid(postId)) throw new PostNotFoundError();
+  if (!isUuid(postId)) throw new PostNotFoundError();
 
-	return getDb().transaction(async (tx) => {
-		const notes = await tx
-			.select({ id: posts.id })
-			.from(posts)
-			.where(and(eq(posts.id, postId), eq(posts.memberId, memberId), eq(posts.status, "blocked"), isNull(posts.deletedAt)));
+  return getDb().transaction(async (tx) => {
+    const notes = await tx
+      .select({ id: posts.id })
+      .from(posts)
+      .where(and(eq(posts.id, postId), eq(posts.memberId, memberId), eq(posts.status, "blocked"), isNull(posts.deletedAt)));
 
-		if (!notes[0]) throw new PostNotFoundError();
-		const rows = await tx.insert(noteReports).values({ postId, memberId, kind: "appeal" }).onConflictDoNothing().returning({ id: noteReports.id });
+    if (!notes[0]) throw new PostNotFoundError();
+    const rows = await tx.insert(noteReports).values({ postId, memberId, kind: "appeal" }).onConflictDoNothing().returning({ id: noteReports.id });
 
-		return { created: !!rows[0] };
-	});
+    return { created: !!rows[0] };
+  });
 }
 
 /** A report or appeal waiting to be sent to the owner, as an owner alert may name it: ids and kinds only. */
 export type ReportToNotify = {
-	id: string;
-	kind: NoteReportKind;
-	postId: string;
-	/** Whether the note is public now: only then may an alert link to it (its thread page). Every appeal is of a held note. */
-	isPublic: boolean;
+  id: string;
+  kind: NoteReportKind;
+  postId: string;
+  /** Whether the note is public now: only then may an alert link to it (its thread page). Every appeal is of a held note. */
+  isPublic: boolean;
 };
 
 /** Unresolved reports and appeals not yet sent to the owner, oldest first (at most `limit`; the next run takes the rest). */
 export async function listReportsToNotify(limit = 200): Promise<ReportToNotify[]> {
-	return getDb()
-		.select({
-			id: noteReports.id,
-			kind: noteReports.kind,
-			postId: noteReports.postId,
-			isPublic: sql<boolean>`(${posts.publishedAt} is not null and ${posts.deletedAt} is null)`,
-		})
-		.from(noteReports)
-		.innerJoin(posts, eq(posts.id, noteReports.postId))
-		.where(and(isNull(noteReports.notifiedAt), isNull(noteReports.resolvedAt)))
-		.orderBy(noteReports.createdAt, noteReports.id)
-		.limit(limit);
+  return getDb()
+    .select({
+      id: noteReports.id,
+      kind: noteReports.kind,
+      postId: noteReports.postId,
+      isPublic: sql<boolean>`(${posts.publishedAt} is not null and ${posts.deletedAt} is null)`,
+    })
+    .from(noteReports)
+    .innerJoin(posts, eq(posts.id, noteReports.postId))
+    .where(and(isNull(noteReports.notifiedAt), isNull(noteReports.resolvedAt)))
+    .orderBy(noteReports.createdAt, noteReports.id)
+    .limit(limit);
 }
 
 /** Records that the owner alert summing these up went out. */
 export async function markReportsNotified(ids: string[]): Promise<void> {
-	if (!ids.length) return;
-	await getDb()
-		.update(noteReports)
-		.set({ notifiedAt: sql`now()` })
-		.where(inArray(noteReports.id, ids));
+  if (!ids.length) return;
+  await getDb()
+    .update(noteReports)
+    .set({ notifiedAt: sql`now()` })
+    .where(inArray(noteReports.id, ids));
 }
 
 // ---------------------------------------------------------------------------
@@ -930,92 +930,98 @@ export async function markReportsNotified(ids: string[]): Promise<void> {
 
 /** Everything Swiftter keeps about a Member, as their export gives it to them. */
 export type MemberExport = {
-	member: { id: string; displayName: string; username: string | null; avatarUrl: string | null; createdAt: string } | null;
-	notes: {
-		id: string;
-		kind: "post" | "reply";
-		parentId: string | null;
-		rootId: string | null;
-		/** Sanitised HTML; empty once torn up. */
-		content: string;
-		status: "pending" | "approved" | "blocked";
-		createdAt: string;
-		publishedAt: string | null;
-		tornUpAt: string | null;
-	}[];
-	reshares: { postId: string; createdAt: string; undoneAt: string | null }[];
-	moderationDecisions: { postId: string; outcome: string; category: string | null; reason: string | null; model: string; createdAt: string }[];
-	/** The Member's own reports (of others' notes) and appeals (of their refused notes). */
-	reports: { postId: string; kind: NoteReportKind; reason: string | null; createdAt: string; resolvedAt: string | null }[];
+  member: { id: string; displayName: string; username: string | null; avatarUrl: string | null; createdAt: string } | null;
+  notes: {
+    id: string;
+    kind: "post" | "reply";
+    parentId: string | null;
+    rootId: string | null;
+    /** Sanitised HTML; empty once torn up. */
+    content: string;
+    status: "pending" | "approved" | "blocked";
+    createdAt: string;
+    publishedAt: string | null;
+    tornUpAt: string | null;
+  }[];
+  reshares: { postId: string; createdAt: string; undoneAt: string | null }[];
+  moderationDecisions: { postId: string; outcome: string; category: string | null; reason: string | null; model: string; createdAt: string }[];
+  /** The Member's own reports (of others' notes) and appeals (of their refused notes). */
+  reports: { postId: string; kind: NoteReportKind; reason: string | null; createdAt: string; resolvedAt: string | null }[];
 };
 
 const isoOrNull = (value: Date | string | null) => (value === null ? null : iso(value));
 
 /** The Member's row, notes (every state, torn up included), reshares (undone included), every moderation decision on their notes, and their reports and appeals. */
 export async function exportMemberData(memberId: string): Promise<MemberExport> {
-	const db = getDb();
-	const [member, notes, entries, decisions, reports] = await Promise.all([
-		db
-			.select({ id: members.id, displayName: members.displayName, username: members.username, avatarUrl: members.avatarUrl, createdAt: members.createdAt })
-			.from(members)
-			.where(eq(members.id, memberId)),
-		db
-			.select({
-				id: posts.id,
-				parentId: posts.parentId,
-				rootId: posts.rootId,
-				content: posts.content,
-				status: posts.status,
-				createdAt: posts.createdAt,
-				publishedAt: posts.publishedAt,
-				deletedAt: posts.deletedAt,
-			})
-			.from(posts)
-			.where(eq(posts.memberId, memberId))
-			.orderBy(posts.createdAt, posts.id),
-		db
-			.select({ postId: reshares.postId, createdAt: reshares.createdAt, deletedAt: reshares.deletedAt })
-			.from(reshares)
-			.where(eq(reshares.memberId, memberId))
-			.orderBy(reshares.createdAt, reshares.id),
-		db
-			.select({
-				postId: moderationDecisions.postId,
-				outcome: moderationDecisions.outcome,
-				category: moderationDecisions.category,
-				reason: moderationDecisions.reason,
-				model: moderationDecisions.model,
-				createdAt: moderationDecisions.createdAt,
-			})
-			.from(moderationDecisions)
-			.innerJoin(posts, eq(posts.id, moderationDecisions.postId))
-			.where(eq(posts.memberId, memberId))
-			.orderBy(moderationDecisions.createdAt, moderationDecisions.id),
-		db
-			.select({ postId: noteReports.postId, kind: noteReports.kind, reason: noteReports.reason, createdAt: noteReports.createdAt, resolvedAt: noteReports.resolvedAt })
-			.from(noteReports)
-			.where(eq(noteReports.memberId, memberId))
-			.orderBy(noteReports.createdAt, noteReports.id),
-	]);
-	const row = member[0];
+  const db = getDb();
+  const [member, notes, entries, decisions, reports] = await Promise.all([
+    db
+      .select({ id: members.id, displayName: members.displayName, username: members.username, avatarUrl: members.avatarUrl, createdAt: members.createdAt })
+      .from(members)
+      .where(eq(members.id, memberId)),
+    db
+      .select({
+        id: posts.id,
+        parentId: posts.parentId,
+        rootId: posts.rootId,
+        content: posts.content,
+        status: posts.status,
+        createdAt: posts.createdAt,
+        publishedAt: posts.publishedAt,
+        deletedAt: posts.deletedAt,
+      })
+      .from(posts)
+      .where(eq(posts.memberId, memberId))
+      .orderBy(posts.createdAt, posts.id),
+    db
+      .select({ postId: reshares.postId, createdAt: reshares.createdAt, deletedAt: reshares.deletedAt })
+      .from(reshares)
+      .where(eq(reshares.memberId, memberId))
+      .orderBy(reshares.createdAt, reshares.id),
+    db
+      .select({
+        postId: moderationDecisions.postId,
+        outcome: moderationDecisions.outcome,
+        category: moderationDecisions.category,
+        reason: moderationDecisions.reason,
+        model: moderationDecisions.model,
+        createdAt: moderationDecisions.createdAt,
+      })
+      .from(moderationDecisions)
+      .innerJoin(posts, eq(posts.id, moderationDecisions.postId))
+      .where(eq(posts.memberId, memberId))
+      .orderBy(moderationDecisions.createdAt, moderationDecisions.id),
+    db
+      .select({
+        postId: noteReports.postId,
+        kind: noteReports.kind,
+        reason: noteReports.reason,
+        createdAt: noteReports.createdAt,
+        resolvedAt: noteReports.resolvedAt,
+      })
+      .from(noteReports)
+      .where(eq(noteReports.memberId, memberId))
+      .orderBy(noteReports.createdAt, noteReports.id),
+  ]);
+  const row = member[0];
 
-	return {
-		member: row ? { ...row, createdAt: iso(row.createdAt) } : null,
-		notes: notes.map((note) => ({
-			id: note.id,
-			kind: note.parentId ? "reply" : "post",
-			parentId: note.parentId,
-			rootId: note.rootId,
-			content: note.deletedAt ? "" : sanitisePostHtml(note.content),
-			status: note.status,
-			createdAt: iso(note.createdAt),
-			publishedAt: isoOrNull(note.publishedAt),
-			tornUpAt: isoOrNull(note.deletedAt),
-		})),
-		reshares: entries.map((entry) => ({ postId: entry.postId, createdAt: iso(entry.createdAt), undoneAt: isoOrNull(entry.deletedAt) })),
-		moderationDecisions: decisions.map((decision) => ({ ...decision, createdAt: iso(decision.createdAt) })),
-		reports: reports.map((report) => ({ ...report, createdAt: iso(report.createdAt), resolvedAt: isoOrNull(report.resolvedAt) })),
-	};
+  return {
+    member: row ? { ...row, createdAt: iso(row.createdAt) } : null,
+    notes: notes.map((note) => ({
+      id: note.id,
+      kind: note.parentId ? "reply" : "post",
+      parentId: note.parentId,
+      rootId: note.rootId,
+      content: note.deletedAt ? "" : sanitisePostHtml(note.content),
+      status: note.status,
+      createdAt: iso(note.createdAt),
+      publishedAt: isoOrNull(note.publishedAt),
+      tornUpAt: isoOrNull(note.deletedAt),
+    })),
+    reshares: entries.map((entry) => ({ postId: entry.postId, createdAt: iso(entry.createdAt), undoneAt: isoOrNull(entry.deletedAt) })),
+    moderationDecisions: decisions.map((decision) => ({ ...decision, createdAt: iso(decision.createdAt) })),
+    reports: reports.map((report) => ({ ...report, createdAt: iso(report.createdAt), resolvedAt: isoOrNull(report.resolvedAt) })),
+  };
 }
 
 /**
@@ -1036,27 +1042,27 @@ export async function exportMemberData(memberId: string): Promise<MemberExport> 
  * Tombstones nothing refers to are removed then, or by the daily purge.
  */
 export async function deleteMemberAccount(memberId: string): Promise<void> {
-	await getDb().transaction(async (tx) => {
-		await lockMember(tx, memberId);
-		await tx
-			.update(posts)
-			.set({ content: "", deletedAt: sql`coalesce(${posts.deletedAt}, now())` })
-			.where(eq(posts.memberId, memberId));
-		await tx
-			.update(moderationDecisions)
-			.set({ reason: null })
-			.where(inArray(moderationDecisions.postId, tx.select({ id: posts.id }).from(posts).where(eq(posts.memberId, memberId))));
-		await tx.delete(reshares).where(eq(reshares.memberId, memberId));
-		await tx.delete(noteReports).where(eq(noteReports.memberId, memberId));
-		await tx
-			.update(noteReports)
-			.set({ resolvedAt: sql`now()` })
-			.where(and(isNull(noteReports.resolvedAt), inArray(noteReports.postId, tx.select({ id: posts.id }).from(posts).where(eq(posts.memberId, memberId)))));
-		await tx.update(members).set({ displayName: "", username: null, avatarUrl: null }).where(eq(members.id, memberId));
-		await tx.execute(sql`select public.delete_auth_user(${memberId})`);
-	});
+  await getDb().transaction(async (tx) => {
+    await lockMember(tx, memberId);
+    await tx
+      .update(posts)
+      .set({ content: "", deletedAt: sql`coalesce(${posts.deletedAt}, now())` })
+      .where(eq(posts.memberId, memberId));
+    await tx
+      .update(moderationDecisions)
+      .set({ reason: null })
+      .where(inArray(moderationDecisions.postId, tx.select({ id: posts.id }).from(posts).where(eq(posts.memberId, memberId))));
+    await tx.delete(reshares).where(eq(reshares.memberId, memberId));
+    await tx.delete(noteReports).where(eq(noteReports.memberId, memberId));
+    await tx
+      .update(noteReports)
+      .set({ resolvedAt: sql`now()` })
+      .where(and(isNull(noteReports.resolvedAt), inArray(noteReports.postId, tx.select({ id: posts.id }).from(posts).where(eq(posts.memberId, memberId)))));
+    await tx.update(members).set({ displayName: "", username: null, avatarUrl: null }).where(eq(members.id, memberId));
+    await tx.execute(sql`select public.delete_auth_user(${memberId})`);
+  });
 
-	await purgeTombstones(memberId);
+  await purgeTombstones(memberId);
 }
 
 // ---------------------------------------------------------------------------
@@ -1082,39 +1088,39 @@ const MAX_TOMBSTONE_DEPTH = 50;
  * Returns how many rows each step removed or cleared.
  */
 export async function purgeExpired(db: Executor = getDb()) {
-	const window = Math.max(LIMITS.post.minutes, LIMITS.reply.minutes);
-	const undoneReshares = await db.execute(sql`
+  const window = Math.max(LIMITS.post.minutes, LIMITS.reply.minutes);
+  const undoneReshares = await db.execute(sql`
 		delete from ${reshares} ${r} using ${posts} ${p}
 		where ${p.id} = ${r.postId} and ${r.deletedAt} is not null and ${p.deletedAt} is not null`);
-	let tombstones = 0;
+  let tombstones = 0;
 
-	// One level of a thread at a time: a tombstone answered only by tombstones goes once they have.
-	for (let depth = 0; depth < MAX_TOMBSTONE_DEPTH; depth++) {
-		const { rowCount } = await db.execute(sql`
+  // One level of a thread at a time: a tombstone answered only by tombstones goes once they have.
+  for (let depth = 0; depth < MAX_TOMBSTONE_DEPTH; depth++) {
+    const { rowCount } = await db.execute(sql`
 			delete from ${posts} ${p}
 			where ${p.deletedAt} is not null and ${p.createdAt} <= now() - make_interval(mins => ${window}) and ${unreferenced}`);
 
-		if (!rowCount) break;
-		tombstones += rowCount;
-	}
+    if (!rowCount) break;
+    tombstones += rowCount;
+  }
 
-	const held = await db.execute(sql`
+  const held = await db.execute(sql`
 		delete from ${posts} ${p}
 		where ${p.deletedAt} is null and ${p.createdAt} < now() - make_interval(days => ${RETENTION_DAYS})
 			and (${p.status} = 'blocked' or ${givenUp(sql`(select max(${moderationDecisions.createdAt}) from ${moderationDecisions} where ${moderationDecisions.postId} = ${p.id})`)})
 			and ${unreferenced}`);
-	const reasons = await db.execute(sql`
+  const reasons = await db.execute(sql`
 		update ${moderationDecisions} set ${bare(moderationDecisions.reason)} = null
 		where ${moderationDecisions.outcome} = 'approved' and ${moderationDecisions.reason} is not null
 			and ${moderationDecisions.createdAt} < now() - make_interval(days => ${RETENTION_DAYS})`);
-	const reports = await db.execute(sql`
+  const reports = await db.execute(sql`
 		delete from ${noteReports} where ${noteReports.resolvedAt} < now() - make_interval(days => ${RETENTION_DAYS})`);
 
-	return {
-		undoneReshares: undoneReshares.rowCount ?? 0,
-		tombstones,
-		heldNotes: held.rowCount ?? 0,
-		reasons: reasons.rowCount ?? 0,
-		reports: reports.rowCount ?? 0,
-	};
+  return {
+    undoneReshares: undoneReshares.rowCount ?? 0,
+    tombstones,
+    heldNotes: held.rowCount ?? 0,
+    reasons: reasons.rowCount ?? 0,
+    reports: reports.rowCount ?? 0,
+  };
 }

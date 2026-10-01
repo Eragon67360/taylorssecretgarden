@@ -8,13 +8,13 @@ const BASE = "https://guestbook.invalid";
  * `javascript:` can never send a Member to another site.
  */
 export function safeRedirect(target: string | null | undefined, fallback: string): string {
-	if (!target || !target.startsWith("/")) return fallback;
+  if (!target || !target.startsWith("/")) return fallback;
 
-	try {
-		const url = new URL(target, BASE);
+  try {
+    const url = new URL(target, BASE);
 
-		return url.origin === BASE ? `${url.pathname}${url.search}${url.hash}` : fallback;
-	} catch {
-		return fallback;
-	}
+    return url.origin === BASE ? `${url.pathname}${url.search}${url.hash}` : fallback;
+  } catch {
+    return fallback;
+  }
 }

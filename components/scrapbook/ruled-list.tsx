@@ -18,9 +18,7 @@ type RuledListProps = ComponentPropsWithoutRef<"ol"> & {
  */
 export function RuledList({ title, footnote, className, children, ...props }: RuledListProps) {
   return (
-    <div
-      className={cn("bg-card text-ink relative overflow-hidden pt-4 pb-5 shadow-[0_1px_2px_rgba(0,0,0,.08),0_22px_36px_-22px_rgba(0,0,0,.55)]", className)}
-    >
+    <div className={cn("bg-card text-ink relative overflow-hidden pt-4 pb-5 shadow-[0_1px_2px_rgba(0,0,0,.08),0_22px_36px_-22px_rgba(0,0,0,.55)]", className)}>
       {/* Ruling and margin, behind the text. */}
       <span
         aria-hidden="true"

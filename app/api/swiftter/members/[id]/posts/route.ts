@@ -12,13 +12,13 @@ type Context = { params: Promise<{ id: string }> };
  * page (no such Member, or a deleted account).
  */
 export async function GET(request: Request, { params }: Context) {
-	try {
-		const { id } = await params;
+  try {
+    const { id } = await params;
 
-		if (!(await getMemberProfile(id))) return NextResponse.json({ error: "There is no such Member." }, { status: 404 });
+    if (!(await getMemberProfile(id))) return NextResponse.json({ error: "There is no such Member." }, { status: 404 });
 
-		return NextResponse.json(await listMemberPosts(id, new URL(request.url).searchParams.get("cursor")));
-	} catch (error) {
-		return errorResponse(error, "Reading this Member's notes");
-	}
+    return NextResponse.json(await listMemberPosts(id, new URL(request.url).searchParams.get("cursor")));
+  } catch (error) {
+    return errorResponse(error, "Reading this Member's notes");
+  }
 }

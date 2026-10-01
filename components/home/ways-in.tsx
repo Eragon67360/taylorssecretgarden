@@ -17,7 +17,10 @@ import { WALL_TOURS, tourPoster } from "./tour-posters";
 export function WaysIn({ covers }: { covers: EraAlbum[] }) {
   return (
     // Below the opening spread: rendered (and its covers fetched) only when scrolled near (globals.css).
-    <section aria-labelledby="ways-in" className="below-fold relative mx-auto w-full max-w-[1240px] px-4 pt-16 pb-8 [--fold-height:1650px] sm:px-8 md:[--fold-height:660px]">
+    <section
+      aria-labelledby="ways-in"
+      className="below-fold relative mx-auto w-full max-w-[1240px] px-4 pt-16 pb-8 [--fold-height:1650px] sm:px-8 md:[--fold-height:660px]"
+    >
       <SectionHead id="ways-in" kicker="page 2 · table of contents" title="Three ways into the garden" />
 
       <ul className="mt-12 grid gap-14 md:grid-cols-3 md:gap-8">
@@ -88,7 +91,9 @@ function Envelope({ covers }: { covers: EraAlbum[] }) {
         )}
         tone="kraft"
       >
-        <span className="font-hand absolute inset-x-0 bottom-5 text-center text-2xl font-bold">{ERAS.length} Eras, {CATALOGUE.length} Albums inside ✿</span>
+        <span className="font-hand absolute inset-x-0 bottom-5 text-center text-2xl font-bold">
+          {ERAS.length} Eras, {CATALOGUE.length} Albums inside ✿
+        </span>
       </Paper>
     </div>
   );
