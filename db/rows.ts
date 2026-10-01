@@ -15,7 +15,7 @@ export type RawValue<C extends AnyColumn> = (C["_"]["data"] extends Date ? Date 
 
 /** A raw row of these columns of a table (its TypeScript keys), keyed by their database names. */
 export type RowOf<T extends Table, K extends keyof T["_"]["columns"]> = {
-	[C in K as T["_"]["columns"][C]["_"]["name"]]: RawValue<T["_"]["columns"][C]>;
+  [C in K as T["_"]["columns"][C]["_"]["name"]]: RawValue<T["_"]["columns"][C]>;
 };
 
 /** A row whose columns the query only selects when set (`published_at is not null`). */

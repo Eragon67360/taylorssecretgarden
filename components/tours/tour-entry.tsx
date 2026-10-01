@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils";
 
 import { TourPoster } from "./tour-poster";
 import { TourScope } from "./tour-scope";
+import { TourStagePhoto } from "./tour-stage-photo";
 import { TourNote, TourStub } from "./tour-stub";
-import { TourVideo } from "./tour-video";
+import { TourTrailer } from "./tour-trailer";
 
 type TourEntryProps = {
   tour: Tour;
@@ -17,8 +18,8 @@ type TourEntryProps = {
 
 /**
  * One Tour's page in the Tours journal, in the Tour's look: its ticket stub,
- * the poster and (when there is footage) the video in taped polaroids, and a
- * link to the Tour page.
+ * the poster and (when there is one) its trailer or a stage photo in taped
+ * polaroids, and a link to the Tour page.
  */
 export function TourEntry({ tour, index }: TourEntryProps) {
   const look = tourLook(tour);
@@ -59,21 +60,11 @@ export function TourEntry({ tour, index }: TourEntryProps) {
 
         <div className={cn("relative lg:col-span-7", flip && "lg:order-1")}>
           <div className="relative mx-auto flex max-w-[620px] flex-col items-center gap-10 sm:flex-row sm:items-start sm:gap-0">
-            <TourPoster
-              className="w-[68%] shrink-0 sm:w-[44%]"
-              tilt={flip ? 3 : -3}
-              tour={tour}
-              width={272}
-            />
-            {tour.videoUrl ? (
-              <TourVideo
-                caption="on repeat"
-                className="w-[92%] sm:mt-24 sm:-ml-8 sm:w-[62%]"
-                credit={tour.videoCredit}
-                src={tour.videoUrl}
-                tilt={flip ? -2 : 2.5}
-                tour={tour.tour}
-              />
+            <TourPoster className="w-[68%] shrink-0 sm:w-[44%]" tilt={flip ? 3 : -3} tour={tour} width={272} />
+            {tour.trailer ? (
+              <TourTrailer className="w-[92%] sm:mt-24 sm:-ml-8 sm:w-[62%]" tilt={flip ? -2 : 2.5} trailer={tour.trailer} width={384} />
+            ) : tour.stage ? (
+              <TourStagePhoto className="w-[92%] sm:mt-24 sm:-ml-8 sm:w-[62%]" photo={tour.stage} tilt={flip ? -2 : 2.5} width={384} />
             ) : (
               <div className="relative flex w-full justify-center sm:mt-16 sm:w-[56%]">
                 <PressedFlower className="absolute -top-6 left-[8%] h-40 w-24 -rotate-12 sm:left-0" kind={look.flower} />

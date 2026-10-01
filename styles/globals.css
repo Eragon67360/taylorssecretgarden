@@ -213,39 +213,39 @@
    stored bullet lists as <ol> items marked data-list="bullet". */
 .post-content ul,
 .post-content ol {
-    padding-left: 1.5em;
+  padding-left: 1.5em;
 }
 
 .post-content ul {
-    list-style-type: disc;
+  list-style-type: disc;
 }
 
 .post-content ol {
-    list-style-type: decimal;
+  list-style-type: decimal;
 }
 
 .post-content li[data-list="bullet"] {
-    list-style-type: disc;
+  list-style-type: disc;
 }
 
 .post-content a {
-    text-decoration: underline;
-    text-underline-offset: 2px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* Each paragraph takes its own direction from its first letter: a Hebrew or
    Arabic line in an English note reads right to left, and the other way round. */
 .post-content :is(p, li, h1, h2, h3, blockquote) {
-    unicode-bidi: plaintext;
-    text-align: start;
+  unicode-bidi: plaintext;
+  text-align: start;
 }
 
 /* The composer's placeholder (Tiptap's Placeholder extension). */
 .post-content p.is-editor-empty:first-child::before {
-    content: attr(data-placeholder);
-    float: left;
-    height: 0;
-    pointer-events: none;
-    color: #46557f;
-    font-style: italic;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: #46557f;
+  font-style: italic;
 }

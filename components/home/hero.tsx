@@ -4,15 +4,15 @@ import { getImageProps } from "next/image";
 
 import { IntentLink } from "@/components/intent-link";
 import { Arrow, Bracelet, ButtonLink, Polaroid, PressedFlower, RubberStamp, Scribble, StickyNote } from "@/components/scrapbook";
-import { homePhoto } from "@/lib/cloudinary";
+import { HOME_PHOTO } from "@/lib/credits";
 import { cn } from "@/lib/utils";
 
 import styles from "./home.module.css";
 
-// Resized by Next's image optimiser from a Cloudinary crop (lib/cloudinary.ts).
+// Resized by Next's image optimiser from the 4:5 print in public/img (lib/credits.ts).
 const { props: heroPhoto } = getImageProps({
-  alt: "Taylor Swift singing on stage in the orange sequinned Eras Tour two-piece",
-  src: homePhoto(1100),
+  alt: HOME_PHOTO.alt,
+  src: HOME_PHOTO.src,
   width: 420,
   height: 525,
   quality: 60,
@@ -34,10 +34,7 @@ export function Hero() {
       >
         <div className="relative lg:col-span-6">
           <p className="font-hand text-accent mb-3 inline-block -rotate-2 text-2xl">dear diary: est. 2006, still not over it</p>
-          <h1
-            className="font-serif relative text-[clamp(3.4rem,9vw,7.6rem)] leading-[0.9] font-semibold tracking-[-0.02em]"
-            id="home-title"
-          >
+          <h1 className="font-serif relative text-[clamp(3.4rem,9vw,7.6rem)] leading-[0.9] font-semibold tracking-[-0.02em]" id="home-title">
             <span className="block">Taylor&apos;s</span>{" "}
             <span className="text-accent font-serif-italic relative inline-block">
               Secret
@@ -74,31 +71,24 @@ export function Hero() {
 
         {/* The taped photo, with what we scribbled around it. */}
         <div className="relative mx-auto w-full max-w-[520px] pt-6 pb-8 lg:col-span-6 lg:pl-6">
-          <PressedFlower
-            className="absolute top-0 -right-1 h-56 w-32 rotate-[18deg] sm:-right-8 sm:h-80 sm:w-44"
-            color="#6F8A55"
-            kind="fern"
-          />
-          <PressedFlower
-            className="absolute bottom-0 -left-2 z-30 h-44 w-24 -rotate-[24deg] sm:-left-10 sm:h-56 sm:w-32"
-            color="#FFFFFF"
-            kind="daisy"
-          />
+          <PressedFlower className="absolute top-0 -right-1 h-56 w-32 rotate-[18deg] sm:-right-8 sm:h-80 sm:w-44" color="#6F8A55" kind="fern" />
+          <PressedFlower className="absolute bottom-0 -left-2 z-30 h-44 w-24 -rotate-[24deg] sm:-left-10 sm:h-56 sm:w-32" color="#FFFFFF" kind="daisy" />
 
           <Polaroid
             taped
             caption={
               <>
-                the orange one. <span className="text-pen">I screamed.</span>
+                the folklore dress. <span className="text-pen">I sobbed.</span>
               </>
             }
             className="z-10 mx-auto w-[86%]"
+            credit={HOME_PHOTO.credit}
             tilt={2.5}
           >
             {/*
               The largest paint on the page, so it is fetched eagerly at high
               priority, straight from the HTML, and from this origin (Next's
-              image optimiser) rather than a new connection to Cloudinary. The
+              image optimiser). The
               <picture> keeps React from hoisting a <link rel="preload"> for it:
               that hint would also ride along in Home's prefetched payload on
               every page linking here, and go unused there.
@@ -113,15 +103,15 @@ export function Hero() {
             <StickyNote className="w-[140px] text-[21px] sm:w-[156px] sm:text-[23px]" tilt={-6}>
               <span>Who is Taylor Swift anyway?</span>{" "}
               <span className="text-pen relative inline-block px-1">
-              EW
-              <svg
-                aria-hidden="true"
-                className="absolute -inset-x-2 -inset-y-1.5 h-[calc(100%+12px)] w-[calc(100%+16px)]"
-                focusable="false"
-                viewBox="0 0 60 36"
-              >
-                <ellipse cx="30" cy="18" fill="none" rx="27" ry="14" stroke="currentColor" strokeWidth="2" transform="rotate(-6 30 18)" />
-              </svg>
+                EW
+                <svg
+                  aria-hidden="true"
+                  className="absolute -inset-x-2 -inset-y-1.5 h-[calc(100%+12px)] w-[calc(100%+16px)]"
+                  focusable="false"
+                  viewBox="0 0 60 36"
+                >
+                  <ellipse cx="30" cy="18" fill="none" rx="27" ry="14" stroke="currentColor" strokeWidth="2" transform="rotate(-6 30 18)" />
+                </svg>
               </span>
             </StickyNote>
           </div>

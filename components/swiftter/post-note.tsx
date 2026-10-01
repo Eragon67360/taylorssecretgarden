@@ -114,7 +114,12 @@ export function PostNote({ post, paper, onDelete, footer, banner, id, position, 
         </div>
         <div className="flex items-baseline justify-between gap-3" style={{ color: look.soft }}>
           {author.username && <p className="min-w-0 truncate text-[13px] font-semibold">@{author.username}</p>}
-          <RelativeTime className="font-hand ml-auto shrink-0 text-[20px] leading-none font-bold whitespace-nowrap" date={published} dateTime={when} id={timeId} />
+          <RelativeTime
+            className="font-hand ml-auto shrink-0 text-[20px] leading-none font-bold whitespace-nowrap"
+            date={published}
+            dateTime={when}
+            id={timeId}
+          />
         </div>
       </header>
 

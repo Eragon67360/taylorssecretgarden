@@ -70,8 +70,8 @@ Answer with:
 
 /** What the model answers (structured output). */
 const MODEL_ANSWER = z.object({
-	decision: z.enum(["allowed", "insult", "restricted", "off_topic"]),
-	reason: z.string(),
+  decision: z.enum(["allowed", "insult", "restricted", "off_topic"]),
+  reason: z.string(),
 });
 
 type ModelAnswer = z.infer<typeof MODEL_ANSWER>;
@@ -83,9 +83,7 @@ type ModelAnswer = z.infer<typeof MODEL_ANSWER>;
  */
 export type ModerationCategory = Exclude<ModelAnswer["decision"], "allowed">;
 
-export type ModerationResult =
-	| { verdict: "allowed"; reason: string }
-	| { verdict: "rejected"; category: ModerationCategory; reason: string };
+export type ModerationResult = { verdict: "allowed"; reason: string } | { verdict: "rejected"; category: ModerationCategory; reason: string };
 
 /** Moderation could not give a verdict (Gateway down, timeout, unusable answer). */
 export class ModerationUnavailableError extends Error {}
@@ -98,18 +96,18 @@ export type ModerationOptions = { model?: LanguageModel; timeoutMs?: number };
  * against the policy. Throws ModerationUnavailableError if no verdict came in time.
  */
 export async function moderatePost(text: string, options: ModerationOptions = {}): Promise<ModerationResult> {
-	const normalised = normaliseForModeration(text);
-	// An injected model (the tests' mock) always wins over the fake.
-	const { decision, reason } = isFake() && !options.model ? fakeAnswer(normalised) : await askModel(normalised, options);
+  const normalised = normaliseForModeration(text);
+  // An injected model (the tests' mock) always wins over the fake.
+  const { decision, reason } = isFake() && !options.model ? fakeAnswer(normalised) : await askModel(normalised, options);
 
-	if (decision === "allowed") return { verdict: "allowed", reason };
+  if (decision === "allowed") return { verdict: "allowed", reason };
 
-	// The category only: the reason can paraphrase the Post, and it is stored
-	// with the decision anyway (moderation_decisions).
-	// eslint-disable-next-line no-console
-	console.info(`Moderation refused a Post (${decision})`);
+  // The category only: the reason can paraphrase the Post, and it is stored
+  // with the decision anyway (moderation_decisions).
+  // eslint-disable-next-line no-console
+  console.info(`Moderation refused a Post (${decision})`);
 
-	return { verdict: "rejected", category: decision, reason };
+  return { verdict: "rejected", category: decision, reason };
 }
 
 /** Zero-width characters and bidirectional controls: invisible, and a way to split words past a filter. */
@@ -123,27 +121,27 @@ const INVISIBLE = /[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u
  * leetspeak or spacing: the model judges those, with known limits.
  */
 export function normaliseForModeration(text: string): string {
-	return text.normalize("NFKC").replace(INVISIBLE, "");
+  return text.normalize("NFKC").replace(INVISIBLE, "");
 }
 
 async function askModel(text: string, { model = MODERATION_MODEL, timeoutMs = TIMEOUT_MS }: ModerationOptions): Promise<ModelAnswer> {
-	try {
-		const { output } = await generateText({
-			model,
-			instructions: INSTRUCTIONS,
-			// Tags that look like the delimiters are dropped, so the Post cannot end its data early.
-			prompt: `<post>\n${text.replaceAll(/<\s*\/?\s*post\b[^>]*>/gi, "")}\n</post>`,
-			output: Output.object({ schema: MODEL_ANSWER }),
-			temperature: 0,
-			timeout: timeoutMs,
-			// One attempt within the timeout: the Member is asked to try again instead.
-			maxRetries: 0,
-		});
+  try {
+    const { output } = await generateText({
+      model,
+      instructions: INSTRUCTIONS,
+      // Tags that look like the delimiters are dropped, so the Post cannot end its data early.
+      prompt: `<post>\n${text.replaceAll(/<\s*\/?\s*post\b[^>]*>/gi, "")}\n</post>`,
+      output: Output.object({ schema: MODEL_ANSWER }),
+      temperature: 0,
+      timeout: timeoutMs,
+      // One attempt within the timeout: the Member is asked to try again instead.
+      maxRetries: 0,
+    });
 
-		return output;
-	} catch (error) {
-		throw new ModerationUnavailableError("Moderation gave no verdict", { cause: error });
-	}
+    return output;
+  } catch (error) {
+    throw new ModerationUnavailableError("Moderation gave no verdict", { cause: error });
+  }
 }
 
 /*
@@ -157,10 +155,10 @@ const isFake = () => process.env.SWIFTTER_MODERATION === "fake" && !process.env.
 export const moderationModelName = () => (isFake() ? "fake" : MODERATION_MODEL);
 
 function fakeAnswer(text: string): ModelAnswer {
-	if (text.includes("fake-moderation-down")) throw new ModerationUnavailableError("Fake moderation is down");
-	if (text.includes("fake-insult")) return { decision: "insult", reason: "Fake: marked as an insult." };
-	if (text.includes("fake-restricted")) return { decision: "restricted", reason: "Fake: marked as not safe to share." };
-	if (text.includes("fake-off-topic")) return { decision: "off_topic", reason: "Fake: marked as off-topic." };
+  if (text.includes("fake-moderation-down")) throw new ModerationUnavailableError("Fake moderation is down");
+  if (text.includes("fake-insult")) return { decision: "insult", reason: "Fake: marked as an insult." };
+  if (text.includes("fake-restricted")) return { decision: "restricted", reason: "Fake: marked as not safe to share." };
+  if (text.includes("fake-off-topic")) return { decision: "off_topic", reason: "Fake: marked as off-topic." };
 
-	return { decision: "allowed", reason: "Fake: allowed." };
+  return { decision: "allowed", reason: "Fake: allowed." };
 }

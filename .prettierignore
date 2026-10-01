@@ -1,0 +1,6 @@
+# Prettier also skips everything .gitignore lists (node_modules, .next, coverage,
+# the Playwright and Lighthouse reports); these are the tracked files it leaves alone.
+.claude/
+public/
+drizzle/meta/
+package-lock.json

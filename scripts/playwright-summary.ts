@@ -22,49 +22,56 @@ export type Flaky = { title: string; file: string; line: number };
 
 /** Every test that passed only on a retry, with where it is. */
 export function flakyTests(report: Report): Flaky[] {
-	const flaky: Flaky[] = [];
-	const walk = (suite: Suite, path: string[]) => {
-		const titles = suite.title ? [...path, suite.title] : path;
+  const flaky: Flaky[] = [];
+  const walk = (suite: Suite, path: string[]) => {
+    const titles = suite.title ? [...path, suite.title] : path;
 
-		for (const spec of suite.specs ?? []) {
-			if (spec.tests.some((test) => test.status === "flaky")) flaky.push({ title: [...titles.slice(1), spec.title].join(" › "), file: spec.file, line: spec.line });
-		}
-		for (const child of suite.suites ?? []) walk(child, titles);
-	};
+    for (const spec of suite.specs ?? []) {
+      if (spec.tests.some((test) => test.status === "flaky"))
+        flaky.push({ title: [...titles.slice(1), spec.title].join(" › "), file: spec.file, line: spec.line });
+    }
+    for (const child of suite.suites ?? []) walk(child, titles);
+  };
 
-	for (const suite of report.suites) walk(suite, []);
+  for (const suite of report.suites) walk(suite, []);
 
-	return flaky;
+  return flaky;
 }
 
 /** The Markdown for the run summary. */
 export function summary(report: Report): string {
-	const { expected, unexpected, flaky, skipped } = report.stats;
-	const lines = ["### Playwright", "", "| Passed | Flaky | Failed | Skipped |", "| --- | --- | --- | --- |", `| ${expected} | ${flaky} | ${unexpected} | ${skipped} |`];
-	const tests = flakyTests(report);
+  const { expected, unexpected, flaky, skipped } = report.stats;
+  const lines = [
+    "### Playwright",
+    "",
+    "| Passed | Flaky | Failed | Skipped |",
+    "| --- | --- | --- | --- |",
+    `| ${expected} | ${flaky} | ${unexpected} | ${skipped} |`,
+  ];
+  const tests = flakyTests(report);
 
-	if (tests.length > 0) {
-		lines.push("", "Flaky (failed, then passed on the retry):", "");
-		for (const test of tests) lines.push(`- \`${test.file}:${test.line}\` ${test.title}`);
-	}
+  if (tests.length > 0) {
+    lines.push("", "Flaky (failed, then passed on the retry):", "");
+    for (const test of tests) lines.push(`- \`${test.file}:${test.line}\` ${test.title}`);
+  }
 
-	return `${lines.join("\n")}\n`;
+  return `${lines.join("\n")}\n`;
 }
 
 /** One GitHub annotation per flaky test: `%`, CR and LF escaped as the runner expects. */
 export const annotations = (report: Report) =>
-	flakyTests(report).map((test) => {
-		const message = `Flaky: ${test.title}`.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+  flakyTests(report).map((test) => {
+    const message = `Flaky: ${test.title}`.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
 
-		return `::warning file=e2e/${test.file},line=${test.line},title=Flaky test::${message}`;
-	});
+    return `::warning file=e2e/${test.file},line=${test.line},title=Flaky test::${message}`;
+  });
 
 // Run as a script (not imported by the unit tests).
 if (process.argv[1] && path.resolve(process.argv[1]) === import.meta.filename) {
-	const report = JSON.parse(readFileSync(process.argv[2] ?? "playwright-results.json", "utf8")) as Report;
-	const markdown = summary(report);
+  const report = JSON.parse(readFileSync(process.argv[2] ?? "playwright-results.json", "utf8")) as Report;
+  const markdown = summary(report);
 
-	if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown);
-	else console.log(markdown);
-	for (const line of annotations(report)) console.log(line);
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown);
+  else console.log(markdown);
+  for (const line of annotations(report)) console.log(line);
 }

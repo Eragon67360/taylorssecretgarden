@@ -20,20 +20,20 @@ const json = (status: number, error: string) => NextResponse.json({ error }, { s
  * cross-site request riding a victim's cookies, and still needs a session.
  */
 export function isCrossSite(request: Request): boolean {
-	const site = request.headers.get("sec-fetch-site");
+  const site = request.headers.get("sec-fetch-site");
 
-	if (site && site !== "same-origin" && site !== "none") return true;
+  if (site && site !== "same-origin" && site !== "none") return true;
 
-	const origin = request.headers.get("origin");
+  const origin = request.headers.get("origin");
 
-	if (!origin) return false;
-	const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  if (!origin) return false;
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
 
-	try {
-		return new URL(origin).host !== host;
-	} catch {
-		return true;
-	}
+  try {
+    return new URL(origin).host !== host;
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -45,34 +45,34 @@ export function isCrossSite(request: Request): boolean {
  * Ownership and visibility are then checked in SQL by the handler (404).
  */
 export async function memberWrite(request: Request, handler: Handler, { body = true } = {}): Promise<Response> {
-	if (isCrossSite(request)) return json(403, "Requests from other sites are not accepted.");
+  if (isCrossSite(request)) return json(403, "Requests from other sites are not accepted.");
 
-	let parsed: Record<string, unknown> = {};
+  let parsed: Record<string, unknown> = {};
 
-	if (body) {
-		if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
-			return json(415, "Expected a JSON body (Content-Type: application/json).");
-		}
-		const value = (await request.json().catch(() => null)) as unknown;
+  if (body) {
+    if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
+      return json(415, "Expected a JSON body (Content-Type: application/json).");
+    }
+    const value = (await request.json().catch(() => null)) as unknown;
 
-		if (!value || typeof value !== "object" || Array.isArray(value)) return json(400, "Expected a JSON object.");
-		parsed = value as Record<string, unknown>;
-	}
+    if (!value || typeof value !== "object" || Array.isArray(value)) return json(400, "Expected a JSON object.");
+    parsed = value as Record<string, unknown>;
+  }
 
-	let writer: Writer | null;
+  let writer: Writer | null;
 
-	try {
-		writer = await getSessionUser();
-	} catch (error) {
-		if (!(error instanceof AuthUnavailableError)) throw error;
-		// eslint-disable-next-line no-console
-		console.error("Neon Auth unavailable", error.message);
+  try {
+    writer = await getSessionUser();
+  } catch (error) {
+    if (!(error instanceof AuthUnavailableError)) throw error;
+    // eslint-disable-next-line no-console
+    console.error("Neon Auth unavailable", error.message);
 
-		return json(503, "Signing in is unavailable just now, so nothing was changed. Try again in a moment.");
-	}
+    return json(503, "Signing in is unavailable just now, so nothing was changed. Try again in a moment.");
+  }
 
-	if (!writer) return json(401, "Sign in first.");
-	if (await isBot(request)) return json(403, BOT_REFUSAL);
+  if (!writer) return json(401, "Sign in first.");
+  if (await isBot(request)) return json(403, BOT_REFUSAL);
 
-	return handler(writer, parsed);
+  return handler(writer, parsed);
 }

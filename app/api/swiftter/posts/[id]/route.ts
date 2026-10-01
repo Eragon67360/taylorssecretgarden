@@ -14,18 +14,18 @@ type Context = { params: Promise<{ id: string }> };
  * Members' notes.
  */
 export function DELETE(request: Request, { params }: Context) {
-	return memberWrite(
-		request,
-		async (writer) => {
-			try {
-				await deletePost(writer.id, (await params).id);
-				feedChanged();
+  return memberWrite(
+    request,
+    async (writer) => {
+      try {
+        await deletePost(writer.id, (await params).id);
+        feedChanged();
 
-				return new NextResponse(null, { status: 204 });
-			} catch (error) {
-				return errorResponse(error, "Tearing up your note");
-			}
-		},
-		{ body: false },
-	);
+        return new NextResponse(null, { status: 204 });
+      } catch (error) {
+        return errorResponse(error, "Tearing up your note");
+      }
+    },
+    { body: false },
+  );
 }

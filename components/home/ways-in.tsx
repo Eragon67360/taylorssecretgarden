@@ -11,13 +11,16 @@ import { cn } from "@/lib/utils";
 
 import styles from "./home.module.css";
 import { SectionHead } from "./section-head";
-import { WALL_TOURS, tourPoster } from "./tour-posters";
+import { WALL_TOURS } from "./tour-posters";
 
 /** Three ways into the garden: an envelope of Album covers (Music), a ticket stub (Tours), a passed note (Swiftter). */
 export function WaysIn({ covers }: { covers: EraAlbum[] }) {
   return (
     // Below the opening spread: rendered (and its covers fetched) only when scrolled near (globals.css).
-    <section aria-labelledby="ways-in" className="below-fold relative mx-auto w-full max-w-[1240px] px-4 pt-16 pb-8 [--fold-height:1650px] sm:px-8 md:[--fold-height:660px]">
+    <section
+      aria-labelledby="ways-in"
+      className="below-fold relative mx-auto w-full max-w-[1240px] px-4 pt-16 pb-8 [--fold-height:1650px] sm:px-8 md:[--fold-height:660px]"
+    >
       <SectionHead id="ways-in" kicker="page 2 · table of contents" title="Three ways into the garden" />
 
       <ul className="mt-12 grid gap-14 md:grid-cols-3 md:gap-8">
@@ -88,7 +91,9 @@ function Envelope({ covers }: { covers: EraAlbum[] }) {
         )}
         tone="kraft"
       >
-        <span className="font-hand absolute inset-x-0 bottom-5 text-center text-2xl font-bold">{ERAS.length} Eras, {CATALOGUE.length} Albums inside ✿</span>
+        <span className="font-hand absolute inset-x-0 bottom-5 text-center text-2xl font-bold">
+          {ERAS.length} Eras, {CATALOGUE.length} Albums inside ✿
+        </span>
       </Paper>
     </div>
   );
@@ -104,10 +109,7 @@ function Ticket() {
         <TicketStub
           kicker="Admit one · floor"
           meta="SEC 13 · ROW 13 · SEAT 13"
-          picture={
-            // eslint-disable-next-line @next/next/no-img-element -- Cloudinary resizes and encodes it (tour-posters.ts)
-            <img alt="" decoding="async" height={150} loading="lazy" src={tourPoster(ERAS_TOUR.poster, 200)} width={100} />
-          }
+          picture={<Image alt="" height={150} sizes="110px" src={ERAS_TOUR.poster} width={100} />}
           tilt={-4}
           title={<span className="text-accent">The Tours</span>}
         />

@@ -25,29 +25,31 @@ const created: string[] = [];
 
 /** A fresh Member for a test; ids never collide with Neon Auth ids (UUIDs) or the demo Members. */
 export async function newMember(name = "Integration Tester"): Promise<string> {
-	const id = `it_${randomUUID()}`;
+  const id = `it_${randomUUID()}`;
 
-	created.push(id);
-	await ensureMember({ id, displayName: name, username: null, avatarUrl: null });
+  created.push(id);
+  await ensureMember({ id, displayName: name, username: null, avatarUrl: null });
 
-	return id;
+  return id;
 }
 
 /** Removes every Member this file created, in one statement so their cross-references go together. */
 export async function removeMembers() {
-	if (!created.length) return;
-	await getDb().execute(sql`delete from members where id in (${sql.join(
-		created.map((id) => sql`${id}`),
-		sql`, `,
-	)})`);
-	created.length = 0;
+  if (!created.length) return;
+  await getDb().execute(
+    sql`delete from members where id in (${sql.join(
+      created.map((id) => sql`${id}`),
+      sql`, `,
+    )})`,
+  );
+  created.length = 0;
 }
 
 /** Moderation stand-ins: a verdict, or no verdict at all. */
 export const allow = async (): Promise<ModerationResult> => ({ verdict: "allowed", reason: "Test: allowed." });
 export const refuse =
-	(category: "insult" | "off_topic" = "insult") =>
-	async (): Promise<ModerationResult> => ({ verdict: "rejected", category, reason: `Test: ${category}.` });
+  (category: "insult" | "off_topic" = "insult") =>
+  async (): Promise<ModerationResult> => ({ verdict: "rejected", category, reason: `Test: ${category}.` });
 export const unavailable = async (): Promise<ModerationResult> => {
-	throw new Error("Test: the Gateway is down");
+  throw new Error("Test: the Gateway is down");
 };

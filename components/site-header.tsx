@@ -85,9 +85,7 @@ export function SiteHeader() {
                     className={cn(
                       "group focus-ring text-ink relative -mb-px flex min-h-11 items-center justify-center rounded-t-[10px] border border-b-0 px-3 sm:px-4",
                       "transition-[translate,padding] duration-200 ease-out",
-                      current
-                        ? "border-line z-10 pt-1 pb-2.5"
-                        : "border-transparent pt-1.5 pb-1.5 motion-safe:hover:-translate-y-0.5",
+                      current ? "border-line z-10 pt-1 pb-2.5" : "border-transparent pt-1.5 pb-1.5 motion-safe:hover:-translate-y-0.5",
                     )}
                     href={section.path}
                     style={{ rotate: `${index % 2 ? 0.8 : -0.8}deg` }}

@@ -7,17 +7,17 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { createPool } from "./client";
 
 async function main() {
-	const pool = createPool();
+  const pool = createPool();
 
-	try {
-		await migrate(drizzle(pool), { migrationsFolder: "drizzle" });
-		console.log("Migrations applied.");
-	} finally {
-		await pool.end();
-	}
+  try {
+    await migrate(drizzle(pool), { migrationsFolder: "drizzle" });
+    console.log("Migrations applied.");
+  } finally {
+    await pool.end();
+  }
 }
 
 main().catch((error) => {
-	console.error(error);
-	process.exit(1);
+  console.error(error);
+  process.exit(1);
 });

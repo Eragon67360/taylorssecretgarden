@@ -50,16 +50,7 @@ const config = [
       "import/order": [
         "warn",
         {
-          groups: [
-            "type",
-            "builtin",
-            "object",
-            "external",
-            "internal",
-            "parent",
-            "sibling",
-            "index",
-          ],
+          groups: ["type", "builtin", "object", "external", "internal", "parent", "sibling", "index"],
           "newlines-between": "always",
         },
       ],

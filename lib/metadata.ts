@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { alt as cardAlt, contentType as cardType, size as cardSize } from "@/app/opengraph-image";
 import { siteConfig } from "@/config/site";
 
-import { albumPath, findAlbum, versionPath } from "./catalogue";
+import { albumPath, versionPath } from "./catalogue";
 
 // Album and Version paths live with the catalogue, so client components can build links without this module.
 export { albumPath, versionPath };
@@ -30,7 +30,7 @@ type PageMetadataOptions = {
   title?: string;
   /** None keeps the site's description. */
   description?: string;
-  /** The page's canonical path: "/tours/the-eras-tour", "/music?album=221543452". */
+  /** The page's canonical path: "/tours/the-eras-tour", "/music/fearless-taylors-version". */
   path: string;
   /** Kept out of search results (the guestbook, the styleguide). */
   noindex?: boolean;
@@ -47,7 +47,9 @@ export function pageMetadata({ title, description, path, noindex, article }: Pag
     ...(title && { title }),
     ...(description && { description }),
     alternates: { canonical: path },
-    openGraph: article ? { ...OPEN_GRAPH, type: "article", publishedTime: article.publishedTime, url: path, images: [CARD] } : { ...OPEN_GRAPH, url: path, images: [CARD] },
+    openGraph: article
+      ? { ...OPEN_GRAPH, type: "article", publishedTime: article.publishedTime, url: path, images: [CARD] }
+      : { ...OPEN_GRAPH, url: path, images: [CARD] },
     ...(noindex && { robots: { index: false, follow: false } }),
   };
 }
@@ -55,19 +57,4 @@ export function pageMetadata({ title, description, path, noindex, article }: Pag
 /** A path as an absolute URL on the site: "/tours" → "https://www.taylorssecretgarden.com/tours". */
 export function absoluteUrl(path: string): string {
   return new URL(path, siteConfig.url).href;
-}
-
-/**
- * Music's canonical path for `?album=<id>`: the Album's page, whichever of its
- * Deezer IDs asked for it (a regional twin, an old link), or the Version's own
- * when one of its Versions is open (another tracklist). Any other value opens
- * the first Album: /music.
- */
-export function musicPath(wanted: string | undefined): string {
-  const album = findAlbum(wanted);
-
-  if (!album) return "/music";
-  const version = album.versions?.find(({ id }) => id === wanted);
-
-  return version ? versionPath(version) : albumPath(album);
 }

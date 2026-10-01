@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
 import { Album, AlbumDetails } from "@/types";
 
@@ -37,12 +38,15 @@ type DeezerAlbumDetails = DeezerAlbum & {
 //
 // Until a response is cached, concurrent page views asking for the same path
 // share one request, and "Quota limit exceeded" (error code 4) is retried twice,
-// once the rate limit's window has moved on.
+// once the rate limit's window has moved on. While the site is being built,
+// five times: the build asks for every Music page's data at once, and has
+// time to wait.
 //
 // Each request gives up after 5 seconds: a hung Deezer would otherwise hold
 // the page's render until the function's time limit. Deezer usually answers
 // well within a second, and the Music page has fallbacks (components/music/catalogue.ts).
 const QUOTA_EXCEEDED = 4;
+const ATTEMPTS = process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD ? 6 : 3;
 const TIMEOUT_MS = 5000;
 const DAY = 86400;
 const inFlight = new Map<string, Promise<unknown>>();
@@ -62,13 +66,41 @@ function fetchOnce<T>(path: string): Promise<T> {
   return request;
 }
 
+/*
+  At most MAX_REQUESTS requests to Deezer at once, per server process; the
+  others wait their turn (their 5 seconds start when they go). A build
+  prerenders every Album and Version page at once, in as many processes as
+  the machine has cores: on a cold cache, a burst of hundreds of requests,
+  which Deezer answers slowly enough to time out.
+*/
+const MAX_REQUESTS = 4;
+let requests = 0;
+const queue: (() => void)[] = [];
+
+async function withSlot<T>(request: () => Promise<T>): Promise<T> {
+  // A finished request hands its slot straight to the next in the queue.
+  if (requests < MAX_REQUESTS) requests++;
+  else await new Promise<void>((resolve) => queue.push(resolve));
+  try {
+    return await request();
+  } finally {
+    const next = queue.shift();
+
+    if (next) next();
+    else requests--;
+  }
+}
+
 async function fetchDeezer<T>(path: string): Promise<T> {
   for (let attempt = 1; ; attempt++) {
-    const response = await fetch(`${API_URL}${path}`, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
-    const data = await response.json();
+    const { response, data } = await withSlot(async () => {
+      const response = await fetch(`${API_URL}${path}`, { cache: "no-store", signal: AbortSignal.timeout(TIMEOUT_MS) });
+
+      return { response, data: await response.json() };
+    });
 
     if (response.ok && !data.error) return data;
-    if (data.error?.code !== QUOTA_EXCEEDED || attempt === 3) {
+    if (data.error?.code !== QUOTA_EXCEEDED || attempt === ATTEMPTS) {
       throw new Error(`Deezer ${path} failed: ${data.error?.message ?? response.status}`);
     }
     await new Promise((resolve) => setTimeout(resolve, 1500 * attempt + Math.random() * 1000));
@@ -109,10 +141,7 @@ export function getAlbumDetails(albumId: string): Promise<AlbumDetails> {
 const cachedAlbumDetails = unstable_cache((albumId: string) => fetchAlbumDetails(albumId), ["deezer", "album-details"], { revalidate: DAY });
 
 async function fetchAlbumDetails(albumId: string): Promise<AlbumDetails> {
-  const [album, tracks] = await Promise.all([
-    deezerGet<DeezerAlbumDetails>(`/album/${albumId}`),
-    getAlbumTracks(albumId),
-  ]);
+  const [album, tracks] = await Promise.all([deezerGet<DeezerAlbumDetails>(`/album/${albumId}`), getAlbumTracks(albumId)]);
 
   return {
     ...toAlbum(album),

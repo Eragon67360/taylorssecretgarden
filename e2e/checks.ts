@@ -24,28 +24,28 @@ const WCAG_22_AA = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
 /** No axe violations at WCAG 2.2 AA, in the scope or the whole page. */
 export async function expectNoAxeViolations(page: Page, scope?: Scope) {
-	// Whatever is still fading in or out (a toast stacking behind another) is
-	// judged once it has settled: mid-transition, its text is briefly fainter
-	// than it will ever be at rest. Endless animations are not waited for.
-	await page.evaluate(() =>
-		Promise.all(
-			document
-				.getAnimations()
-				.filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
-				.map((animation) => animation.finished.catch(() => undefined)),
-		),
-	);
+  // Whatever is still fading in or out (a toast stacking behind another) is
+  // judged once it has settled: mid-transition, its text is briefly fainter
+  // than it will ever be at rest. Endless animations are not waited for.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
 
-	let builder = new AxeBuilder({ page }).withTags(WCAG_22_AA);
+  let builder = new AxeBuilder({ page }).withTags(WCAG_22_AA);
 
-	for (const selector of scope ?? []) builder = builder.include(selector);
+  for (const selector of scope ?? []) builder = builder.include(selector);
 
-	const { violations } = await builder.analyze();
-	const summary = violations.map(
-		({ id, impact, help, nodes }) => `${id} (${impact}): ${help}\n    ${nodes.map((node) => node.target.join(" ")).join("\n    ")}`,
-	);
+  const { violations } = await builder.analyze();
+  const summary = violations.map(
+    ({ id, impact, help, nodes }) => `${id} (${impact}): ${help}\n    ${nodes.map((node) => node.target.join(" ")).join("\n    ")}`,
+  );
 
-	expect(summary, "axe WCAG 2.2 AA violations").toEqual([]);
+  expect(summary, "axe WCAG 2.2 AA violations").toEqual([]);
 }
 
 /**
@@ -54,31 +54,30 @@ export async function expectNoAxeViolations(page: Page, scope?: Scope) {
  * sideways itself.
  */
 export async function expectNoHorizontalOverflow(page: Page, scope?: Scope) {
-	const overflow = await page.evaluate((selectors) => {
-		const viewport = document.documentElement.clientWidth;
+  const overflow = await page.evaluate((selectors) => {
+    const viewport = document.documentElement.clientWidth;
 
-		if (!selectors) {
-			const width = document.documentElement.scrollWidth;
+    if (!selectors) {
+      const width = document.documentElement.scrollWidth;
 
-			return width > viewport ? [`document is ${width}px wide in a ${viewport}px viewport`] : [];
-		}
+      return width > viewport ? [`document is ${width}px wide in a ${viewport}px viewport`] : [];
+    }
 
-		return selectors.flatMap((selector) => {
-			const element = document.querySelector(selector);
+    return selectors.flatMap((selector) => {
+      const element = document.querySelector(selector);
 
-			if (!element) return [`${selector} not found`];
-			const { left, right } = element.getBoundingClientRect();
-			const problems: string[] = [];
+      if (!element) return [`${selector} not found`];
+      const { left, right } = element.getBoundingClientRect();
+      const problems: string[] = [];
 
-			if (left < -0.5 || right > viewport + 0.5) problems.push(`${selector} spans ${left}..${right}px in a ${viewport}px viewport`);
-			if (element.scrollWidth > element.clientWidth + 0.5)
-				problems.push(`${selector} scrolls sideways (${element.scrollWidth} > ${element.clientWidth})`);
+      if (left < -0.5 || right > viewport + 0.5) problems.push(`${selector} spans ${left}..${right}px in a ${viewport}px viewport`);
+      if (element.scrollWidth > element.clientWidth + 0.5) problems.push(`${selector} scrolls sideways (${element.scrollWidth} > ${element.clientWidth})`);
 
-			return problems;
-		});
-	}, scope ?? null);
+      return problems;
+    });
+  }, scope ?? null);
 
-	expect(overflow, "horizontal overflow").toEqual([]);
+  expect(overflow, "horizontal overflow").toEqual([]);
 }
 
 /**
@@ -87,35 +86,34 @@ export async function expectNoHorizontalOverflow(page: Page, scope?: Scope) {
  * playing video, in the scope or the whole page.
  */
 export async function expectReducedMotion(page: Page, scope?: Scope, ready?: (page: Page) => Promise<void>) {
-	await page.emulateMedia({ reducedMotion: "reduce" });
-	await page.reload();
-	await page.waitForLoadState("load");
-	// Content that mounts after load (e.g. the composer) is only checked once it is there.
-	await ready?.(page);
-	// Let hydration and the first frames run: anything still going after that
-	// is motion the visitor would see.
-	await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  await page.waitForLoadState("load");
+  // Content that mounts after load (e.g. the composer) is only checked once it is there.
+  await ready?.(page);
+  // Let hydration and the first frames run: anything still going after that
+  // is motion the visitor would see.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
-	const moving = await page.evaluate((selectors) => {
-		const inScope = (node: Node | null | undefined) =>
-			!!node && (!selectors || selectors.some((selector) => document.querySelector(selector)?.contains(node)));
-		const describe = (node: Element) =>
-			`${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ""}${node.classList.length ? `.${[...node.classList].slice(0, 3).join(".")}` : ""}`;
+  const moving = await page.evaluate((selectors) => {
+    const inScope = (node: Node | null | undefined) => !!node && (!selectors || selectors.some((selector) => document.querySelector(selector)?.contains(node)));
+    const describe = (node: Element) =>
+      `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ""}${node.classList.length ? `.${[...node.classList].slice(0, 3).join(".")}` : ""}`;
 
-		const animations = document
-			.getAnimations()
-			.filter((animation) => animation.playState === "running")
-			.flatMap((animation) => {
-				const target = (animation.effect as KeyframeEffect | null)?.target;
+    const animations = document
+      .getAnimations()
+      .filter((animation) => animation.playState === "running")
+      .flatMap((animation) => {
+        const target = (animation.effect as KeyframeEffect | null)?.target;
 
-				return target && inScope(target) ? [`animation on ${describe(target)}`] : [];
-			});
-		const videos = [...document.querySelectorAll("video")]
-			.filter((video) => inScope(video) && !video.paused && !video.ended)
-			.map((video) => `playing ${describe(video)}`);
+        return target && inScope(target) ? [`animation on ${describe(target)}`] : [];
+      });
+    const videos = [...document.querySelectorAll("video")]
+      .filter((video) => inScope(video) && !video.paused && !video.ended)
+      .map((video) => `playing ${describe(video)}`);
 
-		return [...animations, ...videos];
-	}, scope ?? null);
+    return [...animations, ...videos];
+  }, scope ?? null);
 
-	expect(moving, "motion under prefers-reduced-motion: reduce").toEqual([]);
+  expect(moving, "motion under prefers-reduced-motion: reduce").toEqual([]);
 }

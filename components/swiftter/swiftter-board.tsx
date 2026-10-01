@@ -75,7 +75,9 @@ export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
     mine,
     (id, delta) =>
       setFeed((previous) =>
-        previous.status === "ready" ? { ...previous, items: mapPost(previous.items, id, (shown) => ({ ...shown, reshareCount: shown.reshareCount + delta })) } : previous,
+        previous.status === "ready"
+          ? { ...previous, items: mapPost(previous.items, id, (shown) => ({ ...shown, reshareCount: shown.reshareCount + delta })) }
+          : previous,
       ),
     setAnnouncement,
   );
@@ -100,7 +102,9 @@ export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
 
       return;
     }
-    setFeed((previous) => (previous.status === "ready" ? { status: "ready", items: [...previous.items, ...page.items], nextCursor: page.nextCursor } : previous));
+    setFeed((previous) =>
+      previous.status === "ready" ? { status: "ready", items: [...previous.items, ...page.items], nextCursor: page.nextCursor } : previous,
+    );
     setAnnouncement(`${page.items.length} more ${page.items.length === 1 ? "note" : "notes"} loaded.`);
     // The button may be gone (last page): the keyboard carries on at the first new note.
     if (page.items[0]) focusSoon(noteElementId(page.items[0].key));
@@ -231,7 +235,15 @@ export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
                 const position = { at: index + 1, of: feed.nextCursor ? -1 : feed.items.length };
 
                 if ("tornUp" in item.post) {
-                  return <TornUpNote key={item.key} id={noteElementId(item.key)} paper={paper} position={position} resharedBy={item.kind === "reshare" ? item.resharedBy.displayName : undefined} />;
+                  return (
+                    <TornUpNote
+                      key={item.key}
+                      id={noteElementId(item.key)}
+                      paper={paper}
+                      position={position}
+                      resharedBy={item.kind === "reshare" ? item.resharedBy.displayName : undefined}
+                    />
+                  );
                 }
 
                 const post = item.post;
@@ -247,7 +259,11 @@ export function SwiftterBoard({ firstPage }: { firstPage: FeedPage | null }) {
                           authorName={post.author.displayName}
                           postId={post.id}
                           replyCount={post.replyCount}
-                          reshare={user && !own ? { reshared: mine.reshared.has(post.id), busy: reshare.busy === post.id, onToggle: () => reshare.toggle(post) } : undefined}
+                          reshare={
+                            user && !own
+                              ? { reshared: mine.reshared.has(post.id), busy: reshare.busy === post.id, onToggle: () => reshare.toggle(post) }
+                              : undefined
+                          }
                           reshareCount={post.reshareCount}
                         />
                         {!session.pending && !own && (

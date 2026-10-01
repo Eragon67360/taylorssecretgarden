@@ -9,8 +9,7 @@ export const siteConfig = {
    * sitemap, llms.txt, JSON-LD): the site itself, or a preview its own.
    */
   url: previewUrl ? `https://${previewUrl}` : PRODUCTION_URL,
-  description:
-    "A fan's scrapbook of every Taylor Swift Era: the Albums and their tracklists, the Tours, and Swiftter, where Swifties pass notes.",
+  description: "A fan's scrapbook of every Taylor Swift Era: the Albums and their tracklists, the Tours, and Swiftter, where Swifties pass notes.",
   /** Who publishes the site, as the legal notice, privacy policy and terms name him: a private individual. */
   publisher: "Thomas Moser",
   /**

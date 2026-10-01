@@ -23,6 +23,7 @@ One line per roadmap item (timestamp UTC, item, outcome, commit), plus the desig
 **Merge to `main`.** Proposal: do not merge tonight (checklist line 11, "the core flow works end to end on the Vercel preview, including a moderated write", can't be shown: Vercel BotID refuses the automated browser's sign-in). Opponent argued for merging (the same build passed the flow locally with the real Gateway; BotID blocking a bot proves the protection works; the owner pre-approved the merge). **Not merging won, and the opponent conceded it**: the brief's wording and honesty rule leave line 11 unticked, production needs migration 0002 and the password rotation (B2) first, and a rollback needs the down script first. Release PR #59 stays open with the owner's steps in order.
 
 ## Items
+
 - 2026-09-30T00:55Z · S8 · Vitest unit tests (hermetic, mocked Gateway: happy, blocked ×2, timeout, error, malformed ×3, injection, unicode), shared write guard; CI runs them · #64 5b1772b
 - 2026-09-30T01:00Z · S1 · Migration 0002 up → down → up verified on the `dev` branch (tables, columns and the 10 existing Posts intact at each step) · PR below
 - 2026-09-30T01:40Z · S2–S6, S9, S10 · Stored moderation (fail-closed with pending, capped re-checks, cron), replies, reshares, keyset feed, tear-up tombstones, write wrapper (origin/JSON/session/BotID), open-redirect fix, anonymous session checks answered locally; 17 integration tests green on `dev` branch; Swiftter + auth e2e 69/69 locally, whole suite minus Home/Music (Deezer covers blocked on this machine) 185/185 · PR below

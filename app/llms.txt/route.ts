@@ -3,7 +3,7 @@ import { siteConfig } from "@/config/site";
 import { formatReleaseDate } from "@/components/music/format";
 import { type AlbumFacts, getAlbumFacts, tracklistFacts } from "@/lib/album-facts";
 import { CATALOGUE, type CatalogueAlbum, albumName, albumYear } from "@/lib/catalogue";
-import { absoluteUrl, albumPath } from "@/lib/metadata";
+import { absoluteUrl, albumPath, versionPath } from "@/lib/metadata";
 
 /*
   /llms.txt (https://llmstxt.org): the site in plain Markdown for AI
@@ -36,7 +36,7 @@ function albumLine(album: CatalogueAlbum, tracklist: AlbumFacts | undefined): st
     original && `Taylor Swift's re-recording of ${albumName(original)} (${albumYear(original)})`,
     album.edition && `edition shown: ${album.edition}`,
     album.versions?.length &&
-      `other Versions: ${album.versions.map((version) => `${version.name} (${formatReleaseDate(version.released)})`).join("; ")}`,
+      `other Versions: ${album.versions.map((version) => `[${version.name}](${absoluteUrl(versionPath(album, version))}) (${formatReleaseDate(version.released)})`).join("; ")}`,
   ].filter(Boolean);
 
   return `- [${albumName(album)}](${absoluteUrl(albumPath(album))}): ${facts.join("; ")}.`;
@@ -61,14 +61,14 @@ export async function GET() {
 
 - The site is organised by Era: one album cycle of Taylor Swift's career (Fearless, Red, 1989...), each with its own colours and typeface. There are ${ALBUMS_BY_ERA.length} Eras.
 - An Album belongs to exactly one Era. A Taylor's Version (a re-recording of an earlier Album) is a separate Album in the same Era as the original.
-- Each Album is shown in its most complete edition; its other Versions (other editions, live and acoustic albums, "Chapter" compilations) open on the same page.
+- Each Album is shown in its most complete edition; its other Versions (other editions, live and acoustic albums, "Chapter" compilations) each have a page of their own, under the Album's, with their own tracklist.
 - Covers, tracklists, running times, labels and 30-second previews come from Deezer's public API. Song counts, running times and labels below are those of the edition each page shows; every tracklist is in [llms-full.txt](${absoluteUrl("/llms-full.txt")}).
 
 ## Sections
 
 - [Home](${absoluteUrl("/")}): the opening spread, with ways into Music, Tours and Swiftter, every Era pressed like a flower (each opens its Album on Music), and the Tour posters.
-- [Music](${absoluteUrl("/music")}): every Album on a shelf, in Era order. Opening an Album shows its cover, tracklist with running times, label, 30-second previews and its other Versions; each Album and Version has its own address (\`/music?album=<Deezer album ID>\`).
-- [Tours](${absoluteUrl("/tours")}): every Tour as a journal entry (ticket stub, poster, footage), each with its own page of facts.
+- [Music](${absoluteUrl("/music")}): every Album on a shelf, in Era order. Opening an Album shows its cover, tracklist with running times, label, 30-second previews and its other Versions; each Album and Version has its own address (\`/music/<album>\`, \`/music/<album>/<version>\`; /music itself opens on the debut).
+- [Tours](${absoluteUrl("/tours")}): every Tour as a journal entry (ticket stub, concert photos, and the Eras Tour's trailer), each with its own page of facts.
 - [Swiftter](${absoluteUrl("/swiftter")}): the fan feed. Anyone can read it; Members (fans who signed the guestbook) publish Posts.
 
 ## Albums by Era

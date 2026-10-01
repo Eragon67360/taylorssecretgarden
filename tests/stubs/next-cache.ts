@@ -14,24 +14,24 @@ const nested = new AsyncLocalStorage<true>();
 export const cacheStats = { reads: 0 };
 
 export function resetCache() {
-	entries.clear();
-	cacheStats.reads = 0;
+  entries.clear();
+  cacheStats.reads = 0;
 }
 
 export function unstable_cache<Args extends unknown[], T>(fn: (...args: Args) => Promise<T>, keyParts: string[] = []) {
-	return async (...args: Args): Promise<T> => {
-		if (nested.getStore()) return fn(...args);
+  return async (...args: Args): Promise<T> => {
+    if (nested.getStore()) return fn(...args);
 
-		const key = JSON.stringify([keyParts, args]);
+    const key = JSON.stringify([keyParts, args]);
 
-		cacheStats.reads++;
-		const hit = entries.get(key);
+    cacheStats.reads++;
+    const hit = entries.get(key);
 
-		if (hit !== undefined) return JSON.parse(hit) as T;
-		const value = await nested.run(true, () => fn(...args));
+    if (hit !== undefined) return JSON.parse(hit) as T;
+    const value = await nested.run(true, () => fn(...args));
 
-		entries.set(key, JSON.stringify(value));
+    entries.set(key, JSON.stringify(value));
 
-		return value;
-	};
+    return value;
+  };
 }

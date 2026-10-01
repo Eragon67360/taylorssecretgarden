@@ -8,8 +8,7 @@ import { RETENTION_DAYS } from "@/service/swiftter";
 
 export const metadata = pageMetadata({
   title: "Privacy policy",
-  description:
-    "What Taylor's Secret Garden keeps about its visitors and Members, why, with whom it is shared, for how long, and how to download or delete it.",
+  description: "What Taylor's Secret Garden keeps about its visitors and Members, why, with whom it is shared, for how long, and how to download or delete it.",
   path: "/privacy",
 });
 
@@ -31,7 +30,8 @@ const CONTENTS = [
  * The privacy policy (GDPR arts. 12–14): in English, the site's language.
  * Every period and every processor here comes from the code or the hosting
  * set-up: service/swiftter.ts (purgeExpired, deleteMemberAccount), the
- * auth cookies (app/api/auth), next.config.ts's media hosts. Change them
+ * auth cookies (app/api/auth), next.config.ts's media hosts, the trailer
+ * embed (components/tours/tour-trailer.tsx). Change them
  * together.
  */
 export default function PrivacyPage() {
@@ -45,45 +45,44 @@ export default function PrivacyPage() {
     >
       <Section id="who" title="Who keeps your data">
         <p>
-          Taylor&apos;s Secret Garden is a personal, non-commercial fan site published by <strong>{siteConfig.publisher}</strong>, a private
-          individual living in France. He is the data controller for everything below. Write to <ContactEmail /> about anything on this page. The <Link href="/legal">legal notice</Link> says who hosts the site.
+          Taylor&apos;s Secret Garden is a personal, non-commercial fan site published by <strong>{siteConfig.publisher}</strong>, a private individual living
+          in France. He is the data controller for everything below. Write to <ContactEmail /> about anything on this page. The{" "}
+          <Link href="/legal">legal notice</Link> says who hosts the site.
         </p>
       </Section>
 
       <Section id="what" title="What is kept">
         <h3>If you only read the site</h3>
         <p>
-          No account, no advertising, no cookies. Like every website, the host sees the technical details of each request (your IP address,
-          your browser, the page asked for, the time) and keeps them in its logs for a short time, to run the site and keep it secure.
+          No account, no advertising, no cookies (unless you play the Eras Tour trailer, which comes from YouTube: see <a href="#cookies">cookies</a>). Like
+          every website, the host sees the technical details of each request (your IP address, your browser, the page asked for, the time) and keeps them in its
+          logs for a short time, to run the site and keep it secure.
         </p>
         <p>
-          The site also measures its audience with <strong>Vercel Web Analytics</strong>, on the live site only. It sets no cookie and stores
-          nothing in your browser. It counts page views (the page&apos;s address, cleaned of sign-in codes and return addresses, the page you
-          came from, your browser, operating system and device type, and your approximate location: country, region, city) and five events: &ldquo;Sign up&rdquo;, &ldquo;Sign
-          in&rdquo;, &ldquo;Google sign-in started&rdquo;, &ldquo;Note passed&rdquo; (with whether it was a reply) and &ldquo;Preview
-          played&rdquo;. No event carries your name, email address, account or the text of a note. According to Vercel, visitors are told
-          apart only by a hash made from the request, without cookies, and a visit is discarded after 24 hours; the publisher sees aggregate
-          figures only.
+          The site also measures its audience with <strong>Vercel Web Analytics</strong>, on the live site only. It sets no cookie and stores nothing in your
+          browser. It counts page views (the page&apos;s address, cleaned of sign-in codes and return addresses, the page you came from, your browser, operating
+          system and device type, and your approximate location: country, region, city) and five events: &ldquo;Sign up&rdquo;, &ldquo;Sign in&rdquo;,
+          &ldquo;Google sign-in started&rdquo;, &ldquo;Note passed&rdquo; (with whether it was a reply) and &ldquo;Preview played&rdquo;. No event carries your
+          name, email address, account or the text of a note. According to Vercel, visitors are told apart only by a hash made from the request, without
+          cookies, and a visit is discarded after 24 hours; the publisher sees aggregate figures only.
         </p>
         <h3>If you sign the guestbook (become a Member)</h3>
         <ul>
           <li>
-            <strong>Your account:</strong> the name you give, your email address and your password, which is never stored as such, only as a
-            one-way hash. If you sign in with Google instead, Google tells the site your name, email address, profile picture and Google
-            account identifier, and the sign-in tokens it issues are kept with your account.
+            <strong>Your account:</strong> the name you give, your email address and your password, which is never stored as such, only as a one-way hash. If
+            you sign in with Google instead, Google tells the site your name, email address, profile picture and Google account identifier, and the sign-in
+            tokens it issues are kept with your account.
           </li>
           <li>
-            <strong>Your sessions:</strong> when you sign in, a session is recorded with the IP address and browser it was opened from, until
-            you sign out or it expires.
+            <strong>Your sessions:</strong> when you sign in, a session is recorded with the IP address and browser it was opened from, until you sign out or it
+            expires.
           </li>
           <li>
-            <strong>What you write on Swiftter:</strong> your notes and replies, your reshares, and when each was written, published, undone
-            or torn up.
+            <strong>What you write on Swiftter:</strong> your notes and replies, your reshares, and when each was written, published, undone or torn up.
           </li>
           <li>
-            <strong>Moderation decisions:</strong> for each note, whether the automated check allowed or refused it, the rule it broke if
-            any, the check&apos;s one-sentence reason, which model gave it and how long it took. See the <Link href="/terms">terms</Link> for how
-            the check works.
+            <strong>Moderation decisions:</strong> for each note, whether the automated check allowed or refused it, the rule it broke if any, the check&apos;s
+            one-sentence reason, which model gave it and how long it took. See the <Link href="/terms">terms</Link> for how the check works.
           </li>
         </ul>
         <p>Nothing else: no date of birth, no address, no phone number, no payment details.</p>
@@ -92,28 +91,28 @@ export default function PrivacyPage() {
       <Section id="why" title="Why, and on what basis">
         <ul>
           <li>
-            <strong>Your account, your notes and showing them on Swiftter</strong>: to give you the service you signed up for (GDPR art.
-            6(1)(b), performance of a contract: the <Link href="/terms">terms</Link>).
+            <strong>Your account, your notes and showing them on Swiftter</strong>: to give you the service you signed up for (GDPR art. 6(1)(b), performance of
+            a contract: the <Link href="/terms">terms</Link>).
           </li>
           <li>
-            <strong>Checking every note before it is published, and keeping the decision</strong>: to keep Swiftter kind and safe, and to be
-            able to explain or review a decision (art. 6(1)(f), legitimate interest).
+            <strong>Checking every note before it is published, and keeping the decision</strong>: to keep Swiftter kind and safe, and to be able to explain or
+            review a decision (art. 6(1)(f), legitimate interest).
           </li>
           <li>
-            <strong>Security</strong> (sessions, request logs, the bot check on sign-in and on writing, limits on how fast notes can be
-            written): to keep accounts and the feed safe from abuse (art. 6(1)(f), legitimate interest).
+            <strong>Security</strong> (sessions, request logs, the bot check on sign-in and on writing, limits on how fast notes can be written): to keep
+            accounts and the feed safe from abuse (art. 6(1)(f), legitimate interest).
           </li>
           <li>
-            <strong>Audience measurement</strong> (Vercel Web Analytics: how many people visit which pages, and how often the site&apos;s
-            main features are used, in aggregate): to see what the site is used for and improve it (art. 6(1)(f), legitimate interest).
+            <strong>Audience measurement</strong> (Vercel Web Analytics: how many people visit which pages, and how often the site&apos;s main features are
+            used, in aggregate): to see what the site is used for and improve it (art. 6(1)(f), legitimate interest).
           </li>
           <li>
             <strong>Encrypted backups of the database</strong>: to recover from an accident (art. 6(1)(f), legitimate interest).
           </li>
         </ul>
         <p>
-          No decision with legal or similarly significant effects is made about you automatically: the moderation check only decides whether
-          one note is shown, and you can ask a person to look at it again (see the <Link href="/terms#moderation">terms</Link>).
+          No decision with legal or similarly significant effects is made about you automatically: the moderation check only decides whether one note is shown,
+          and you can ask a person to look at it again (see the <Link href="/terms#moderation">terms</Link>).
         </p>
       </Section>
 
@@ -121,62 +120,64 @@ export default function PrivacyPage() {
         <p>These companies process data for the site, each under its own data processing terms. Nothing is sold, and nothing is shared for advertising.</p>
         <ul>
           <li>
-            <strong>Vercel Inc.</strong> (United States): hosts the site and runs its code, keeps its request logs, measures the audience
-            (Web Analytics), checks for bots when you sign in or write, and relays each note to the moderation model through its AI Gateway.
+            <strong>Vercel Inc.</strong> (United States): hosts the site and runs its code, keeps its request logs, measures the audience (Web Analytics),
+            checks for bots when you sign in or write, and relays each note to the moderation model through its AI Gateway.
           </li>
           <li>
-            <strong>Neon</strong> (United States; servers in the AWS us-east-1 region, Virginia): the database where accounts, sessions, notes
-            and moderation decisions are stored, and the sign-in service (Neon Auth).
+            <strong>Neon</strong> (United States; servers in the AWS us-east-1 region, Virginia): the database where accounts, sessions, notes and moderation
+            decisions are stored, and the sign-in service (Neon Auth).
           </li>
           <li>
-            <strong>Anthropic, PBC</strong> (United States): its Claude model reads the text of each note to check it against the community
-            rules. It receives the note&apos;s text only, not your name or email address.
+            <strong>Anthropic, PBC</strong> (United States): its Claude model reads the text of each note to check it against the community rules. It receives
+            the note&apos;s text only, not your name or email address.
           </li>
           <li>
-            <strong>Google</strong>: only if you choose &ldquo;Continue with Google&rdquo;, to sign you in. Its own privacy policy applies to
-            your Google account.
+            <strong>Google</strong>: only if you choose &ldquo;Continue with Google&rdquo;, to sign you in. Its own privacy policy applies to your Google
+            account.
           </li>
           <li>
             <strong>GitHub, Inc.</strong> (United States): stores the weekly database backups, encrypted with a key only the publisher holds.
           </li>
           <li>
-            <strong>Deezer</strong> (France): album covers and 30-second previews. The site sends Deezer nothing about you; when you play a
-            preview, your browser fetches the audio straight from Deezer&apos;s servers, which see your IP address as any website would.
-          </li>
-          <li>
-            <strong>Cloudinary</strong> (United States): hosts the site&apos;s own photos and videos. Your browser loads some of them straight
-            from Cloudinary, which sees your IP address as any website would. Nothing you write or upload goes there.
+            <strong>Deezer</strong> (France): album covers and 30-second previews. The site sends Deezer nothing about you; when you play a preview, your
+            browser fetches the audio straight from Deezer&apos;s servers, which see your IP address as any website would.
           </li>
         </ul>
         <p>
-          Several of these are in the United States. Data goes there under the European Commission&apos;s standard contractual clauses in each
-          company&apos;s data processing terms, or the EU–US Data Privacy Framework where the company is certified under it. You can ask for a
-          copy of the safeguards at <ContactEmail />.
+          <strong>YouTube</strong> (Google) is not one of them, but the Eras Tour page embeds the film&apos;s official trailer from it. Nothing is loaded from
+          YouTube until you press play on the trailer: only then does your browser load YouTube&apos;s player (from its youtube-nocookie.com address), and
+          YouTube sees your IP address and the page it is played on, as any website would, and may store data in your browser to play the video. Google&apos;s
+          privacy policy applies to that.
+        </p>
+        <p>
+          Several of these are in the United States. Data goes there under the European Commission&apos;s standard contractual clauses in each company&apos;s
+          data processing terms, or the EU–US Data Privacy Framework where the company is certified under it. You can ask for a copy of the safeguards at{" "}
+          <ContactEmail />.
         </p>
       </Section>
 
       <Section id="how-long" title="How long it is kept">
         <ul>
           <li>
-            <strong>Your account</strong>, as long as you keep it. Delete it yourself whenever you like from{" "}
-            <Link href="/guestbook">your guestbook page</Link>: your account, email address, password hash, picture and sessions go at once.
-            Your notes are torn up (their text erased), your reshares are deleted, and your name no longer appears anywhere.
+            <strong>Your account</strong>, as long as you keep it. Delete it yourself whenever you like from <Link href="/guestbook">your guestbook page</Link>:
+            your account, email address, password hash, picture and sessions go at once. Your notes are torn up (their text erased), your reshares are deleted,
+            and your name no longer appears anywhere.
           </li>
           <li>
             <strong>Published notes and replies</strong>, until you tear them up or delete your account.
           </li>
           <li>
-            <strong>A torn-up note</strong>: its text and the check&apos;s reasons are erased at once. An empty placeholder with no text and no
-            name stays only while other Members&apos; replies or reshares point to it, so their threads still read; otherwise it is removed
-            within {TOMBSTONE_MINUTES} minutes, or at the next daily clean-up.
+            <strong>A torn-up note</strong>: its text and the check&apos;s reasons are erased at once. An empty placeholder with no text and no name stays only
+            while other Members&apos; replies or reshares point to it, so their threads still read; otherwise it is removed within {TOMBSTONE_MINUTES} minutes,
+            or at the next daily clean-up.
           </li>
           <li>
-            <strong>Refused notes</strong>, and notes the check could not decide on within {MODERATION_RETRY.days} days, are deleted with their
-            moderation history {RETENTION_DAYS} days after they were written.
+            <strong>Refused notes</strong>, and notes the check could not decide on within {MODERATION_RETRY.days} days, are deleted with their moderation
+            history {RETENTION_DAYS} days after they were written.
           </li>
           <li>
-            <strong>The check&apos;s reason on an allowed note</strong> is erased after {RETENTION_DAYS} days; the decision itself (allowed, the
-            model) stays with the note.
+            <strong>The check&apos;s reason on an allowed note</strong> is erased after {RETENTION_DAYS} days; the decision itself (allowed, the model) stays
+            with the note.
           </li>
           <li>
             <strong>Backups</strong> are kept 30 days, then deleted, so something you deleted can survive in a backup for up to 30 days.
@@ -192,8 +193,8 @@ export default function PrivacyPage() {
 
       <Section id="rights" title="Your rights">
         <p>
-          Under the GDPR and the French Data Protection Act you can, at any time, do the following. A request by email is answered within one
-          month, the deadline the GDPR sets (art. 12(3)).
+          Under the GDPR and the French Data Protection Act you can, at any time, do the following. A request by email is answered within one month, the
+          deadline the GDPR sets (art. 12(3)).
         </p>
         <ul>
           <li>
@@ -204,12 +205,11 @@ export default function PrivacyPage() {
             <strong>delete it</strong> (erasure): &ldquo;Delete my account&rdquo; on the same page, or tear up any note on its own;
           </li>
           <li>
-            <strong>correct it</strong> (rectification), <strong>object</strong> to a processing based on legitimate interest, or ask for it
-            to be <strong>restricted</strong>: write to <ContactEmail />;
+            <strong>correct it</strong> (rectification), <strong>object</strong> to a processing based on legitimate interest, or ask for it to be{" "}
+            <strong>restricted</strong>: write to <ContactEmail />;
           </li>
           <li>
-            <strong>say what should happen to your data after your death</strong> (French Data Protection Act, art. 85): write to{" "}
-            <ContactEmail />.
+            <strong>say what should happen to your data after your death</strong> (French Data Protection Act, art. 85): write to <ContactEmail />.
           </li>
         </ul>
         <p>
@@ -220,31 +220,31 @@ export default function PrivacyPage() {
 
       <Section id="cookies" title="Cookies">
         <p>
-          The site sets cookies only when you sign in, and only the ones signing in needs, so it asks for no consent (French Data Protection
-          Act, art. 82: strictly necessary cookies). There are no advertising, analytics or tracking cookies: the audience
-          measurement uses none. All are secure, HTTP-only cookies
-          on this site&apos;s address:
+          The site sets cookies only when you sign in, and only the ones signing in needs, so it asks for no consent (French Data Protection Act, art. 82:
+          strictly necessary cookies). There are no advertising, analytics or tracking cookies: the audience measurement uses none. All are secure, HTTP-only
+          cookies on this site&apos;s address:
         </p>
         <ul>
           <li>
             <code>__Secure-neon-auth.session_token</code>: keeps you signed in, until you sign out or the session expires;
           </li>
           <li>
-            <code>__Secure-neon-auth.local.session_data</code>: a signed, short-lived copy of who is signed in, so each page need not ask the
-            sign-in service again;
+            <code>__Secure-neon-auth.local.session_data</code>: a signed, short-lived copy of who is signed in, so each page need not ask the sign-in service
+            again;
           </li>
           <li>
-            <code>__Secure-neon-auth.session_challenge</code>: only while you sign in with Google, to check that the answer coming back is
-            yours.
+            <code>__Secure-neon-auth.session_challenge</code>: only while you sign in with Google, to check that the answer coming back is yours.
           </li>
         </ul>
         <p>Signing out or deleting your account removes them.</p>
+        <p>
+          The one other way anything is stored in your browser is your own choice: pressing play on the Eras Tour trailer loads YouTube&apos;s player, which may
+          then store data under Google&apos;s policy (see <a href="#who-else">who else handles it</a>). Until you press play, nothing comes from YouTube.
+        </p>
       </Section>
 
       <Section id="changes" title="Changes">
-        <p>
-          If this policy changes, the new version is published here, with the date it changed.
-        </p>
+        <p>If this policy changes, the new version is published here, with the date it changed.</p>
       </Section>
     </LegalPage>
   );

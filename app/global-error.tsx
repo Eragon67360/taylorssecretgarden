@@ -17,13 +17,41 @@ const ACCENT = "#7e2a37";
 const ON_ACCENT = "#fff6ec";
 
 const styles = {
-  body: { margin: 0, minHeight: "100dvh", background: PAPER, color: INK, colorScheme: "light", fontFamily: "system-ui, sans-serif", display: "grid", placeItems: "center" },
-  page: { boxSizing: "border-box", width: "min(640px, calc(100% - 32px))", margin: "48px 16px", padding: "40px 28px", background: CARD, boxShadow: "0 14px 30px -14px rgba(0,0,0,.35)", rotate: "-0.6deg" },
+  body: {
+    margin: 0,
+    minHeight: "100dvh",
+    background: PAPER,
+    color: INK,
+    colorScheme: "light",
+    fontFamily: "system-ui, sans-serif",
+    display: "grid",
+    placeItems: "center",
+  },
+  page: {
+    boxSizing: "border-box",
+    width: "min(640px, calc(100% - 32px))",
+    margin: "48px 16px",
+    padding: "40px 28px",
+    background: CARD,
+    boxShadow: "0 14px 30px -14px rgba(0,0,0,.35)",
+    rotate: "-0.6deg",
+  },
   kicker: { margin: 0, color: SOFT, fontSize: 11, fontWeight: 700, letterSpacing: ".26em", textTransform: "uppercase" },
   title: { margin: "8px 0 0", fontFamily: "Georgia, serif", fontSize: "clamp(2rem, 7vw, 3rem)", lineHeight: 1.05, fontWeight: 600 },
   text: { margin: "16px 0 0", color: SOFT, fontSize: 17, lineHeight: 1.6 },
   actions: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "16px 28px", marginTop: 28 },
-  button: { minHeight: 44, padding: "0 20px", border: 0, borderRadius: 4, background: ACCENT, color: ON_ACCENT, font: "inherit", fontSize: 15, fontWeight: 700, cursor: "pointer" },
+  button: {
+    minHeight: 44,
+    padding: "0 20px",
+    border: 0,
+    borderRadius: 4,
+    background: ACCENT,
+    color: ON_ACCENT,
+    font: "inherit",
+    fontSize: 15,
+    fontWeight: 700,
+    cursor: "pointer",
+  },
   link: { color: INK, fontWeight: 700, textUnderlineOffset: 4 },
 } satisfies Record<string, CSSProperties>;
 

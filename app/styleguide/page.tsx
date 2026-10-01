@@ -33,8 +33,8 @@ export default function Styleguide() {
         <p className="text-soft text-[11px] font-bold tracking-[.26em] uppercase">Development only · not in production</p>
         <h1 className="font-serif mt-2 text-[clamp(2.6rem,7vw,4.8rem)] leading-none font-semibold tracking-[-0.02em]">Styleguide</h1>
         <p className="text-soft mt-4 max-w-[40rem] text-[17px] leading-relaxed">
-          The scrapbook kit (components/scrapbook) and every Era&apos;s look (lib/eras.ts). An Era applies by overriding the journal&apos;s
-          colour variables and display face on a container (components/era-scope.tsx).
+          The scrapbook kit (components/scrapbook) and every Era&apos;s look (lib/eras.ts). An Era applies by overriding the journal&apos;s colour variables and
+          display face on a container (components/era-scope.tsx).
         </p>
       </div>
 
@@ -74,8 +74,7 @@ export default function Styleguide() {
           Album → Era
         </h2>
         <p className="text-soft mt-1 text-[15px]">
-          The catalogue (lib/catalogue.ts): each Album in its most complete edition on Deezer. A Taylor&apos;s Version shares its
-          original&apos;s Era.
+          The catalogue (lib/catalogue.ts): each Album in its most complete edition on Deezer. A Taylor&apos;s Version shares its original&apos;s Era.
         </p>
         <table className="mt-4 w-full max-w-[720px] text-left text-[15px]">
           <thead className="text-soft text-[11px] tracking-[.2em] uppercase">

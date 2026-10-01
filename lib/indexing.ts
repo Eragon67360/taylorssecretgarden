@@ -23,7 +23,5 @@ export const NOINDEX_HEADER = { key: "X-Robots-Tag", value: "noindex, nofollow" 
 
 /** robots.txt: everything allowed and the sitemap listed in production, everything disallowed elsewhere. */
 export function robotsFile(indexable: boolean, siteUrl: string): MetadataRoute.Robots {
-  return indexable
-    ? { rules: { userAgent: "*", allow: "/" }, sitemap: `${siteUrl}/sitemap.xml` }
-    : { rules: { userAgent: "*", disallow: "/" } };
+  return indexable ? { rules: { userAgent: "*", allow: "/" }, sitemap: `${siteUrl}/sitemap.xml` } : { rules: { userAgent: "*", disallow: "/" } };
 }
