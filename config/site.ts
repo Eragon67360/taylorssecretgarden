@@ -1,5 +1,5 @@
 /** The canonical address (the apex redirects here). */
-const PRODUCTION_URL = "https://www.taylorssecretgarden.com";
+export const PRODUCTION_URL = "https://www.taylorssecretgarden.com";
 const previewUrl = process.env.VERCEL_ENV === "preview" && process.env.VERCEL_BRANCH_URL;
 
 export const siteConfig = {
