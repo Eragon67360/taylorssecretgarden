@@ -1,0 +1,6 @@
+# Formatting-only commits, skipped by `git blame` once you run
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub skips them on its own.)
+
+# style: format the code base with Prettier (2 spaces)
+3759bbca1d26dc0fec3f967b14edabd6d8d61630

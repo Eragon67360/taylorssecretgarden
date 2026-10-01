@@ -47,12 +47,19 @@ npm run dev                  # http://localhost:3000
 ## Checks
 
 ```bash
-npm run lint              # ESLint 9, flat config (eslint.config.mjs)
+npm run lint              # ESLint 9, flat config (eslint.config.mjs); fails on any warning
+npm run format            # Prettier rewrites every file (npm run format:check only reports)
 npm run typecheck         # tsc --noEmit
 npm test                  # unit tests (Vitest), hermetic
 npm run test:integration  # integration tests, against a disposable Neon branch only
 npm run test:e2e          # Playwright smoke suite
 npm run lighthouse        # Lighthouse CI on a production build (run `npm run build` first)
+```
+
+[Prettier](https://prettier.io/) formats the code, styles, JSON, YAML and Markdown ([`.prettierrc.json`](.prettierrc.json): its defaults, 160 columns; [`.prettierignore`](.prettierignore)), with 2-space indentation, and [`.editorconfig`](.editorconfig) gives editors the same settings. The reformat that introduced it is listed in [`.git-blame-ignore-revs`](.git-blame-ignore-revs); to have `git blame` skip it locally, run once:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
 
 `npm test` runs the unit tests (Vitest, `tests/unit/`): hermetic, no network or database. AI moderation runs against the AI SDK's mock model (`MockLanguageModelV4`): allowed, both refusals, timeout, Gateway error and malformed answers, prompt injection and unicode. The sanitiser and the database guards are covered too. `npm run test:integration` runs `tests/integration/` against a disposable Neon branch only (the same guard as below), and `npm run test:coverage` reports coverage.
