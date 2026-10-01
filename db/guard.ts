@@ -64,3 +64,24 @@ export function seedGuard(env: Env = process.env, production = PRODUCTION_ENDPOI
 
   return writeGuard(env, production);
 }
+
+/**
+ * Why `npm run moderator` (scripts/moderator.ts) must not run here, or null.
+ * Granting someone moderation is not test data: it may change production,
+ * but only when asked in so many words. `--production` must be given exactly
+ * when DATABASE_URL is production's (the Grant moderator workflow gives it;
+ * a laptop has no production credentials), and never with NODE_ENV or
+ * VERCEL_ENV set to production, which would mean the app's own environment.
+ */
+export function moderatorGuard(env: Env = process.env, { production: asked = false } = {}, production = PRODUCTION_ENDPOINT_SHA256): string | null {
+  if (env.NODE_ENV === "production") return "NODE_ENV=production";
+  if (env.VERCEL_ENV === "production") return "VERCEL_ENV=production";
+  if (!env.DATABASE_URL) return "Needs DATABASE_URL";
+
+  const isProduction = isProductionEndpoint(env.DATABASE_URL, production);
+
+  if (isProduction && !asked) return "DATABASE_URL is production's: pass --production to change its moderators (the Grant moderator workflow does)";
+  if (!isProduction && asked) return "--production was given, but DATABASE_URL is not production's";
+
+  return null;
+}

@@ -227,6 +227,8 @@ test.describe("confirming an email address", () => {
 
       return fulfil(route, { status: true, token: "t", user: { ...user, emailVerified: true } });
     });
+    // Signed in, the member menu asks for its new-replies badge (and whether to link the moderation page); with no real session behind the stubs, it is answered here.
+    await page.route("**/api/swiftter/me/replies*", (route) => fulfil(route, { count: 0, at: new Date().toISOString(), moderator: false }));
     await page.goto("/sign-up?redirect_url=%2Fmusic");
     await page.getByRole("textbox", { name: "Name" }).fill(user.name);
     await page.getByRole("textbox", { name: "Email" }).fill(user.email);

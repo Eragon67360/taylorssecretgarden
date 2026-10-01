@@ -15,6 +15,7 @@ import {
   SelfReshareError,
   type WriteOutcome,
 } from "@/service/swiftter";
+import { AlreadyHandledError, NotModeratorError, NotRefusedError } from "@/service/moderators";
 
 /*
   How Swiftter's routes answer, in the journal's voice: one place for the
@@ -33,6 +34,9 @@ export const REFUSALS: Record<RefusalCategory, string> = {
 /** Moderation gave no verdict: the note is kept, waiting. */
 export const HELD =
   "Your note is saved, but it couldn't be checked just now, so only you can see it. It will be checked again shortly, or you can press “check again”.";
+
+/** A Member who is not a moderator, on a moderation route (403). */
+export const NOT_MODERATOR = "Only moderators can do this.";
 
 const WHAT: Record<LimitedWrite, string> = { post: "notes", reply: "replies", reshare: "reshares", report: "reports" };
 
@@ -69,6 +73,8 @@ export function errorResponse(error: unknown, action: string) {
   if (error instanceof PostNotFoundError) return NextResponse.json({ error: "There is no such note." }, { status: 404 });
   if (error instanceof SelfReshareError || error instanceof SelfReportError) return NextResponse.json({ error: error.message }, { status: 422 });
   if (error instanceof AlreadyResharedError) return NextResponse.json({ error: error.message }, { status: 409 });
+  if (error instanceof NotModeratorError) return NextResponse.json({ error: NOT_MODERATOR }, { status: 403 });
+  if (error instanceof AlreadyHandledError || error instanceof NotRefusedError) return NextResponse.json({ error: error.message }, { status: 409 });
   if (error instanceof NoMoreChecksError) {
     return NextResponse.json({ error: "This note has been checked as many times as it can be. Tear it up and write it again later." }, { status: 409 });
   }

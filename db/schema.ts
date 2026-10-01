@@ -125,7 +125,7 @@ export const moderationDecisions = pgTable(
     category: text("category"),
     /** The model's one-line reason; erased when the Post is torn up. */
     reason: text("reason"),
-    /** The model that judged it (or `fake` in tests). */
+    /** The model that judged it (or `fake` in tests), or `human:<member id>` for a moderator's decision. */
     model: text("model").notNull(),
     /** How long the attempt took, in milliseconds. */
     durationMs: integer("duration_ms"),
@@ -136,6 +136,21 @@ export const moderationDecisions = pgTable(
     check("moderation_decisions_outcome_check", sql`${table.outcome} in ('approved', 'blocked', 'unavailable')`),
   ],
 );
+
+/**
+ * The Members who may handle reports and appeals on the moderation page
+ * (/guestbook/moderation): a row each, so a grant says when it was made and
+ * by whom (null: by the owner, with `npm run moderator` or the Grant moderator
+ * workflow). Revoking deletes the row; the decisions a moderator made stay in
+ * moderation_decisions (`model` `human:<their id>`). Goes with the Member.
+ */
+export const moderators = pgTable("moderators", {
+  memberId: text("member_id")
+    .primaryKey()
+    .references(() => members.id, { onDelete: "cascade" }),
+  grantedAt: timestamp("granted_at", { withTimezone: true }).notNull().defaultNow(),
+  grantedBy: text("granted_by").references(() => members.id, { onDelete: "set null" }),
+});
 
 /** What a Member asks a human for: to look at someone else's public note, or to look again at their own refused one. */
 export const NOTE_REPORT_KINDS = ["report", "appeal"] as const;

@@ -47,12 +47,16 @@ A Post or reply that is not public: waiting for a moderation check (pending), or
 _Avoid_: Draft, hidden post
 
 **Report**:
-A Member asking a human to look at someone else's public note ("Report" in the interface), with a reason if they like. One per Member and note; the owner hears of it in the hourly owner alert.
+A Member asking a human to look at someone else's public note ("Report" in the interface), with a reason if they like. One per Member and note; the owner hears of it in the hourly owner alert, and a Moderator settles it.
 _Avoid_: Flag, complaint
 
 **Appeal**:
 A Member asking a human to look again at their own refused note ("Ask a human to look again" in the interface). One per note.
 _Avoid_: Dispute, review request
+
+**Moderator**:
+A Member who may handle Reports and Appeals on the moderation page: tear the note up, keep it, or publish a refused note after all. The owner is the first; the role is granted, never claimed.
+_Avoid_: Admin, mod (in the interface)
 
 **Owner alert**:
 What the site sends its owner when something needs a human: notes given up on, and new Reports and Appeals. A GitHub issue on the (public) repository when a token is set, so it names notes by id only; otherwise a log line.

@@ -140,7 +140,8 @@ const MAX_LISTED = 50;
 /**
  * The alert summing up the reports and appeals one cron run found: how many,
  * and each note by id, with a link only when the note is public (a report);
- * an appeal is about a refused note, which only its author may see.
+ * an appeal is about a refused note, which only its author may see. It links
+ * to the moderation page, where moderators read and handle them.
  */
 export function reportsAlert(reports: ReportToNotify[], at = new Date(), siteUrl = siteConfig.url): OwnerAlert {
   const count = (kind: ReportToNotify["kind"]) => reports.filter((report) => report.kind === kind).length;
@@ -170,7 +171,9 @@ export function reportsAlert(reports: ReportToNotify[], at = new Date(), siteUrl
       ...lines,
       ...(notes.size > MAX_LISTED ? [`- and ${notes.size - MAX_LISTED} more notes`] : []),
       "",
-      "Who reported and why is in the database only (`note_reports`), never here: this repository is public. Once handled, set `resolved_at` on those rows; to publish a refused note after all, set it approved with `published_at` (ADR-0007). Close this issue when the list is done; the next alert opens a new one.",
+      `Handle them on the moderation page, signed in as a moderator: ${siteUrl}/guestbook/moderation (tear up, keep, or publish a refused note after all; each decision is recorded).`,
+      "",
+      "Who reported and why is on that page and in the database only (`note_reports`), never here: this repository is public. Close this issue when the list is done; the next alert opens a new one.",
     ].join("\n"),
     labels: ["moderation"],
   };

@@ -24,4 +24,9 @@ describe("BotID's routes", () => {
     expect(isBotIdProtected("POST", "/api/auth/reset-password")).toBe(false);
     expect(isBotIdProtected("POST", "/api/auth/email-otp/verify-email")).toBe(false);
   });
+
+  it("guard a moderator's decisions, but not reading the moderation list", () => {
+    expect(isBotIdProtected("POST", "/api/swiftter/moderation/abc")).toBe(true);
+    expect(isBotIdProtected("GET", "/api/swiftter/moderation")).toBe(false);
+  });
 });
