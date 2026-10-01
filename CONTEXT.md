@@ -62,7 +62,7 @@ A signed-in person who can publish Posts on Swiftter.
 _Avoid_: User, account, profile
 
 **Guestbook**:
-The sign-up and sign-in pages, styled as a book fans sign. Signing it (email and password, or Google) makes a visitor a Member.
+The sign-up and sign-in pages, styled as a book fans sign, with "Forgot your password?" (`/forgot-password`, `/reset-password`) on the same card. Signing it (email and password, or Google) makes a visitor a Member.
 _Avoid_: Login, registration (in the interface)
 
 **Demo content**:

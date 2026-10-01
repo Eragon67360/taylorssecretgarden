@@ -1,4 +1,4 @@
-import { Guestbook, guestbookError, guestbookRedirect, type SearchParams } from "@/components/guestbook/guestbook";
+import { Guestbook, guestbookError, guestbookNotice, guestbookRedirect, type SearchParams } from "@/components/guestbook/guestbook";
 import { GuestbookForm } from "@/components/guestbook/guestbook-form";
 import { pageMetadata } from "@/lib/metadata";
 
@@ -15,7 +15,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
 
   return (
     <Guestbook note="Been here before? Write your name again.">
-      <GuestbookForm initialError={guestbookError(params)} mode="sign-in" redirectTo={guestbookRedirect(params)} />
+      <GuestbookForm initialError={guestbookError(params)} mode="sign-in" notice={guestbookNotice(params)} redirectTo={guestbookRedirect(params)} />
     </Guestbook>
   );
 }
