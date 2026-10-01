@@ -55,6 +55,8 @@ test.describe("your guestbook page, signed in", () => {
 	test.skip(!!writeGuard(), writeGuard() ?? "");
 	test.skip(() => !readTestMember(), "The setup project signs up the test Member");
 	test.use({ storageState: { cookies: [], origins: [] } });
+	// The deleted Member's page is a 404, which the browser logs.
+	test.use({ expectedConsoleMessages: [/Failed to load resource: the server responded with a status of 404/] });
 
 	test("a Member downloads their data, then deletes their account: signed out, their thread still reads", async ({ page, browser }) => {
 		test.setTimeout(180_000);
@@ -65,7 +67,11 @@ test.describe("your guestbook page, signed in", () => {
 		const written = await page.request.post("/api/swiftter/posts", { headers: BOTID_HUMAN, data: { content: `<p>${text}</p>` } });
 
 		expect(written.status()).toBe(201);
-		const { note } = (await written.json()) as { note: { id: string } };
+		const { note } = (await written.json()) as { note: { id: string; author: { id: string } } };
+		const memberPage = `/swiftter/m/${note.author.id}`;
+
+		// Their Member page, while they are one.
+		expect((await page.request.get(memberPage)).status()).toBe(200);
 
 		// Someone else answers it (the shared test Member).
 		const other = await browser.newContext({ storageState: existsSync(MEMBER_STATE) ? MEMBER_STATE : undefined });
@@ -116,5 +122,12 @@ test.describe("your guestbook page, signed in", () => {
 		await expect(page.getByRole("heading", { level: 1, name: "A torn-up note" })).toBeVisible();
 		await expect(page.getByText(answer)).toBeVisible();
 		expect(await thread?.text()).not.toContain(name);
+
+		// Their Member page is gone with their account.
+		const gone = await page.goto(memberPage);
+
+		expect(gone?.status()).toBe(404);
+		await expect(page.getByRole("heading", { level: 1, name: "This page isn't in the guestbook." })).toBeVisible();
+		expect((await page.request.get(`/api/swiftter/members/${note.author.id}/posts`)).status()).toBe(404);
 	});
 });
