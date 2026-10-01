@@ -1027,9 +1027,11 @@ export async function exportMemberData(memberId: string): Promise<MemberExport> 
  * - their Member row keeps only its id (other rows refer to it), no name or
  *   picture;
  * - their Neon Auth account goes, with its sessions and credentials (on
- *   delete cascade), straight from the `neon_auth` schema. Neon Auth's own
- *   delete-user endpoint is disabled on its hosted service (it answers 404),
- *   so this is the second deliberate exception to ADR-0004, after
+ *   delete cascade), through public.delete_auth_user (drizzle/0005): the
+ *   app's database role has no access to the `neon_auth` schema, and that
+ *   function deletes exactly one account by id (docs/adr/0008). Neon Auth's
+ *   own delete-user endpoint is disabled on its hosted service (it answers
+ *   404), so this is the second deliberate exception to ADR-0004, after
  *   scripts/unseed.ts.
  * Tombstones nothing refers to are removed then, or by the daily purge.
  */
@@ -1051,7 +1053,7 @@ export async function deleteMemberAccount(memberId: string): Promise<void> {
 			.set({ resolvedAt: sql`now()` })
 			.where(and(isNull(noteReports.resolvedAt), inArray(noteReports.postId, tx.select({ id: posts.id }).from(posts).where(eq(posts.memberId, memberId)))));
 		await tx.update(members).set({ displayName: "", username: null, avatarUrl: null }).where(eq(members.id, memberId));
-		await tx.execute(sql`delete from neon_auth."user" where id::text = ${memberId}`);
+		await tx.execute(sql`select public.delete_auth_user(${memberId})`);
 	});
 
 	await purgeTombstones(memberId);
