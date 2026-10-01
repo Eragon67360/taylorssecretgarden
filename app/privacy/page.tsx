@@ -46,17 +46,24 @@ export default function PrivacyPage() {
       <Section id="who" title="Who keeps your data">
         <p>
           Taylor&apos;s Secret Garden is a personal, non-commercial fan site published by <strong>{siteConfig.publisher}</strong>, a private
-          individual living in France. He is the data controller for everything below. Write to <ContactEmail /> about anything on this page;
-          you will get an answer within a month. The <Link href="/legal">legal notice</Link> says who hosts the site.
+          individual living in France. He is the data controller for everything below. Write to <ContactEmail /> about anything on this page. The <Link href="/legal">legal notice</Link> says who hosts the site.
         </p>
       </Section>
 
       <Section id="what" title="What is kept">
         <h3>If you only read the site</h3>
         <p>
-          Nothing is kept about you by the site itself: no account, no tracking, no advertising, no analytics. Like every website, the host
-          sees the technical details of each request (your IP address, your browser, the page asked for, the time) and keeps them in its logs
-          for a short time, to run the site and keep it secure.
+          No account, no advertising, no cookies. Like every website, the host sees the technical details of each request (your IP address,
+          your browser, the page asked for, the time) and keeps them in its logs for a short time, to run the site and keep it secure.
+        </p>
+        <p>
+          The site also measures its audience with <strong>Vercel Web Analytics</strong>, on the live site only. It sets no cookie and stores
+          nothing in your browser. It counts page views (the page&apos;s address, cleaned of sign-in codes and return addresses, the page you
+          came from, your browser, operating system and device type, and your approximate location: country, region, city) and five events: &ldquo;Sign up&rdquo;, &ldquo;Sign
+          in&rdquo;, &ldquo;Google sign-in started&rdquo;, &ldquo;Note passed&rdquo; (with whether it was a reply) and &ldquo;Preview
+          played&rdquo;. No event carries your name, email address, account or the text of a note. According to Vercel, visitors are told
+          apart only by a hash made from the request, without cookies, and a visit is discarded after 24 hours; the publisher sees aggregate
+          figures only.
         </p>
         <h3>If you sign the guestbook (become a Member)</h3>
         <ul>
@@ -97,6 +104,10 @@ export default function PrivacyPage() {
             written): to keep accounts and the feed safe from abuse (art. 6(1)(f), legitimate interest).
           </li>
           <li>
+            <strong>Audience measurement</strong> (Vercel Web Analytics: how many people visit which pages, and how often the site&apos;s
+            main features are used, in aggregate): to see what the site is used for and improve it (art. 6(1)(f), legitimate interest).
+          </li>
+          <li>
             <strong>Encrypted backups of the database</strong>: to recover from an accident (art. 6(1)(f), legitimate interest).
           </li>
         </ul>
@@ -110,8 +121,8 @@ export default function PrivacyPage() {
         <p>These companies process data for the site, each under its own data processing terms. Nothing is sold, and nothing is shared for advertising.</p>
         <ul>
           <li>
-            <strong>Vercel Inc.</strong> (United States): hosts the site and runs its code, keeps its request logs, checks for bots when you
-            sign in or write, and relays each note to the moderation model through its AI Gateway.
+            <strong>Vercel Inc.</strong> (United States): hosts the site and runs its code, keeps its request logs, measures the audience
+            (Web Analytics), checks for bots when you sign in or write, and relays each note to the moderation model through its AI Gateway.
           </li>
           <li>
             <strong>Neon</strong> (United States; servers in the AWS us-east-1 region, Virginia): the database where accounts, sessions, notes
@@ -173,11 +184,17 @@ export default function PrivacyPage() {
           <li>
             <strong>Request logs</strong>, for the short time the host keeps them.
           </li>
+          <li>
+            <strong>Audience figures</strong>, in aggregate, for as long as Vercel Web Analytics keeps them under the site&apos;s plan.
+          </li>
         </ul>
       </Section>
 
       <Section id="rights" title="Your rights">
-        <p>Under the GDPR and the French Data Protection Act you can, at any time:</p>
+        <p>
+          Under the GDPR and the French Data Protection Act you can, at any time, do the following. A request by email is answered within one
+          month, the deadline the GDPR sets (art. 12(3)).
+        </p>
         <ul>
           <li>
             <strong>get a copy of your data</strong> (access and portability): &ldquo;Download your data&rdquo; on{" "}
@@ -204,7 +221,8 @@ export default function PrivacyPage() {
       <Section id="cookies" title="Cookies">
         <p>
           The site sets cookies only when you sign in, and only the ones signing in needs, so it asks for no consent (French Data Protection
-          Act, art. 82: strictly necessary cookies). There are no advertising, analytics or tracking cookies. All are secure, HTTP-only cookies
+          Act, art. 82: strictly necessary cookies). There are no advertising, analytics or tracking cookies: the audience
+          measurement uses none. All are secure, HTTP-only cookies
           on this site&apos;s address:
         </p>
         <ul>

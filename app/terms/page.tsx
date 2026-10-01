@@ -123,8 +123,8 @@ export default function TermsPage() {
         </ul>
         <p>
           The check can be wrong. <strong>If you think a note was refused by mistake, press &ldquo;Ask a human to look again&rdquo;</strong> on
-          the refused note, or write to <ContactEmail /> saying which note. {siteConfig.publisher} reads it himself and answers you; if the
-          refusal was wrong, the note is published.
+          the refused note, or write to <ContactEmail /> saying which note. {siteConfig.publisher} looks at it himself; if the refusal was
+          wrong, the note is published.
         </p>
       </Section>
 
@@ -132,7 +132,7 @@ export default function TermsPage() {
         <p>
           The check misses things too. If a published note breaks the rules or the law,{" "}
           <strong>press &ldquo;Report&rdquo; on the note</strong>, or write to <ContactEmail /> with its link and what is wrong with it. Every
-          report is read by a person. A note that breaks the rules is removed, and its author is told by email which rule it broke and why.
+          report is read by a person, and a note that breaks the rules is removed.
         </p>
       </Section>
 
@@ -156,17 +156,15 @@ export default function TermsPage() {
           keeps about you there first. Your notes are torn up and your name taken off them.
         </p>
         <p>
-          A Member who seriously or repeatedly breaks these rules can have notes removed and their account suspended or closed. Except for
-          what is plainly illegal, a first problem gets a warning, and every decision comes with its reason; you can answer it at{" "}
-          <ContactEmail />.
+          A Member who seriously or repeatedly breaks these rules can have notes removed and their account closed. If that happens to you
+          and you think it was a mistake, write to <ContactEmail />.
         </p>
       </Section>
 
       <Section id="liability" title="The fine print">
         <ul>
           <li>
-            The site is a free hobby project, kept as well as one fan can: it may be unavailable now and then, change, or stop. If Swiftter is
-            ever closed, Members are told beforehand and can download their notes.
+            The site is a free hobby project, kept as well as one fan can: it may be unavailable now and then, change, or stop.
           </li>
           <li>
             Members are responsible for their notes. The site removes unlawful content promptly once it is reported, but cannot read

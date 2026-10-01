@@ -12,15 +12,14 @@ export const metadata = pageMetadata({
 });
 
 /*
-  The host, as LCEN art. 6-III requires it be named: the address Vercel
-  publishes in its terms and privacy policy (vercel.com/legal). Vercel lists
-  no telephone number there; this one is the number French legal notices
-  commonly give for Vercel Inc.
+  The host, as LCEN art. 6-III requires it be named: the address and contact
+  Vercel publishes in its terms and privacy policy (vercel.com/legal).
 */
+// TODO(owner): LCEN asks for the host's phone number too; Vercel publishes none on vercel.com/legal.
 const HOST = {
   name: "Vercel Inc.",
   address: ["440 N Barranca Ave #4133", "Covina, CA 91723"],
-  phone: "+1 951 383 6898",
+  email: "legalnotices@vercel.com",
   url: "https://vercel.com",
 };
 
@@ -35,7 +34,7 @@ function HostAddress({ country }: { country: string }) {
       <br />
       {HOST.address[1]}, {country}
       <br />
-      <a href={`tel:${HOST.phone.replaceAll(" ", "")}`}>{HOST.phone}</a> · <a href={HOST.url}>vercel.com</a>
+      <a href={`mailto:${HOST.email}`}>{HOST.email}</a> · <a href={HOST.url}>vercel.com</a>
     </address>
   );
 }
