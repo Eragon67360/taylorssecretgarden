@@ -5,7 +5,7 @@ import type { EraSlug } from "@/lib/eras";
 
 import { unstable_cache } from "next/cache";
 
-import { CATALOGUE, albumName, albumPath, albumYear, findAlbum, isTaylorsVersion, versionPath } from "@/lib/catalogue";
+import { CATALOGUE, albumName, albumPath, albumYear, isTaylorsVersion, versionPath } from "@/lib/catalogue";
 import { getAlbum, getAlbums } from "@/service/deezer";
 
 const DAY = 86400;
@@ -98,44 +98,29 @@ export async function getShelf(): Promise<ShelfAlbum[]> {
 }
 
 /**
- * The shelf Album a `?album=<id>` asks for: by the ID on the shelf, else by
- * any Deezer ID of the same Album (another edition, a regional twin).
- * Anything else opens the debut Album.
- */
-export function pickAlbum(shelf: ShelfAlbum[], wanted: string | undefined): ShelfAlbum | undefined {
-  const catalogueId = findAlbum(wanted)?.id;
-
-  return shelf.find(({ id }) => id === wanted) ?? shelf.find((album) => album.catalogueId === catalogueId) ?? shelf[0];
-}
-
-/**
- * The ID of the version a `?album=<id>` asks for, when it is one of this
- * Album's versions; otherwise the Album's own (shelf) ID.
- */
-export function pickVersion(album: ShelfAlbum, wanted: string | undefined): string {
-  const entry = CATALOGUE.find(({ id }) => id === album.catalogueId);
-
-  return entry?.versions?.some(({ id }) => id === wanted) ? wanted! : album.id;
-}
-
-/**
  * Every version of an Album, the shelf's own edition first, each with its
  * Deezer cover; empty when the Album has only the one, or when Deezer fails
  * (the page then shows the shelf's edition alone).
  */
 export async function getVersions(album: ShelfAlbum): Promise<AlbumVersionCard[]> {
-  const versions = CATALOGUE.find(({ id }) => id === album.catalogueId)?.versions ?? [];
+  const entry = CATALOGUE.find(({ id }) => id === album.catalogueId);
+  const versions = entry?.versions ?? [];
   const shelfCover = album.images[0]?.url;
 
-  if (!versions.length || !shelfCover) return [];
+  if (!entry || !versions.length || !shelfCover) return [];
   const covers = await cachedVersionCovers(versions.map(({ id }) => id)).catch(() => undefined);
 
   if (!covers) return [];
 
   return [
     { id: album.id, path: album.path, name: album.edition ?? "The Album", released: album.released, cover: shelfCover },
-    ...versions.map((version, index) => ({ ...version, path: versionPath(version), cover: covers[index] })),
+    ...versions.map((version, index) => ({ ...version, path: versionPath(entry, version), cover: covers[index] })),
   ];
+}
+
+/** Every shelf Album's versions (getVersions), by catalogue ID: what the music journal switches between without asking the server. */
+export async function getEveryVersion(shelf: ShelfAlbum[]): Promise<Record<string, AlbumVersionCard[]>> {
+  return Object.fromEntries(await Promise.all(shelf.map(async (album) => [album.catalogueId, await getVersions(album)] as const)));
 }
 
 /** An Album's versions' covers, in order, as one cache entry per Album; fails (and caches nothing) if any does. */

@@ -5,6 +5,7 @@ import { HTML_LIMITED_BOT_UA_RE } from "next/dist/shared/lib/router/utils/html-b
 
 // Relative imports: the app's path aliases do not apply to this file.
 import { AVATAR_REMOTE_PATTERNS } from "./lib/avatar";
+import { CATALOGUE } from "./lib/catalogue";
 import { NOINDEX_HEADER, isIndexable } from "./lib/indexing";
 
 /**
@@ -84,6 +85,9 @@ const nextConfig: NextConfig = {
     return [
       // Swiftter used to live at /forum.
       { source: "/forum", destination: "/swiftter", permanent: true },
+      // The first Album's page is /music itself (lib/catalogue.ts); its Versions keep their /music/<slug>/… pages.
+      // Old ?album= links are sent on by proxy.ts, which can drop the parameter.
+      { source: `/music/${CATALOGUE[0].slug}`, destination: "/music", permanent: true },
       // The old production address sends people to the canonical www host,
       // path and query kept. Pages only: API routes keep answering there, so
       // Vercel Cron and a tab left open on the old address still work. Neon

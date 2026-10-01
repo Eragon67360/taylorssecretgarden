@@ -22,7 +22,7 @@ const SEEDED_THREAD = "/swiftter/p/5eed0000-0000-4000-8000-000000000001";
 /** Pages kept out of search results everywhere. */
 const NOINDEX = ["/sign-in", "/sign-up", "/styleguide"];
 
-/** A URL as a path on the site: "https://www.taylorssecretgarden.com/music?album=1" → "/music?album=1". */
+/** A URL as a path on the site: "https://www.taylorssecretgarden.com/swiftter?page=2" → "/swiftter?page=2". */
 const pathOf = (url: string) => {
   const { pathname, search } = new URL(url);
 
@@ -111,7 +111,7 @@ test.describe("sitemap.xml", () => {
     expect(new Set(paths).size, "no URL listed twice").toBe(paths.length);
     expect(paths).toEqual(expect.arrayContaining(INDEXABLE));
     // Every other Album has a page of its own: a Taylor's Version, for one.
-    expect(paths).toContain("/music?album=221543452");
+    expect(paths).toContain("/music/fearless-taylors-version");
     for (const path of [...NOINDEX, "/sign-in?redirect_url=%2Fswiftter"]) expect(paths).not.toContain(path);
   });
 
@@ -127,7 +127,7 @@ test.describe("sitemap.xml", () => {
   test("every link to Music on Home, Music and the Tour pages is a sitemap URL or a Version's own page", async ({ page, request }) => {
     const sitemap = await (await request.get("/sitemap.xml")).text();
     const listed = new Set([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) => pathOf(loc.trim())));
-    const versionPages = new Set(CATALOGUE.flatMap((album) => album.versions ?? []).map(({ id }) => `/music?album=${id}`));
+    const versionPages = new Set(CATALOGUE.flatMap((album) => (album.versions ?? []).map(({ slug }) => `/music/${album.slug}/${slug}`)));
     const pages = ["/", ...[...listed].filter((path) => path.startsWith("/music") || path.startsWith("/tours/"))];
     let checked = 0;
 
@@ -177,7 +177,8 @@ test.describe("llms.txt", () => {
       expect(text).toContain(`[${name}](${SITE}${path})`);
     }
     expect(text).toContain("### Fearless Era (2008)");
-    expect(text).toContain(`[Fearless (Taylor's Version)](${SITE}/music?album=221543452)`);
+    expect(text).toContain(`[Fearless (Taylor's Version)](${SITE}/music/fearless-taylors-version)`);
+    expect(text).toContain(`[The Long Pond Studio Sessions](${SITE}/music/folklore/the-long-pond-studio-sessions) (November 25, 2020)`);
     for (const { tour, slug } of tours) expect(text).toContain(`[${tour}](${SITE}/tours/${slug})`);
 
     const links = [...text.matchAll(/\]\((\S+?)\)/g)].map(([, url]) => url);
@@ -189,7 +190,7 @@ test.describe("llms.txt", () => {
     const text = await (await request.get("/llms.txt")).text();
 
     expect(text).toMatch(
-      new RegExp(`^- \\[reputation\\]\\(${RegExp.escape(SITE)}/music\\?album=52612062\\): released November 10, 2017; 15 songs, \\d+ min, label .+\\.$`, "m"),
+      new RegExp(`^- \\[reputation\\]\\(${RegExp.escape(SITE)}/music/reputation\\): released November 10, 2017; 15 songs, \\d+ min, label .+\\.$`, "m"),
     );
     expect(text).toMatch(/^- \[Midnights\]\(.+\): released October 21, 2022; 23 songs, 1 h \d{2} min, label /m);
   });
@@ -202,7 +203,7 @@ test.describe("llms.txt", () => {
     const text = await response.text();
 
     expect(text).toMatch(/^# Taylor's Secret Garden: every tracklist\n/);
-    expect(text).toContain(`## reputation\n\n${SITE}/music?album=52612062\n`);
+    expect(text).toContain(`## reputation\n\n${SITE}/music/reputation\n`);
     expect(text).toContain("\n1. ...Ready For It? (3:28)\n");
     expect(text.match(/^## /gm)).toHaveLength(CATALOGUE.length);
   });
@@ -267,23 +268,23 @@ test.describe("JSON-LD", () => {
     expect(others).toEqual([]);
     expect(debut).toMatchObject({ "@type": "MusicAlbum", name: "Taylor Swift", datePublished: "2006-10-24", url: `${SITE}/music`, byArtist: TAYLOR_SWIFT });
 
-    const [album] = await structuredData(page, request, "/music?album=221543452");
+    const [album] = await structuredData(page, request, "/music/fearless-taylors-version");
 
     expect(album).toMatchObject({
       "@type": "MusicAlbum",
       name: "Fearless (Taylor's Version)",
       byArtist: TAYLOR_SWIFT,
       datePublished: "2021-04-09",
-      url: `${SITE}/music?album=221543452`,
+      url: `${SITE}/music/fearless-taylors-version`,
       image: expect.stringMatching(/^https:\/\//),
       albumProductionType: "https://schema.org/StudioAlbum",
       albumReleaseType: "https://schema.org/AlbumRelease",
       // A Taylor's Version is based on its original.
-      isBasedOn: { "@type": "MusicAlbum", name: "Fearless", url: `${SITE}/music?album=426350` },
+      isBasedOn: { "@type": "MusicAlbum", name: "Fearless", url: `${SITE}/music/fearless` },
       albumRelease: {
         "@type": "MusicRelease",
         recordLabel: { "@type": "Organization", name: expect.any(String) },
-        releaseOf: expect.objectContaining({ "@type": "MusicAlbum", url: `${SITE}/music?album=221543452` }),
+        releaseOf: expect.objectContaining({ "@type": "MusicAlbum", url: `${SITE}/music/fearless-taylors-version` }),
       },
     });
     expect(album.numTracks).toBeGreaterThanOrEqual(26);
@@ -291,19 +292,19 @@ test.describe("JSON-LD", () => {
   });
 
   test("a Version's page describes the Version itself, as a release of its Album", async ({ page, request }) => {
-    const [version] = await structuredData(page, request, "/music?album=188803732");
+    const [version] = await structuredData(page, request, "/music/folklore/the-long-pond-studio-sessions");
 
     expect(version).toMatchObject({
       "@type": "MusicAlbum",
       name: "folklore, The Long Pond Studio Sessions",
       datePublished: "2020-11-25",
-      url: `${SITE}/music?album=188803732`,
+      url: `${SITE}/music/folklore/the-long-pond-studio-sessions`,
       albumProductionType: "https://schema.org/LiveAlbum",
-      albumRelease: { "@type": "MusicRelease", releaseOf: expect.objectContaining({ name: "folklore", url: `${SITE}/music?album=167766152` }) },
+      albumRelease: { "@type": "MusicRelease", releaseOf: expect.objectContaining({ name: "folklore", url: `${SITE}/music/folklore` }) },
     });
     expectTracks(version);
 
-    const [chapter] = await structuredData(page, request, "/music?album=289970772");
+    const [chapter] = await structuredData(page, request, "/music/red-taylors-version/from-the-vault-chapter");
 
     expect(chapter).toMatchObject({ name: "Red (Taylor's Version), From The Vault Chapter", albumProductionType: "https://schema.org/CompilationAlbum" });
   });
@@ -377,8 +378,8 @@ test.describe("links between clusters", () => {
   test("a Tour page links its Era's Albums, named, at their canonical addresses", async ({ page, request }) => {
     expect(await linksOf(page, request, "/tours/the-red-tour")).toEqual(
       expect.arrayContaining([
-        { href: "/music?album=68491961", text: "Red tracklist · 2012" },
-        { href: "/music?album=272247412", text: "Red (Taylor's Version) tracklist · 2021" },
+        { href: "/music/red", text: "Red tracklist · 2012" },
+        { href: "/music/red-taylors-version", text: "Red (Taylor's Version) tracklist · 2021" },
       ]),
     );
     // The Eras Tour spans every Era: it links the Music shelf.
@@ -388,16 +389,16 @@ test.describe("links between clusters", () => {
   });
 
   test("a Taylor's Version links its original and back, and each Album its Era's Tour", async ({ page, request }) => {
-    const taylorsVersion = await linksOf(page, request, "/music?album=221543452");
+    const taylorsVersion = await linksOf(page, request, "/music/fearless-taylors-version");
 
     expect(taylorsVersion).toEqual(
       expect.arrayContaining([
-        { href: "/music?album=426350", text: "Fearless (2008)" },
+        { href: "/music/fearless", text: "Fearless (2008)" },
         { href: "/tours/fearless-tour", text: "Fearless Tour (2009–2010)" },
       ]),
     );
-    expect(await linksOf(page, request, "/music?album=426350")).toEqual(
-      expect.arrayContaining([{ href: "/music?album=221543452", text: "Fearless (Taylor's Version)" }]),
+    expect(await linksOf(page, request, "/music/fearless")).toEqual(
+      expect.arrayContaining([{ href: "/music/fearless-taylors-version", text: "Fearless (Taylor's Version)" }]),
     );
   });
 });
@@ -411,7 +412,7 @@ test.describe("one h1 per page", () => {
     await page.route(/\/api\/auth\/get-session(\?|$)/, (route) => route.fulfill({ json: null }));
   });
 
-  for (const path of [...INDEXABLE, "/music?album=167766152", ...NOINDEX, SEEDED_THREAD]) {
+  for (const path of [...INDEXABLE, "/music/folklore", "/music/folklore/the-long-pond-studio-sessions", ...NOINDEX, SEEDED_THREAD]) {
     test(`${path} has exactly one h1`, async ({ page }) => {
       await page.goto(path);
       await expect(page.locator("h1")).toHaveCount(1);

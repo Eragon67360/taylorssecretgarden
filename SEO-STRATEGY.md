@@ -20,7 +20,6 @@ Known gaps:
 
 - `taylorssecretgarden.vercel.app` redirects its pages to www permanently (308, path and query kept); its API routes keep answering there (`next.config.ts`).
 - Music's h1 is the journal's playful line ("pick an Era. the page changes outfits."), the same on every Album page. The release's full name (Album, Taylor's Version, edition or Version) is the h2.
-- Album pages are query-string URLs (`/music?album=<Deezer ID>`). They work and are canonical, but the ID says nothing to a reader of search results.
 - The Tour facts carry no sources on the page.
 
 ## Topic clusters
@@ -30,7 +29,7 @@ Each cluster has a hub, which is the page that should rank for the broad topic, 
 ### 1. Albums and tracklists
 
 - **Hub:** `/music`
-- **Spokes:** each Album's page (`/music?album=<id>`), with its tracklist, running times, label, release date and 30-second previews.
+- **Spokes:** each Album's page (`/music/<album>`, e.g. `/music/folklore`), with its tracklist, running times, label, release date and 30-second previews.
 - **Query themes:** "<Album> tracklist", "<Album> release date", "how long is <Album>", "songs on <Album> deluxe".
 - **Gap:** the page's text leads with the Era's look rather than the Album. A short factual line (Album, release date, edition, number of tracks) near the title would answer these questions directly (V9).
 
@@ -44,7 +43,7 @@ Each cluster has a hub, which is the page that should rank for the broad topic, 
 ### 3. Album Versions and editions
 
 - **Hub:** each Album's page, whose row of Versions links to them.
-- **Spokes:** each Version's page (`/music?album=<version id>`): standard and deluxe editions, the 3am and Til Dawn editions of Midnights, The Anthology, the "Chapter" compilations, the live and acoustic albums.
+- **Spokes:** each Version's page (`/music/<album>/<version>`, e.g. `/music/midnights/3am-edition`): standard and deluxe editions, the 3am and Til Dawn editions of Midnights, The Anthology, the "Chapter" compilations, the live and acoustic albums.
 - **Query themes:** "<Album> 3am edition tracklist", "<Album> standard vs deluxe", "<Chapter name> tracklist".
 - **Note:** Versions are canonical to themselves because each has its own tracklist. The sitemap leaves them out; they are reached through their Album's page.
 
@@ -75,8 +74,9 @@ Each cluster has a hub, which is the page that should rank for the broad topic, 
 | ------------------------------------------------------------ | ------------------------------------ | --------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------------- |
 | `/`                                                          | Hub of hubs                          | yes                                           | itself                                                                  | `WebSite`                                          |
 | `/music`                                                     | Albums hub; opens on the first Album | yes                                           | itself                                                                  | `MusicAlbum` (the open Album)                      |
-| `/music?album=<Album ID>`                                    | An Album                             | yes                                           | the Album's catalogue ID (regional twins and old IDs point here)        | `MusicAlbum`                                       |
-| `/music?album=<Version ID>`                                  | A Version of an Album                | yes, not in the sitemap                       | itself                                                                  | `MusicAlbum` (the Version, a release of its Album) |
+| `/music/<album>`                                             | An Album                             | yes                                           | itself                                                                  | `MusicAlbum`                                       |
+| `/music/<album>/<version>`                                   | A Version of an Album                | yes, not in the sitemap                       | itself                                                                  | `MusicAlbum` (the Version, a release of its Album) |
+| `/music?album=<Deezer ID>`                                   | The old Album and Version addresses  | no: 308 to the page above                     | n/a                                                                     | n/a                                                |
 | `/tours`                                                     | Tours hub                            | yes                                           | itself                                                                  | `ItemList` of Tours                                |
 | `/tours/<slug>`                                              | A Tour                               | yes                                           | itself                                                                  | `EventSeries`                                      |
 | `/swiftter`                                                  | The fan feed                         | yes                                           | itself                                                                  | none yet                                           |
@@ -90,10 +90,11 @@ Rules that keep this consistent:
 - Every indexable page gets its metadata from `pageMetadata` (title, description, canonical, Open Graph). A new route that skips it inherits the layout's defaults and has no canonical link.
 - Canonical URLs, the sitemap, JSON-LD and `llms.txt` are all generated from the same data (the catalogue, the Tours data, `config/site.ts`), so they cannot disagree with each other.
 - A page that should not be found passes `noindex: true`. Nothing is blocked in `robots.txt` in production: a crawler has to fetch a page to see its `noindex`.
+- Album and Version addresses come from the catalogue's slugs and never change once published. Every old `/music?album=<Deezer ID>` (an Album's, a Version's, an alias or a regional twin) gets a 308 to its page, without the parameter (`proxy.ts`); `/music/taylor-swift` gets one to `/music`.
 
 ## Internal linking plan
 
-Links today: the four-tab nav on every page; Home to Music, Tours and Swiftter, each Era's pressed flower to its Album, and each Tour poster to its page; the Music shelf to every Album, and an Album to its Versions; Tours to each Tour page, and back; each Tour page to its Era's Albums ("Albums of this Era"; the Eras Tour to the Music shelf); each Album page to its Era's Tour, and a Taylor's Version to its original and back ("a re-recording of Fearless (2008)", "re-recorded as Fearless (Taylor's Version)"). Every link to an Album uses its catalogue ID (`albumPath`), never the regional twin Deezer may answer with.
+Links today: the four-tab nav on every page; Home to Music, Tours and Swiftter, each Era's pressed flower to its Album, and each Tour poster to its page; the Music shelf to every Album, and an Album to its Versions; Tours to each Tour page, and back; each Tour page to its Era's Albums ("Albums of this Era"; the Eras Tour to the Music shelf); each Album page to its Era's Tour, and a Taylor's Version to its original and back ("a re-recording of Fearless (2008)", "re-recorded as Fearless (Taylor's Version)"). Every link to an Album or Version uses its catalogue slug (`albumPath`, `versionPath`), never a Deezer ID.
 
 To add, in order of value:
 
@@ -145,7 +146,7 @@ Do these in this order. Steps 2 and 3 must not be swapped: redirecting to www be
 | P2  | A Taylor's Versions page generated from `reRecords`                                                             | Hub for cluster 2                                                           | Lists each re-recording beside its original, with release dates                                                           |
 | P2  | Sources for the Tour facts                                                                                      | Trust and checkability, for readers and assistants                          | Each fact in `tours.json` has a source URL, shown on its Tour page                                                        |
 | P2  | The open Album's title in Music's h1                                                                            | The h1 would say what the page is about                                     | Decided with the owner (the playful line is part of the design)                                                           |
-| P2  | Path-based Album URLs (`/music/<album-slug>`)                                                                   | Readable URLs in results                                                    | Owner decision (a URL change): 308s from `?album=`, canonicals, sitemap and `llms.txt` updated together                   |
+| ✅  | Path-based Album URLs (`/music/<album-slug>`)                                                                   | Readable URLs in results                                                    | Done (#92): 308s from `?album=`; canonicals, sitemap and `llms.txt` updated together                                      |
 | P2  | Open Graph cards per Album or Tour, in the Era's palette                                                        | Richer link previews when shared                                            | Generated with `next/og`; no cover art unless its licence allows it                                                       |
 | P2  | `og:locale` from `en` to a language and territory (e.g. `en_US`)                                                | Open Graph expects `language_TERRITORY`                                     | Owner decides the audience                                                                                                |
 

@@ -1,38 +1,38 @@
-import type { Locator, Page } from "@playwright/test";
+import type { APIResponse, Locator, Page } from "@playwright/test";
 
 import { PHONE, expectNoAxeViolations, expectNoHorizontalOverflow, expectReducedMotion } from "./checks";
 import { expect, test } from "./fixtures";
 
 // Albums are named from the curated catalogue (lib/catalogue.ts), not from
-// Deezer, whose titles vary by catalog region; URLs use curated IDs.
-const IDS = {
-  reputation: "52612062",
-  folklore: "167766152",
-  midnights: "446218925",
-  showgirl: "1103662682",
+// Deezer, whose titles vary by catalog region; each has a page of its own.
+const PATHS = {
+  reputation: "/music/reputation",
+  folklore: "/music/folklore",
+  midnights: "/music/midnights",
+  showgirl: "/music/the-life-of-a-showgirl",
   /** Fearless (International Version), another version of the Fearless Album. */
-  fearlessInternational: "283925",
-  midnights3am: "368506677",
+  fearlessInternational: "/music/fearless/international-version",
+  midnights3am: "/music/midnights/3am-edition",
 };
 
 /** The shelf, in Era order: each Taylor's Version right after its original. */
-const SHELF: { name: string; id: string; era: string }[] = [
-  { name: "Taylor Swift", id: "227786", era: "debut" },
-  { name: "Fearless", id: "426350", era: "fearless" },
-  { name: "Fearless (Taylor's Version)", id: "221543452", era: "fearless" },
-  { name: "Speak Now", id: "689149", era: "speak-now" },
-  { name: "Speak Now (Taylor's Version)", id: "461146065", era: "speak-now" },
-  { name: "Red", id: "68491961", era: "red" },
-  { name: "Red (Taylor's Version)", id: "272247412", era: "red" },
-  { name: "1989", id: "9007781", era: "1989" },
-  { name: "1989 (Taylor's Version)", id: "505316961", era: "1989" },
-  { name: "reputation", id: "52612062", era: "reputation" },
-  { name: "Lover", id: "108447472", era: "lover" },
-  { name: "folklore", id: "167766152", era: "folklore" },
-  { name: "evermore", id: "198167862", era: "evermore" },
-  { name: "Midnights", id: "446218925", era: "midnights" },
-  { name: "The Tortured Poets Department", id: "575252501", era: "ttpd" },
-  { name: "The Life of a Showgirl", id: "1103662682", era: "showgirl" },
+const SHELF: { name: string; id: string; era: string; path: string }[] = [
+  { name: "Taylor Swift", id: "227786", era: "debut", path: "/music" },
+  { name: "Fearless", id: "426350", era: "fearless", path: "/music/fearless" },
+  { name: "Fearless (Taylor's Version)", id: "221543452", era: "fearless", path: "/music/fearless-taylors-version" },
+  { name: "Speak Now", id: "689149", era: "speak-now", path: "/music/speak-now" },
+  { name: "Speak Now (Taylor's Version)", id: "461146065", era: "speak-now", path: "/music/speak-now-taylors-version" },
+  { name: "Red", id: "68491961", era: "red", path: "/music/red" },
+  { name: "Red (Taylor's Version)", id: "272247412", era: "red", path: "/music/red-taylors-version" },
+  { name: "1989", id: "9007781", era: "1989", path: "/music/1989" },
+  { name: "1989 (Taylor's Version)", id: "505316961", era: "1989", path: "/music/1989-taylors-version" },
+  { name: "reputation", id: "52612062", era: "reputation", path: "/music/reputation" },
+  { name: "Lover", id: "108447472", era: "lover", path: "/music/lover" },
+  { name: "folklore", id: "167766152", era: "folklore", path: "/music/folklore" },
+  { name: "evermore", id: "198167862", era: "evermore", path: "/music/evermore" },
+  { name: "Midnights", id: "446218925", era: "midnights", path: "/music/midnights" },
+  { name: "The Tortured Poets Department", id: "575252501", era: "ttpd", path: "/music/the-tortured-poets-department" },
+  { name: "The Life of a Showgirl", id: "1103662682", era: "showgirl", path: "/music/the-life-of-a-showgirl" },
 ];
 const ERA_COUNT = new Set(SHELF.map(({ era }) => era)).size;
 
@@ -86,10 +86,14 @@ test.describe("Music", () => {
     await page.goto("/music");
     await expectAlbumShown(page, /^Taylor Swift/);
     const debutPaper = await background(eraPage(page));
+    const journal = await eraPage(page).elementHandle();
 
     await polaroid(page, "reputation").click();
 
-    await expect(page).toHaveURL(`/music?album=${IDS.reputation}`);
+    await expect(page).toHaveURL(PATHS.reputation);
+    // In place: no page load, the same journal (its Era fade carries on), and the polaroid keeps the focus.
+    expect(await journal!.evaluate((element) => element.isConnected)).toBe(true);
+    await expect(polaroid(page, "reputation")).toBeFocused();
     await expect(eraBracelet(page, "reputation")).toBeVisible();
     await expectAlbumShown(page, "reputation");
     await expect(page.getByText("...Ready For It?", { exact: true })).toBeVisible();
@@ -100,7 +104,7 @@ test.describe("Music", () => {
 
     await polaroid(page, "folklore").click();
 
-    await expect(page).toHaveURL(`/music?album=${IDS.folklore}`);
+    await expect(page).toHaveURL(PATHS.folklore);
     await expect(eraBracelet(page, "folklore")).toBeVisible();
     await expectAlbumShown(page, "folklore");
     await expect(page.getByText("cardigan", { exact: true })).toBeVisible();
@@ -136,7 +140,7 @@ test.describe("Music", () => {
       const paper = await background(eraPage(page));
 
       await polaroid(page, tv.name).click();
-      await expect(page).toHaveURL(`/music?album=${tv.id}`);
+      await expect(page).toHaveURL(tv.path);
       await expect(eraPage(page)).toHaveAttribute("data-era", original.era);
       // The handwritten tag (the h2 also holds the full name, for screen readers and search engines).
       await expect(page.getByText("the one we stream")).toBeVisible();
@@ -145,7 +149,7 @@ test.describe("Music", () => {
   });
 
   test("The Life of a Showgirl is Era No. 12, with its own look and its Encore edition", async ({ page }) => {
-    await page.goto(`/music?album=${IDS.showgirl}`);
+    await page.goto(PATHS.showgirl);
 
     await expectAlbumShown(page, "The Life of a Showgirl");
     await expect(eraPage(page)).toHaveAttribute("data-era", "showgirl");
@@ -160,7 +164,7 @@ test.describe("Music", () => {
   });
 
   test("each Album is shown in its most complete edition, named on the page", async ({ page }) => {
-    await page.goto(`/music?album=${IDS.midnights}`);
+    await page.goto(PATHS.midnights);
 
     await expectAlbumShown(page, "Midnights");
     // Named under the title (first), and current among the Album's versions.
@@ -169,17 +173,17 @@ test.describe("Music", () => {
     await expect(page.getByRole("definition").nth(1)).toHaveText("23");
   });
 
-  test("every Album has a working ?album deep link", async ({ page }) => {
+  test("every Album has a page of its own", async ({ page }) => {
     test.setTimeout(180_000);
-    for (const { name, id, era } of SHELF) {
-      await page.goto(`/music?album=${id}`);
+    for (const { name, era, path } of SHELF) {
+      await page.goto(path);
       await expect(polaroid(page, name), name).toHaveAttribute("aria-current", "true");
       await expect(eraPage(page)).toHaveAttribute("data-era", era);
     }
   });
 
   test("a deep link to another version of an Album opens that Album on that version", async ({ page }) => {
-    await page.goto(`/music?album=${IDS.fearlessInternational}`);
+    await page.goto(PATHS.fearlessInternational);
 
     await expect(polaroid(page, "Fearless")).toHaveAttribute("aria-current", "true");
     await expect(eraPage(page)).toHaveAttribute("data-era", "fearless");
@@ -190,7 +194,7 @@ test.describe("Music", () => {
   });
 
   test("an open Album lists every version; picking one switches the cover, facts and tracklist in place", async ({ page }) => {
-    await page.goto(`/music?album=${IDS.midnights}`);
+    await page.goto(PATHS.midnights);
     await expectAlbumShown(page, "Midnights");
 
     const list = versions(page, "Midnights");
@@ -205,7 +209,7 @@ test.describe("Music", () => {
     await expect(list.locator("[data-selected-mark]")).toHaveCount(1);
 
     await list.getByRole("link", { name: /3am Edition/ }).click();
-    await expect(page).toHaveURL(`/music?album=${IDS.midnights3am}`);
+    await expect(page).toHaveURL(PATHS.midnights3am);
     await expect(list.getByRole("link", { name: /3am Edition/ })).toHaveAttribute("aria-current", "true");
     await expect(page.getByText("3am Edition", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("definition").nth(1)).toHaveText("20");
@@ -215,13 +219,16 @@ test.describe("Music", () => {
     await expect(eraPage(page)).toHaveAttribute("data-era", "midnights");
     await expectNoAxeViolations(page);
 
-    await list.getByRole("link", { name: /The Til Dawn Edition/ }).click();
-    await expect(page).toHaveURL(`/music?album=${IDS.midnights}`);
+    // From the keyboard: the focus stays on the version picked, in the new page's list.
+    await list.getByRole("link", { name: /The Til Dawn Edition/ }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(PATHS.midnights);
     await expect(page.getByRole("definition").nth(1)).toHaveText("23");
+    await expect(list.getByRole("link", { name: /The Til Dawn Edition/ })).toBeFocused();
   });
 
   test("an Album with a single version shows no list of versions", async ({ page }) => {
-    await page.goto(`/music?album=${IDS.reputation}`);
+    await page.goto(PATHS.reputation);
     await expectAlbumShown(page, "reputation");
 
     await expect(versions(page, "reputation")).toHaveCount(0);
@@ -239,8 +246,8 @@ test.describe("Music", () => {
     await expect(eraPage(page)).toHaveAttribute("data-era", "fearless");
   });
 
-  test("a ?album deep link opens that Album", async ({ page }) => {
-    await page.goto(`/music?album=${IDS.midnights}`);
+  test("an Album's page opens that Album", async ({ page }) => {
+    await page.goto(PATHS.midnights);
 
     await expect(eraBracelet(page, "Midnights")).toBeVisible();
     await expectAlbumShown(page, /^Midnights/);
@@ -248,15 +255,54 @@ test.describe("Music", () => {
     await expect(eraPage(page)).toHaveAttribute("data-era", "midnights");
   });
 
-  test("an unknown ?album falls back to the debut Album", async ({ page }) => {
+  test("an unknown ?album falls back to the debut Album; an unknown Album or Version is a 404", async ({ page, request }) => {
     const response = await page.goto("/music?album=not-an-album");
 
     expect(response?.status()).toBe(200);
     await expect(eraBracelet(page, "debut")).toBeVisible();
+    for (const path of ["/music/fearless-deluxe", "/music/fearless/3am-edition"]) expect((await request.get(path)).status(), path).toBe(404);
+  });
+
+  // The old addresses (/music?album=<Deezer ID>), for good, without the parameter (proxy.ts).
+  test.describe("old ?album= links", () => {
+    /** Where a redirect sends, as a path on the site (Next writes some Locations in full). */
+    const locationOf = (response: APIResponse) => {
+      const { pathname, search } = new URL(response.headers().location, "http://localhost");
+
+      return pathname + search;
+    };
+
+    for (const [what, id, path] of [
+      ["an Album's catalogue ID", "167766152", "/music/folklore"],
+      ["a Version's ID", "188803732", "/music/folklore/the-long-pond-studio-sessions"],
+      ["a regional twin's ID", "272284", "/music/fearless"],
+      ["the first Album's ID", "227786", "/music"],
+    ]) {
+      test(`send ${what} to its page`, async ({ request }) => {
+        const response = await request.get(`/music?album=${id}`, { maxRedirects: 0 });
+
+        expect(response.status()).toBe(308);
+        expect(locationOf(response)).toBe(path);
+      });
+    }
+
+    test("keep any other parameter, and land on the page", async ({ page }) => {
+      await page.goto("/music?album=283925&utm_source=newsletter");
+
+      await expect(page).toHaveURL("/music/fearless/international-version?utm_source=newsletter");
+      await expect(versions(page, "Fearless").getByRole("link", { name: /International Version/ })).toHaveAttribute("aria-current", "true");
+    });
+
+    test("/music/taylor-swift is /music, where the first Album is", async ({ request }) => {
+      const response = await request.get("/music/taylor-swift", { maxRedirects: 0 });
+
+      expect(response.status()).toBe(308);
+      expect(locationOf(response)).toBe("/music");
+    });
   });
 
   test("the Album details show the release date, songs, running time and label", async ({ page }) => {
-    await page.goto(`/music?album=${IDS.reputation}`);
+    await page.goto(PATHS.reputation);
 
     const facts = page.getByRole("definition");
 
@@ -285,7 +331,7 @@ test.describe("Music", () => {
     });
 
     test("play one track at a time, with a visible playing state and progress", async ({ page }) => {
-      await page.goto(`/music?album=${IDS.reputation}`);
+      await page.goto(PATHS.reputation);
       await expectAlbumShown(page, "reputation");
 
       await playButtons(page).nth(0).click();
@@ -312,7 +358,7 @@ test.describe("Music", () => {
     });
 
     test("switching Album stops playback", async ({ page }) => {
-      await page.goto(`/music?album=${IDS.reputation}`);
+      await page.goto(PATHS.reputation);
       await expectAlbumShown(page, "reputation");
 
       await playButtons(page).nth(0).click();
@@ -332,7 +378,7 @@ test.describe("Music", () => {
 
       test("say so on the track's line and announce it politely, once", async ({ page }) => {
         await page.route("**/api/preview/*", (route) => route.fulfill({ status: 404, body: "No preview for this track" }));
-        await page.goto(`/music?album=${IDS.reputation}`);
+        await page.goto(PATHS.reputation);
         await expectAlbumShown(page, "reputation");
 
         // The live region is on the page, empty, before anything fails, so the message is heard when it goes in.
@@ -370,7 +416,7 @@ test.describe("Music", () => {
     });
 
     test("are keyboard operable", async ({ page }) => {
-      await page.goto(`/music?album=${IDS.folklore}`);
+      await page.goto(PATHS.folklore);
       await expectAlbumShown(page, "folklore");
 
       await playButtons(page).nth(0).focus();
@@ -411,7 +457,7 @@ test.describe("Music", () => {
 
   test("fits a 390px phone", async ({ page }) => {
     await page.setViewportSize(PHONE);
-    await page.goto(`/music?album=${IDS.midnights}`);
+    await page.goto(PATHS.midnights);
     await expectAlbumShown(page, /^Midnights/);
     await expectNoHorizontalOverflow(page);
     // The selected polaroid is scrolled into view on the shelf.
@@ -419,7 +465,7 @@ test.describe("Music", () => {
   });
 
   test("is still under reduced motion", async ({ page }) => {
-    await page.goto(`/music?album=${IDS.folklore}`);
+    await page.goto(PATHS.folklore);
     await expectReducedMotion(page);
   });
 
