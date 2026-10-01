@@ -116,7 +116,12 @@ describe("signing up, in and out", () => {
     await client.signInEmail({ email: "tay@example.com", password: "long-enough" });
     await client.signInSocial({ provider: "google", callbackURL: "https://site.test/swiftter", errorCallbackURL: "https://site.test/sign-in" });
     await client.signOut();
+    await client.requestPasswordReset({ email: "tay@example.com", redirectTo: "https://site.test/reset-password" });
+    await client.resetPassword({ newPassword: "long-enough", token: "t" });
+    await client.sendVerificationCode({ email: "tay@example.com" });
+    await client.verifyEmailCode({ email: "tay@example.com", otp: "123456" });
 
+    expect(calls).toHaveLength(9);
     for (const { method, url } of calls) {
       expect(AUTH_PROXY_ROUTES[method], `${method} ${url}`).toContain(new URL(url, "https://site.test").pathname.replace("/api/auth/", ""));
     }
@@ -148,6 +153,22 @@ describe("signing up, in and out", () => {
     expect(hint.currentMember()).toBeUndefined();
   });
 
+  it("does not record a Member whose sign-up opened no session (the email must be confirmed first)", async () => {
+    answer = () => json({ token: null, user: member });
+    const { client, hint } = await load();
+
+    expect((await client.signUpEmail({ name: "Tay", email: "tay@example.com", password: "long-enough" })).data).toEqual({ token: null, user: member });
+    expect(hint.currentMember()).toBeNull();
+  });
+
+  it("records the Member a sign-up signed in", async () => {
+    answer = () => json({ token: "t", user: member });
+    const { client, hint } = await load();
+
+    await client.signUpEmail({ name: "Tay", email: "tay@example.com", password: "long-enough" });
+    expect(hint.currentMember()).toEqual(member);
+  });
+
   it("reports an unreachable guestbook as status 0", async () => {
     answer = () => Promise.reject(new TypeError("Failed to fetch"));
     const { client } = await load();
@@ -167,6 +188,46 @@ describe("signing up, in and out", () => {
     expect((await client.signInSocial(input)).error).toBeNull();
     expect(calls[0].body).toEqual(input);
     expect(location.href).toBe("https://accounts.google.com/o/oauth2/auth?x=1");
+  });
+
+  it("sends Neon Auth what each reset and verification endpoint expects", async () => {
+    answer = () => json({ status: true });
+    const { client, hint } = await load();
+
+    await client.requestPasswordReset({ email: "tay@example.com", redirectTo: "https://site.test/reset-password" });
+    await client.resetPassword({ newPassword: "long-enough", token: "abc" });
+    await client.sendVerificationCode({ email: "tay@example.com" });
+
+    expect(calls).toEqual([
+      { method: "POST", url: "/api/auth/request-password-reset", body: { email: "tay@example.com", redirectTo: "https://site.test/reset-password" } },
+      { method: "POST", url: "/api/auth/reset-password", body: { newPassword: "long-enough", token: "abc" } },
+      { method: "POST", url: "/api/auth/send-verification-email", body: { email: "tay@example.com" } },
+    ]);
+    // None of them signs anyone in.
+    expect(hint.currentMember()).toBeUndefined();
+  });
+
+  it("records the Member a confirmed code signed in", async () => {
+    answer = () => json({ status: true, token: "t", user: member });
+    const { client, hint } = await load();
+
+    expect((await client.verifyEmailCode({ email: "tay@example.com", otp: "123456" })).error).toBeNull();
+    expect(calls[0]).toEqual({ method: "POST", url: "/api/auth/email-otp/verify-email", body: { email: "tay@example.com", otp: "123456" } });
+    expect(hint.currentMember()).toEqual(member);
+  });
+
+  it("does not record anyone when a confirmed code opened no session, or the code was wrong", async () => {
+    answer = () => json({ status: true, token: null, user: member });
+    const { client, hint } = await load();
+
+    await client.verifyEmailCode({ email: "tay@example.com", otp: "123456" });
+    expect(hint.currentMember()).toBeUndefined();
+    answer = () => json({ code: "INVALID_OTP", message: "Invalid OTP" }, 400);
+    expect(await client.verifyEmailCode({ email: "tay@example.com", otp: "000000" })).toEqual({
+      data: null,
+      error: { status: 400, code: "INVALID_OTP", message: "Invalid OTP" },
+    });
+    expect(hint.currentMember()).toBeUndefined();
   });
 
   it.each(["javascript:alert(1)", "data:text/html,hi", "not a url"])("never navigates to %s", async (url) => {
