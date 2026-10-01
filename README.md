@@ -134,13 +134,47 @@ Every database command uses `DATABASE_URL` (read from `.env.local` when it is no
 
 **Production's credentials are on no laptop.** Its `DATABASE_URL` is a Sensitive variable in Vercel (write-only: builds and functions get it, nobody can read it back) and otherwise lives only in Neon. Production migrations run in the **Migrate production** workflow ([`.github/workflows/migrate-production.yml`](.github/workflows/migrate-production.yml)): Actions → Migrate production → Run workflow, pick the branch whose migrations to apply (usually `dev`, before merging a release) and type `production`. It fetches the connection string from Neon's API for the run, masked in the log. Apply a migration to `dev` first (`npm run db:migrate` locally); its reverse lives in `drizzle/down/`.
 
-Neon Auth keeps the Members' accounts (users, sessions) in the `neon_auth` schema of the same database. It belongs to Neon: `drizzle.config.ts` limits drizzle-kit to `public`, and nothing in the app writes to `neon_auth` except through `/api/auth`, with one exception: a Member deleting their account deletes their own `neon_auth."user"` row (Neon Auth's hosted `delete-user` is disabled; [ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md)).
+Neon Auth keeps the Members' accounts (users, sessions) in the `neon_auth` schema of the same database. It belongs to Neon: `drizzle.config.ts` limits drizzle-kit to `public`, and nothing in the app writes to `neon_auth` except through `/api/auth`, with one exception: a Member deleting their account deletes their own `neon_auth."user"` row, through the `public.delete_auth_user` function (Neon Auth's hosted `delete-user` is disabled; [ADR-0007](docs/adr/0007-social-feed-and-stored-moderation.md), [ADR-0008](docs/adr/0008-least-privilege-database-role.md)). The development scripts (`npm run seed`, `npm run unseed`) read and write `neon_auth` directly, so they need the owner's connection string.
 
 ```bash
 npm run db:migrate   # apply the SQL migrations in drizzle/
 npm run db:seed      # insert the demo Members and Posts (safe to re-run)
 npm run db:unseed    # show the demo rows; add `-- --yes` to delete them
 npm run db:generate  # after editing db/schema.ts: write a new migration to drizzle/, then commit it
+```
+
+### Database roles
+
+The deployed app connects as **`swiftter_app`**, not as the owner (`neondb_owner`): it can read and write the rows of Swiftter's tables in `public`, and delete one Neon Auth account by id through `public.delete_auth_user` (migration 0005), and nothing else. It cannot read `neon_auth` (emails, password hashes, sessions) or `drizzle`, create or alter tables, or truncate them. Why: [ADR-0008](docs/adr/0008-least-privilege-database-role.md). Migrations, the backup, the seed scripts and CI keep the owner: Migrate production and Backup production ask Neon's API for `neondb_owner`'s connection string, as before.
+
+The role is not a migration (roles belong to a branch, and its password must never be committed): [`db/roles/swiftter_app.sql`](db/roles/swiftter_app.sql) creates it and grants exactly that, each line explained. Later migrations need no grant for a new table (the script sets `neondb_owner`'s default privileges); a new function the app calls does (`GRANT EXECUTE … TO swiftter_app` in its migration, as 0005 does).
+
+**Production**, once, by the owner, after the release with migration 0005 is migrated (the script grants its function):
+
+1. Make a password on your own machine: `openssl rand -hex 24` (hex: nothing to escape in a URL; Neon wants at least 60 bits of entropy, this is 192).
+2. Neon console → the project → **SQL Editor**, branch **production**, database `neondb`, role `neondb_owner`. Paste `db/roles/swiftter_app.sql`, replace `:'password'` in `CREATE ROLE` with the password in single quotes, and run it. Create the role this way, not under Roles & Databases: roles made there are members of `neon_superuser`. Then remove the query from the editor's history, so the password is kept nowhere but in step 4.
+3. Build its **pooled** connection string: the owner's pooled string from **Connect** (host ending in `-pooler`) with the user and password replaced, `postgresql://swiftter_app:<password>@ep-…-pooler.<region>.aws.neon.tech/neondb?sslmode=require&channel_binding=require`.
+4. Vercel → `taylorssecretgarden` (team Le Bon Tempérament) → Settings → Environment Variables: set **Production** `DATABASE_URL` to it, **Sensitive**. Then redeploy production (Deployments → the current production deployment → Redeploy): functions read the variable when deployed.
+5. Check: the Swiftter feed loads, a test account can publish, and deleting it from `/guestbook` works. In the SQL editor (as `neondb_owner`), `select usename, count(*) from pg_stat_activity group by 1` shows `swiftter_app`'s connections.
+
+To go back, set Production `DATABASE_URL` to the owner's pooled string again (from Connect) and redeploy; the role can stay.
+
+**dev (Preview)**: the same on the `dev` branch, with a password of its own: `npm run db:migrate` first (from `.env.local`), then steps 1–3 on branch `dev`, then Vercel's **Preview** `DATABASE_URL` (Sensitive), and redeploy a preview. Keep **Development** (`.env.local`, what `npx vercel env pull` gives) on the owner: local work runs migrations, the seed scripts and the integration tests' Neon Auth fixtures, which need it. To run the app locally as the role, set `DATABASE_URL` for that command only.
+
+Branches made from production after step 2 (CI's, a reset `dev`) inherit the role **with production's password**: after resetting `dev` from production, give it its own (`ALTER ROLE swiftter_app PASSWORD '…';` on `dev`) and update Preview's `DATABASE_URL`. CI connects as the owner and does not depend on the role.
+
+To remove the role from a branch (as `neondb_owner`, which Neon does not allow `DROP OWNED`), close its connections first, or the pooler keeps sessions of a role that no longer exists (`invalid role OID` once it is created again):
+
+```sql
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE usename = 'swiftter_app';
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM swiftter_app;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM swiftter_app;
+REVOKE ALL ON SCHEMA public FROM swiftter_app;
+REVOKE ALL ON FUNCTION public.delete_auth_user(text) FROM swiftter_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE neondb_owner IN SCHEMA public REVOKE ALL ON TABLES FROM swiftter_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE neondb_owner IN SCHEMA public REVOKE ALL ON SEQUENCES FROM swiftter_app;
+REVOKE ALL ON DATABASE neondb FROM swiftter_app;
+DROP ROLE swiftter_app;
 ```
 
 ### Backups
