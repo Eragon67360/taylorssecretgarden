@@ -30,7 +30,8 @@ const CONTENTS = [
  * The privacy policy (GDPR arts. 12–14): in English, the site's language.
  * Every period and every processor here comes from the code or the hosting
  * set-up: service/swiftter.ts (purgeExpired, deleteMemberAccount), the
- * auth cookies (app/api/auth), next.config.ts's media hosts. Change them
+ * auth cookies (app/api/auth), next.config.ts's media hosts, the trailer
+ * embed (components/tours/tour-trailer.tsx). Change them
  * together.
  */
 export default function PrivacyPage() {
@@ -53,8 +54,9 @@ export default function PrivacyPage() {
       <Section id="what" title="What is kept">
         <h3>If you only read the site</h3>
         <p>
-          No account, no advertising, no cookies. Like every website, the host sees the technical details of each request (your IP address, your browser, the
-          page asked for, the time) and keeps them in its logs for a short time, to run the site and keep it secure.
+          No account, no advertising, no cookies (unless you play the Eras Tour trailer, which comes from YouTube: see <a href="#cookies">cookies</a>). Like
+          every website, the host sees the technical details of each request (your IP address, your browser, the page asked for, the time) and keeps them in its
+          logs for a short time, to run the site and keep it secure.
         </p>
         <p>
           The site also measures its audience with <strong>Vercel Web Analytics</strong>, on the live site only. It sets no cookie and stores nothing in your
@@ -140,11 +142,13 @@ export default function PrivacyPage() {
             <strong>Deezer</strong> (France): album covers and 30-second previews. The site sends Deezer nothing about you; when you play a preview, your
             browser fetches the audio straight from Deezer&apos;s servers, which see your IP address as any website would.
           </li>
-          <li>
-            <strong>Cloudinary</strong> (United States): hosts the site&apos;s own photos and videos. Your browser loads some of them straight from Cloudinary,
-            which sees your IP address as any website would. Nothing you write or upload goes there.
-          </li>
         </ul>
+        <p>
+          <strong>YouTube</strong> (Google) is not one of them, but the Eras Tour page embeds the film&apos;s official trailer from it. Nothing is loaded from
+          YouTube until you press play on the trailer: only then does your browser load YouTube&apos;s player (from its youtube-nocookie.com address), and
+          YouTube sees your IP address and the page it is played on, as any website would, and may store data in your browser to play the video. Google&apos;s
+          privacy policy applies to that.
+        </p>
         <p>
           Several of these are in the United States. Data goes there under the European Commission&apos;s standard contractual clauses in each company&apos;s
           data processing terms, or the EU–US Data Privacy Framework where the company is certified under it. You can ask for a copy of the safeguards at{" "}
@@ -233,6 +237,10 @@ export default function PrivacyPage() {
           </li>
         </ul>
         <p>Signing out or deleting your account removes them.</p>
+        <p>
+          The one other way anything is stored in your browser is your own choice: pressing play on the Eras Tour trailer loads YouTube&apos;s player, which may
+          then store data under Google&apos;s policy (see <a href="#who-else">who else handles it</a>). Until you press play, nothing comes from YouTube.
+        </p>
       </Section>
 
       <Section id="changes" title="Changes">

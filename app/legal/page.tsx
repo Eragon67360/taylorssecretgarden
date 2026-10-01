@@ -82,9 +82,10 @@ export default function LegalNoticePage() {
         </p>
         <p>
           Les pochettes d&apos;albums, les listes de titres et les extraits de 30 secondes sont fournis par <a href="https://www.deezer.com/">Deezer</a>, au
-          moyen de son interface publique. Les photographies sont <Link href="/credits">créditées</Link> lorsque leur auteur est connu. Tout titulaire de droits
-          qui souhaite le retrait d&apos;un contenu ou la correction d&apos;un crédit peut écrire à <ContactEmail /> : le contenu sera retiré ou corrigé dans
-          les meilleurs délais.
+          moyen de son interface publique. Les photographies de concert sont l&apos;œuvre de fans et de photographes qui les ont publiées sous licence Creative
+          Commons sur Wikimedia Commons ; chacune est <Link href="/credits">créditée</Link>, avec sa licence et les modifications apportées. La bande-annonce du
+          film The Eras Tour est intégrée depuis la chaîne YouTube officielle de Taylor Swift. Tout titulaire de droits qui souhaite le retrait d&apos;un
+          contenu ou la correction d&apos;un crédit peut écrire à <ContactEmail /> : le contenu sera retiré ou corrigé dans les meilleurs délais.
         </p>
         <p>
           Les textes et le code du site sont de {siteConfig.publisher} ; le code source est publié sur <a href={REPOSITORY}>GitHub</a> sous licence MIT.
@@ -124,9 +125,11 @@ export default function LegalNoticePage() {
           album covers, photographs and recordings mentioned or shown belong to their respective owners.
         </p>
         <p>
-          Album covers, tracklists and 30-second previews come from <a href="https://www.deezer.com/">Deezer</a>, through its public API. Photographs are{" "}
-          <Link href="/credits">credited</Link> where their author is known. Any rights holder who wants something removed or a credit corrected can write to{" "}
-          <ContactEmail />: it will be removed or corrected promptly.
+          Album covers, tracklists and 30-second previews come from <a href="https://www.deezer.com/">Deezer</a>, through its public API. The concert
+          photographs are by fans and photographers who published them under Creative Commons licences on Wikimedia Commons; each is{" "}
+          <Link href="/credits">credited</Link>, with its licence and what was changed. The Eras Tour film trailer is embedded from Taylor Swift&apos;s official
+          YouTube channel. Any rights holder who wants something removed or a credit corrected can write to <ContactEmail />: it will be removed or corrected
+          promptly.
         </p>
         <p>
           The site&apos;s text and code are by {siteConfig.publisher}; the source code is published on <a href={REPOSITORY}>GitHub</a> under the MIT licence.

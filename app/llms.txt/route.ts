@@ -68,7 +68,7 @@ export async function GET() {
 
 - [Home](${absoluteUrl("/")}): the opening spread, with ways into Music, Tours and Swiftter, every Era pressed like a flower (each opens its Album on Music), and the Tour posters.
 - [Music](${absoluteUrl("/music")}): every Album on a shelf, in Era order. Opening an Album shows its cover, tracklist with running times, label, 30-second previews and its other Versions; each Album and Version has its own address (\`/music/<album>\`, \`/music/<album>/<version>\`; /music itself opens on the debut).
-- [Tours](${absoluteUrl("/tours")}): every Tour as a journal entry (ticket stub, poster, footage), each with its own page of facts.
+- [Tours](${absoluteUrl("/tours")}): every Tour as a journal entry (ticket stub, concert photos, and the Eras Tour's trailer), each with its own page of facts.
 - [Swiftter](${absoluteUrl("/swiftter")}): the fan feed. Anyone can read it; Members (fans who signed the guestbook) publish Posts.
 
 ## Albums by Era
