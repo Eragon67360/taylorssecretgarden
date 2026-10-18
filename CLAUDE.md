@@ -1,5 +1,9 @@
 # Taylor's Secret Garden
 
+## Subagent models
+
+Small, fully specified tasks go to Sonnet (`quick` agent); audits, searches and reviews to Fable (`scout`); medium implementation packages to Fable (`builder`); orchestration and anything security-sensitive stay on the main model. See `docs/agents/model-routing.md`.
+
 ## Agent skills
 
 ### Issue tracker

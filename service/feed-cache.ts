@@ -19,11 +19,14 @@ import { listFeed } from "@/service/swiftter";
 export const FEED_TAG = "swiftter-feed";
 
 /**
- * The feed's first page. Invalidated by `feedChanged()`; the minute's
+ * The feed's first page. Invalidated by `feedChanged()`; the hour's
  * revalidation is a safety net for changes made outside the app (a note
- * approved by hand, ADR-0007; the seed scripts).
+ * approved by hand, ADR-0007; the seed scripts). An hour, not a minute: Neon
+ * suspends the database after 5 idle minutes, and an uptime check or a bot
+ * reading the feed every few minutes kept it awake around the clock, past the
+ * free plan's 100 CU-hours a month (October 2026).
  */
-export const getFirstFeedPage = unstable_cache(() => listFeed(), ["swiftter-first-feed-page"], { tags: [FEED_TAG], revalidate: 60 });
+export const getFirstFeedPage = unstable_cache(() => listFeed(), ["swiftter-first-feed-page"], { tags: [FEED_TAG], revalidate: 3600 });
 
 /**
  * Something public changed (a note approved, by a Member's write, "check
